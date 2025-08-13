@@ -68,6 +68,29 @@ const TeacherLoginScreen = ({ navigation }) => {
           <Text style={styles.loginButtonText}>{loading ? 'Signing In...' : 'Sign In as Teacher'}</Text>
         </TouchableOpacity>
 
+        {/* Quick fill credentials */}
+        <View style={styles.quickFillRow}>
+          <Text style={styles.quickFillLabel}>Quick fill:</Text>
+          <TouchableOpacity
+            style={styles.quickFillChip}
+            onPress={() => { setEmail('teacher@eduai.com'); setPassword('password123'); }}
+          >
+            <Text style={styles.quickFillChipText}>Teacher</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickFillChip}
+            onPress={() => { setEmail('admin@eduai.com'); setPassword('password123'); }}
+          >
+            <Text style={styles.quickFillChipText}>Admin</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={styles.quickFillChip}
+            onPress={() => { setEmail('student@eduai.com'); setPassword('password123'); }}
+          >
+            <Text style={styles.quickFillChipText}>Student</Text>
+          </TouchableOpacity>
+        </View>
+
         <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
           <Text style={styles.backButtonText}>← Back to Main Login</Text>
         </TouchableOpacity>
@@ -162,6 +185,31 @@ const styles = StyleSheet.create({
     color: '#6b7280',
     fontSize: Platform.OS === 'ios' ? 16 : 14,
     fontWeight: '500',
+  },
+  quickFillRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    marginBottom: 8,
+  },
+  quickFillLabel: {
+    color: '#6b7280',
+    fontSize: 12,
+    marginRight: 8,
+  },
+  quickFillChip: {
+    backgroundColor: '#e3f2fd',
+    borderColor: '#90caf9',
+    borderWidth: 1,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: 999,
+    marginHorizontal: 4,
+  },
+  quickFillChipText: {
+    color: '#1a237e',
+    fontSize: 12,
+    fontWeight: '600',
   },
 });
 
