@@ -457,7 +457,7 @@ const TeacherStack = () => {
     >
       <Drawer.Screen name="TeacherDashboard" component={TeacherDashboardScreen} options={{ title: 'Dashboard', drawerIcon: ({ color, size }) => (<Icon name="📊" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherClasses" component={TeacherClassesScreen} options={{ title: 'My Classes', drawerIcon: ({ color, size }) => (<Icon name="🏫" size={size} color={color} />), }} />
-      <Drawer.Screen name="TeacherMarkAttendance" component={TeacherClassesScreen} options={{ title: 'Mark Attendance', drawerIcon: ({ color, size }) => (<Icon name="✅" size={size} color={color} />), }} />
+      <Drawer.Screen name="TeacherMarkAttendance" component={MarkAttendanceScreen} options={{ title: 'Mark Attendance', drawerIcon: ({ color, size }) => (<Icon name="✅" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherSummary" component={AttendanceSummaryScreen} options={{ title: 'Summary', drawerIcon: ({ color, size }) => (<Icon name="🧾" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherSchedule" component={SimpleScheduleScreen} options={{ title: 'Schedule', drawerIcon: ({ color, size }) => (<Icon name="📅" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherProfile" component={SimpleProfileScreen} options={{ title: 'Profile', drawerIcon: ({ color, size }) => (<Icon name="👤" size={size} color={color} />), }} />

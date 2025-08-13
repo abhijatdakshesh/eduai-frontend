@@ -11,12 +11,20 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   const { classId, className } = route.params || {};
   const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
   const [students, setStudents] = useState([]);
-  const [marks, setMarks] = useState({}); // studentId -> { status, notes }
+  const [marks, setMarks] = useState({}); // studentKey -> { status, notes }
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
 
   useBackButton(navigation);
+
+  const getStudentKey = (s) => {
+    // Backend expects UUID from roster as student_db_id
+    if (s.student_db_id) return String(s.student_db_id);
+    if (s.student_uuid) return String(s.student_uuid);
+    if (typeof s.id === 'string') return s.id; // UUID fallback
+    return null; // don't use numeric/internal ids for backend save
+  };
 
   useEffect(() => {
     const load = async () => {
@@ -30,11 +38,13 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
         setStudents(rosterStudents);
         const map = {};
         (existing?.data?.attendance || []).forEach((a) => {
-          map[a.student_id] = { status: a.status || 'present', notes: a.notes || '' };
+          const key = String(a.student_id);
+          map[key] = { status: a.status || 'present', notes: a.notes || '' };
         });
         // default new students to present
         rosterStudents.forEach((s) => {
-          if (!map[s.id]) map[s.id] = { status: 'present', notes: '' };
+          const key = getStudentKey(s);
+          if (key && !map[key]) map[key] = { status: 'present', notes: '' };
         });
         setMarks(map);
         setDirty(false);
@@ -50,29 +60,39 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
 
   const markAll = (status) => {
     const next = {};
-    students.forEach((s) => (next[s.id] = { status, notes: marks[s.id]?.notes || '' }));
+    students.forEach((s) => {
+      const key = getStudentKey(s);
+      if (!key) return;
+      next[key] = { status, notes: marks[key]?.notes || '' };
+    });
     setMarks(next);
     setDirty(true);
   };
 
-  const updateStatus = (studentId, status) => {
-    setMarks((prev) => ({ ...prev, [studentId]: { ...(prev[studentId] || {}), status } }));
+  const updateStatus = (studentKey, status) => {
+    setMarks((prev) => ({ ...prev, [studentKey]: { ...(prev[studentKey] || {}), status } }));
     setDirty(true);
   };
 
-  const updateNotes = (studentId, notes) => {
-    setMarks((prev) => ({ ...prev, [studentId]: { ...(prev[studentId] || {}), notes } }));
+  const updateNotes = (studentKey, notes) => {
+    setMarks((prev) => ({ ...prev, [studentKey]: { ...(prev[studentKey] || {}), notes } }));
     setDirty(true);
   };
 
   const save = async () => {
     try {
       setSaving(true);
-      const entries = students.map((s) => ({
-        student_id: s.id,
-        status: marks[s.id]?.status || 'present',
-        notes: marks[s.id]?.notes || '',
-      }));
+      const entries = students
+        .map((s) => {
+          const key = getStudentKey(s);
+          if (!key) return null;
+          return {
+            student_id: key,
+            status: marks[key]?.status || 'present',
+            notes: marks[key]?.notes || '',
+          };
+        })
+        .filter(Boolean);
       const resp = await apiClient.saveTeacherClassAttendance(classId, { date, entries });
       if (resp?.success) {
         Alert.alert('Success', 'Attendance saved');
@@ -81,15 +101,15 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
         Alert.alert('Error', resp?.message || 'Failed to save');
       }
     } catch (e) {
-      Alert.alert('Success', 'Attendance saved (demo)');
-      setDirty(false);
+      Alert.alert('Error', e?.message || 'Failed to save attendance');
     } finally {
       setSaving(false);
     }
   };
 
   const renderRow = ({ item }) => {
-    const current = marks[item.id] || { status: 'present', notes: '' };
+    const key = getStudentKey(item) || String(item.id);
+    const current = marks[key] || { status: 'present', notes: '' };
     return (
       <View style={styles.row}>
         <View style={styles.studentCol}>
@@ -100,7 +120,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           {statusOptions.map((s) => (
             <TouchableOpacity
               key={s}
-              onPress={() => updateStatus(item.id, s)}
+              onPress={() => updateStatus(key, s)}
               style={[styles.statusPill, styles[`status_${s}`], current.status === s && styles.statusSelected]}
             >
               <Text style={styles.statusText}>{s[0].toUpperCase()}</Text>
@@ -110,7 +130,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
         <View style={styles.notesCol}>
           <TextInput
             value={current.notes}
-            onChangeText={(t) => updateNotes(item.id, t)}
+            onChangeText={(t) => updateNotes(key, t)}
             placeholder="Notes"
             style={styles.notesInput}
           />

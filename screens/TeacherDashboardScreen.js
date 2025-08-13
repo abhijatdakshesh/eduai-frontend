@@ -47,7 +47,7 @@ const TeacherDashboardScreen = ({ navigation }) => {
         <TouchableOpacity style={styles.actionBtn} onPress={() => navigation.navigate('TeacherClasses')}> 
           <Text style={styles.actionText}>Go to Classes</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.actionBtn, styles.secondary]} onPress={() => navigation.navigate('AttendanceSummary', { classId: undefined })}>
+        <TouchableOpacity style={[styles.actionBtn, styles.secondary]} onPress={() => navigation.navigate('TeacherSummary')}>
           <Text style={styles.actionText}>View Summary</Text>
         </TouchableOpacity>
       </View>

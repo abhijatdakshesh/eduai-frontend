@@ -38,10 +38,10 @@ const TeacherClassesScreen = ({ navigation }) => {
       <Text style={styles.className}>{item.name}</Text>
       <Text style={styles.classMeta}>{item.grade_level} • {item.academic_year}</Text>
       <View style={{ flexDirection: 'row', justifyContent: 'flex-end' }}>
-        <TouchableOpacity style={styles.smallBtn} onPress={() => navigation.navigate('MarkAttendance', { classId: item.id, className: item.name })}>
+        <TouchableOpacity style={styles.smallBtn} onPress={() => navigation.navigate('TeacherMarkAttendance', { classId: item.id, className: item.name })}>
           <Text style={styles.smallBtnText}>Attendance</Text>
         </TouchableOpacity>
-        <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#3b82f6' }]} onPress={() => navigation.navigate('AttendanceSummary', { classId: item.id })}>
+        <TouchableOpacity style={[styles.smallBtn, { backgroundColor: '#3b82f6' }]} onPress={() => navigation.navigate('TeacherSummary', { classId: item.id, className: item.name })}>
           <Text style={styles.smallBtnText}>Summary</Text>
         </TouchableOpacity>
       </View>
