@@ -12,6 +12,7 @@ import {
   Dimensions
 } from 'react-native';
 import { useAuth } from '../contexts/AuthContext';
+import { apiClient } from '../services/api';
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
@@ -127,7 +128,29 @@ const LoginScreen = ({ navigation }) => {
 
 
           {/* Forgot Password */}
-          <TouchableOpacity style={styles.forgotPassword}>
+          <TouchableOpacity
+            style={styles.forgotPassword}
+            onPress={async () => {
+              const emailToUse = email.trim();
+              if (!emailToUse) {
+                Alert.alert('Forgot Password', 'Enter your email above first.');
+                return;
+              }
+              try {
+                setLoading(true);
+                const resp = await apiClient.forgotPassword(emailToUse);
+                if (resp?.success) {
+                  Alert.alert('Email sent', 'If an account exists for this email, reset instructions have been sent.');
+                } else {
+                  Alert.alert('Error', resp?.message || 'Unable to send reset email.');
+                }
+              } catch (e) {
+                Alert.alert('Error', e?.message || 'Unable to send reset email.');
+              } finally {
+                setLoading(false);
+              }
+            }}
+          >
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
