@@ -17,6 +17,20 @@ export const AuthProvider = ({ children }) => {
   const [loading, setLoading] = useState(true);
   const [isAuthenticated, setIsAuthenticated] = useState(false);
 
+  const normalizeUser = (rawUser) => {
+    if (!rawUser) return null;
+    const inferredRole =
+      rawUser.role ||
+      rawUser.user_type ||
+      rawUser.userType ||
+      rawUser.type ||
+      rawUser.role_name ||
+      rawUser.roleName ||
+      null;
+    const role = inferredRole ? String(inferredRole).toLowerCase() : null;
+    return { ...rawUser, role };
+  };
+
   useEffect(() => {
     checkAuthStatus();
   }, []);
@@ -27,7 +41,7 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         const response = await apiClient.getProfile();
         if (response.success) {
-          setUser(response.data.user);
+          setUser(normalizeUser(response.data.user));
           setIsAuthenticated(true);
         } else {
           await clearAuth();
@@ -54,7 +68,7 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.login(email, password);
       
       if (response.success) {
-        setUser(response.data.user);
+        setUser(normalizeUser(response.data.user));
         setIsAuthenticated(true);
         return { success: true, message: 'Login successful!' };
       } else {
@@ -108,7 +122,7 @@ export const AuthProvider = ({ children }) => {
     try {
       const response = await apiClient.getProfile();
       if (response.success) {
-        setUser(response.data.user);
+        setUser(normalizeUser(response.data.user));
       }
     } catch (error) {
       console.error('Failed to refresh user:', error);
