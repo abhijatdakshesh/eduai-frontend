@@ -550,6 +550,31 @@ class ApiClient {
     }
   }
 
+  // Student Attendance APIs
+  async getStudentAttendance(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      const response = await this.api.get(`/student/attendance${query.toString() ? `?${query.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getStudentAttendanceSummary(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      const response = await this.api.get(`/student/attendance/summary${query.toString() ? `?${query.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Admin Attendance Audit APIs
   async getAdminAttendanceAudit(params = {}) {
     try {

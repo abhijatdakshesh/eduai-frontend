@@ -29,6 +29,7 @@ import SimpleAIAssistantScreen from './screens/SimpleAIAssistantScreen';
 import SimpleStaffDirectoryScreen from './screens/SimpleStaffDirectoryScreen';
 import SimpleProfileScreen from './screens/SimpleProfileScreen';
 import SimpleResultsPortalScreen from './screens/SimpleResultsPortalScreen';
+import StudentAttendanceScreen from './screens/StudentAttendanceScreen';
 import LoadingScreen from './components/LoadingScreen';
 
 // Import Admin Screens
@@ -247,6 +248,16 @@ const MainAppStack = ({ route }) => {
           title: 'Academic Results',
           drawerIcon: ({ color, size }) => (
             <Icon name="📊" size={size} color={color} />
+          ),
+        }}
+      />
+      <Drawer.Screen 
+        name="My Attendance" 
+        component={StudentAttendanceScreen}
+        options={{
+          title: 'My Attendance',
+          drawerIcon: ({ color, size }) => (
+            <Icon name="🗓️" size={size} color={color} />
           ),
         }}
       />
