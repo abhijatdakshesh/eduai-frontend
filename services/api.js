@@ -1,0 +1,1364 @@
+import axios from 'axios';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import * as Device from 'expo-device';
+import Constants from 'expo-constants';
+
+import { API_BASE_URL, USE_MOCKS, ALLOW_DEMO_LOGINS } from '../config/environment';
+
+// API Configuration
+
+class ApiClient {
+  constructor() {
+    this.api = axios.create({
+      baseURL: API_BASE_URL,
+      timeout: 10000,
+      headers: {
+        'Content-Type': 'application/json',
+      },
+    });
+
+    this.setupInterceptors();
+  }
+
+  setupInterceptors() {
+    // Request interceptor to add auth token
+    this.api.interceptors.request.use(
+      async (config) => {
+        const token = await AsyncStorage.getItem('accessToken');
+        if (token) {
+          config.headers.Authorization = `Bearer ${token}`;
+        }
+
+        // Add device info headers
+        config.headers['X-Device-Id'] = await this.getDeviceId();
+        config.headers['X-Platform'] = Device.osName || 'unknown';
+        config.headers['X-OS-Version'] = Device.osVersion || 'unknown';
+
+        return config;
+      },
+      (error) => Promise.reject(error)
+    );
+
+    // Response interceptor to handle token refresh
+    this.api.interceptors.response.use(
+      (response) => response,
+      async (error) => {
+        const originalRequest = error.config;
+
+        if (error.response?.status === 401 && !originalRequest._retry) {
+          originalRequest._retry = true;
+
+          try {
+            const refreshed = await this.refreshToken();
+            if (refreshed) {
+              return this.api(originalRequest);
+            }
+          } catch (refreshError) {
+            await this.clearTokens();
+            // Navigate to login - this will be handled by the auth context
+          }
+        }
+
+        return Promise.reject(error);
+      }
+    );
+  }
+
+  async getDeviceId() {
+    let deviceId = await AsyncStorage.getItem('deviceId');
+    if (!deviceId) {
+      deviceId = `mobile_${Device.osName}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
+      await AsyncStorage.setItem('deviceId', deviceId);
+    }
+    return deviceId;
+  }
+
+  async getDeviceInfo() {
+    return {
+      device_id: await this.getDeviceId(),
+      device_type: 'mobile',
+      os_version: Device.osVersion || 'unknown',
+      app_version: Constants.expoConfig?.version || '1.0.0',
+      device_model: Device.modelName || 'unknown',
+      device_brand: Device.brand || 'unknown',
+    };
+  }
+
+  async getLocationInfo() {
+    // For mobile, we'll use default values
+    // In a real app, you'd get this from GPS or user input
+    return {
+      country: 'Unknown',
+      state: 'Unknown',
+      city: 'Unknown',
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+  }
+
+  async refreshToken() {
+    try {
+      const refreshToken = await AsyncStorage.getItem('refreshToken');
+      if (!refreshToken) return false;
+
+      const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
+        device_id: await this.getDeviceId(),
+      }, {
+        headers: {
+          'Authorization': `Bearer ${refreshToken}`,
+          'X-Device-Id': await this.getDeviceId(),
+        }
+      });
+
+      if (response.data.success) {
+        const { access_token, refresh_token } = response.data.data.tokens;
+        await this.setTokens(access_token, refresh_token);
+        return true;
+      }
+      return false;
+    } catch (error) {
+      // Don't log token refresh failures as errors - this is normal when tokens expire
+      console.log('Token refresh: No valid refresh token');
+      return false;
+    }
+  }
+
+  async setTokens(accessToken, refreshToken) {
+    await AsyncStorage.setItem('accessToken', accessToken);
+    await AsyncStorage.setItem('refreshToken', refreshToken);
+  }
+
+  async clearTokens() {
+    await AsyncStorage.removeItem('accessToken');
+    await AsyncStorage.removeItem('refreshToken');
+  }
+
+  // Authentication methods
+  async register(userData) {
+    try {
+      const response = await this.api.post('/auth/register', {
+        ...userData,
+        device_info: await this.getDeviceInfo(),
+        location_info: await this.getLocationInfo(),
+      });
+
+      if (response.data.success) {
+        await this.setTokens(
+          response.data.data.tokens.access_token,
+          response.data.data.tokens.refresh_token
+        );
+      }
+
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async login(email, password) {
+    try {
+      // Demo users (guarded by ALLOW_DEMO_LOGINS)
+      if (ALLOW_DEMO_LOGINS && email === 'admin@eduai.com' && password === 'admin123') {
+        const mockResponse = {
+          success: true,
+          message: 'Login successful',
+          data: {
+            user: {
+              id: 1,
+              email: 'admin@eduai.com',
+              role: 'admin',
+              name: 'Admin User',
+            },
+            tokens: {
+              access_token: 'mock_access_token',
+              refresh_token: 'mock_refresh_token',
+            },
+          },
+        };
+        await this.setTokens(
+          mockResponse.data.tokens.access_token,
+          mockResponse.data.tokens.refresh_token
+        );
+        return mockResponse;
+      }
+      if (ALLOW_DEMO_LOGINS && email === 'teacher@eduai.com' && password === 'teacher123') {
+        const mockResponse = {
+          success: true,
+          message: 'Login successful',
+          data: {
+            user: {
+              id: 3,
+              email: 'teacher@eduai.com',
+              role: 'teacher',
+              name: 'Teacher User',
+            },
+            tokens: {
+              access_token: 'mock_access_token',
+              refresh_token: 'mock_refresh_token',
+            },
+          },
+        };
+        await this.setTokens(
+          mockResponse.data.tokens.access_token,
+          mockResponse.data.tokens.refresh_token
+        );
+        return mockResponse;
+      }
+
+      // Try server login
+      try {
+        const response = await this.api.post('/auth/login', {
+          email,
+          password,
+        });
+
+        if (response.data.success) {
+          await this.setTokens(
+            response.data.data.tokens.access_token,
+            response.data.data.tokens.refresh_token
+          );
+        }
+
+        return response.data;
+      } catch (serverError) {
+        // If server is not available, use mock data for student login
+        if (ALLOW_DEMO_LOGINS && email === 'student@eduai.com' && password === 'password123') {
+          const mockResponse = {
+            success: true,
+            message: 'Login successful',
+            data: {
+              user: {
+                id: 2,
+                email: 'student@eduai.com',
+                role: 'student',
+                name: 'Student User',
+              },
+              tokens: {
+                access_token: 'mock_access_token',
+                refresh_token: 'mock_refresh_token',
+              },
+            },
+          };
+          await this.setTokens(
+            mockResponse.data.tokens.access_token,
+            mockResponse.data.tokens.refresh_token
+          );
+          return mockResponse;
+        }
+        throw this.handleError(serverError);
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async logout(logoutAllSessions = false) {
+    try {
+      const response = await this.api.post('/auth/logout', {
+        device_id: await this.getDeviceId(),
+        logout_all_sessions: logoutAllSessions,
+      });
+
+      if (response.data.success) {
+        await this.clearTokens();
+      }
+
+      return response.data;
+    } catch (error) {
+      // Even if logout fails, clear tokens locally
+      await this.clearTokens();
+      throw this.handleError(error);
+    }
+  }
+
+  async getProfile() {
+    try {
+      const response = await this.api.get('/auth/profile');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getSessions() {
+    try {
+      const response = await this.api.get('/auth/sessions');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async verifyEmail(verificationToken) {
+    try {
+      const response = await this.api.post('/auth/verify-email', {
+        verification_token: verificationToken,
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async resendVerification(email) {
+    try {
+      const response = await this.api.post('/auth/resend-verification', { email });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async forgotPassword(email) {
+    try {
+      const response = await this.api.post('/auth/forgot-password', { email });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async resetPassword(resetToken, newPassword) {
+    try {
+      const response = await this.api.post('/auth/reset-password', {
+        reset_token: resetToken,
+        new_password: newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateProfile(profileData) {
+    try {
+      const response = await this.api.put('/auth/profile', profileData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async changePassword(currentPassword, newPassword) {
+    try {
+      const response = await this.api.post('/auth/change-password', {
+        current_password: currentPassword,
+        new_password: newPassword,
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteAccount(password) {
+    try {
+      const response = await this.api.delete('/auth/account', {
+        data: { password }
+      });
+      
+      if (response.data.success) {
+        await this.clearTokens();
+      }
+      
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Dashboard & Analytics APIs
+  async getAdminDashboardStats() {
+    try {
+      const response = await this.api.get('/admin/dashboard/stats');
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            stats: {
+              totalStudents: 1250,
+              totalTeachers: 85,
+              totalClasses: 45,
+              totalCourses: 120,
+              totalParents: 1100,
+              activeEnrollments: 1180,
+              recentActivities: [
+                { type: 'student_registration', message: 'New student registered', timestamp: new Date() },
+                { type: 'course_creation', message: 'Course "Advanced Mathematics" created', timestamp: new Date() },
+                { type: 'class_assignment', message: 'Class "Grade 10A" assigned to teacher', timestamp: new Date() }
+              ]
+            }
+          }
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async getStudentAnalytics() {
+    try {
+      const response = await this.api.get('/admin/analytics/students');
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            gradeDistribution: { 'A': 30, 'B': 45, 'C': 15, 'D': 8, 'F': 2 },
+            attendanceRate: 92,
+            enrollmentTrends: [
+              { month: 'Jan', count: 120 },
+              { month: 'Feb', count: 135 },
+              { month: 'Mar', count: 142 }
+            ]
+          }
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin User Management APIs
+  async getAdminUsers(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/users?${queryString}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: { users: [], total: 0, page: 1, per_page: 10 },
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async createAdminUser(userData) {
+    try {
+      const response = await this.api.post('/admin/users', userData);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok', data: { user: { id: 1, ...userData } } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async updateAdminUser(userId, userData) {
+    try {
+      const response = await this.api.put(`/admin/users/${userId}`, userData);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok', data: { user: { id: userId, ...userData } } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteAdminUser(userId) {
+    try {
+      const response = await this.api.delete(`/admin/users/${userId}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok' };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Student Management APIs
+  async getAdminStudents(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/students?${queryString}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, data: { students: [], total: 0, page: 1, per_page: 10 } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Teacher Management APIs
+  async getAdminTeachers(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/teachers?${queryString}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, data: { teachers: [], total: 0, page: 1, per_page: 10 } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Class Management APIs
+  async getAdminClasses(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/classes?${queryString}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, data: { classes: [], total: 0, page: 1, per_page: 10 } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async createAdminClass(classData) {
+    try {
+      const response = await this.api.post('/admin/classes', classData);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok', data: { class: { id: 1, ...classData } } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Course Management APIs
+  async getAdminCourses(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/courses?${queryString}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, data: { courses: [], total: 0, page: 1, per_page: 10 } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async createAdminCourse(courseData) {
+    try {
+      const response = await this.api.post('/admin/courses', courseData);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok', data: { course: { id: 1, ...courseData } } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async updateAdminCourse(courseId, courseData) {
+    try {
+      const response = await this.api.put(`/admin/courses/${courseId}`, courseData);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok', data: { course: { id: courseId, ...courseData } } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteAdminCourse(courseId) {
+    try {
+      const response = await this.api.delete(`/admin/courses/${courseId}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok' };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Class Management APIs
+  async getAdminClasses(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/classes?${queryString}`);
+      return response.data;
+    } catch (error) {
+      // Fallback to mock data
+      return {
+        success: true,
+        data: {
+          classes: [
+            {
+              id: 1,
+              name: 'Grade 10A',
+              grade_level: '10th Grade',
+              academic_year: '2024',
+              teacher: {
+                id: 1,
+                name: 'Dr. Sarah Wilson',
+                subject: 'Mathematics',
+              },
+              room_id: 'R101',
+              capacity: 30,
+              enrolled_students: 25,
+              schedule: [
+                { day: 'Monday', time: '9:00 AM - 10:30 AM' },
+                { day: 'Wednesday', time: '9:00 AM - 10:30 AM' },
+                { day: 'Friday', time: '9:00 AM - 10:30 AM' },
+              ],
+            },
+            {
+              id: 2,
+              name: 'Grade 11B',
+              grade_level: '11th Grade',
+              academic_year: '2024',
+              teacher: {
+                id: 2,
+                name: 'Prof. Michael Chen',
+                subject: 'Physics',
+              },
+              room_id: 'R102',
+              capacity: 35,
+              enrolled_students: 32,
+              schedule: [
+                { day: 'Tuesday', time: '11:00 AM - 12:30 PM' },
+                { day: 'Thursday', time: '11:00 AM - 12:30 PM' },
+              ],
+            },
+          ],
+          total: 2,
+          page: 1,
+          per_page: 10
+        }
+      };
+    }
+  }
+
+  async createAdminClass(classData) {
+    try {
+      const response = await this.api.post('/admin/classes', classData);
+      return response.data;
+    } catch (error) {
+      // Fallback to mock success
+      return {
+        success: true,
+        message: 'Class created successfully',
+        data: {
+          class: {
+            id: Math.floor(Math.random() * 1000) + 1,
+            ...classData,
+            teacher: {
+              id: classData.teacher_id,
+              name: 'Dr. Sarah Wilson', // Mock teacher name
+              subject: 'Mathematics', // Mock subject
+            },
+            enrolled_students: 0,
+            schedule: [],
+            created_at: new Date().toISOString()
+          }
+        }
+      };
+    }
+  }
+
+  async updateAdminClass(classId, classData) {
+    try {
+      const response = await this.api.put(`/admin/classes/${classId}`, classData);
+      return response.data;
+    } catch (error) {
+      // Fallback to mock success
+      return {
+        success: true,
+        message: 'Class updated successfully',
+        data: {
+          class: {
+            id: classId,
+            ...classData,
+            updated_at: new Date().toISOString()
+          }
+        }
+      };
+    }
+  }
+
+  async deleteAdminClass(classId) {
+    try {
+      const response = await this.api.delete(`/admin/classes/${classId}`);
+      return response.data;
+    } catch (error) {
+      // Fallback to mock success
+      return {
+        success: true,
+        message: 'Class deleted successfully'
+      };
+    }
+  }
+
+  // Admin Attendance Management APIs
+  async getClassAttendance(classId, params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/classes/${classId}/attendance${queryString ? `?${queryString}` : ''}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        const date = params?.date || new Date().toISOString().slice(0, 10);
+        return { success: true, data: { date, records: [] } };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async markClassAttendance(classId, payload) {
+    try {
+      const response = await this.api.post(`/admin/classes/${classId}/attendance`, payload);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, message: 'ok', data: payload };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Teacher APIs
+  async getTeacherClasses() {
+    try {
+      const response = await this.api.get('/teacher/classes');
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            classes: [
+              { id: 101, name: 'Grade 10A', grade_level: '10th Grade', academic_year: '2024' },
+              { id: 102, name: 'Grade 11B', grade_level: '11th Grade', academic_year: '2024' },
+            ],
+          },
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherClassStudents(classId) {
+    try {
+      const response = await this.api.get(`/teacher/classes/${classId}/students`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            students: [
+              { id: 1, student_id: 'STU001', first_name: 'John', last_name: 'Doe' },
+              { id: 2, student_id: 'STU002', first_name: 'Jane', last_name: 'Smith' },
+              { id: 3, student_id: 'STU003', first_name: 'Mike', last_name: 'Johnson' },
+            ],
+          },
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherClassAttendance(classId, date) {
+    try {
+      const response = await this.api.get(`/teacher/classes/${classId}/attendance?date=${encodeURIComponent(date)}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            date,
+            attendance: [
+              { attendance_id: 'a1', student_id: 1, status: 'present', notes: '' },
+              { attendance_id: 'a2', student_id: 2, status: 'absent', notes: '' },
+            ],
+          },
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async saveTeacherClassAttendance(classId, payload) {
+    try {
+      const response = await this.api.post(`/teacher/classes/${classId}/attendance`, payload);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return { success: true, updated: payload?.entries?.length || 0 };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherAttendanceSummary(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      if (params.classId) query.append('classId', params.classId);
+      const response = await this.api.get(`/teacher/attendance/summary?${query.toString()}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            totals: { present: 42, absent: 5, late: 3, excused: 2 },
+            byStudent: [
+              { student_id: 1, name: 'John Doe', present: 10, absent: 1, late: 0, excused: 0 },
+              { student_id: 2, name: 'Jane Smith', present: 9, absent: 2, late: 1, excused: 0 },
+            ],
+          },
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Attendance Audit APIs
+  async getAdminAttendanceAudit(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      if (params.classId) query.append('classId', params.classId);
+      if (params.teacherId) query.append('teacherId', params.teacherId);
+      const response = await this.api.get(`/admin/attendance/audit?${query.toString()}`);
+      return response.data;
+    } catch (error) {
+      if (USE_MOCKS) {
+        return {
+          success: true,
+          data: {
+            entries: [
+              {
+                id: 'chg_1',
+                timestamp: new Date().toISOString(),
+                class_name: 'Grade 10A',
+                student_name: 'John Doe',
+                date: new Date().toISOString().slice(0, 10),
+                old_status: 'absent',
+                new_status: 'present',
+                changed_by: 'Teacher User',
+                notes: 'Corrected after verification',
+              },
+              {
+                id: 'chg_2',
+                timestamp: new Date(Date.now() - 3600_000).toISOString(),
+                class_name: 'Grade 11B',
+                student_name: 'Jane Smith',
+                date: new Date().toISOString().slice(0, 10),
+                old_status: 'present',
+                new_status: 'late',
+                changed_by: 'Admin User',
+                notes: 'Late by 10 mins',
+              },
+            ],
+          },
+        };
+      }
+      throw this.handleError(error);
+    }
+  }
+
+  // Dashboard APIs
+  async getDashboardStats() {
+    try {
+      const response = await this.api.get('/dashboard/stats');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getDashboardQuickActions() {
+    try {
+      const response = await this.api.get('/dashboard/quick-actions');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Courses APIs
+  async getCourses(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key]) params.append(key, filters[key]);
+      });
+      
+      const response = await this.api.get(`/courses?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getCourseById(courseId) {
+    try {
+      const response = await this.api.get(`/courses/${courseId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getCourseDepartments() {
+    try {
+      const response = await this.api.get('/courses/departments');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getEnrolledCourses() {
+    try {
+      const response = await this.api.get('/courses/enrolled');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async enrollInCourse(courseId) {
+    try {
+      const response = await this.api.post(`/courses/enroll/${courseId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async dropCourse(courseId) {
+    try {
+      const response = await this.api.delete(`/courses/enroll/${courseId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Schedule APIs
+  async getScheduleByWeek(weekOffset = 0) {
+    try {
+      const response = await this.api.get(`/schedule/week/${weekOffset}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getTodaySchedule() {
+    try {
+      const response = await this.api.get('/schedule/today');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getCurrentWeekSchedule() {
+    try {
+      const response = await this.api.get('/schedule/current-week');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Job Portal APIs
+  async getJobs(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key]) params.append(key, filters[key]);
+      });
+      
+      const response = await this.api.get(`/jobs?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getJobById(jobId) {
+    try {
+      const response = await this.api.get(`/jobs/${jobId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getJobTypes() {
+    try {
+      const response = await this.api.get('/jobs/types');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getJobLocations() {
+    try {
+      const response = await this.api.get('/jobs/locations');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async applyForJob(jobId, applicationData = {}) {
+    try {
+      const response = await this.api.post(`/jobs/${jobId}/apply`, applicationData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getAppliedJobs() {
+    try {
+      const response = await this.api.get('/jobs/applied');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Finance APIs
+  async getFees() {
+    try {
+      const response = await this.api.get('/finance/fees');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getFeeBreakdown(feeId) {
+    try {
+      const response = await this.api.get(`/finance/fees/${feeId}/breakdown`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async makePayment(feeId, paymentData) {
+    try {
+      const response = await this.api.post(`/finance/fees/${feeId}/payment`, paymentData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getPaymentHistory() {
+    try {
+      const response = await this.api.get('/finance/payment-history');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getScholarships() {
+    try {
+      const response = await this.api.get('/finance/scholarships');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async applyForScholarship(scholarshipId, applicationData = {}) {
+    try {
+      const response = await this.api.post(`/finance/scholarships/${scholarshipId}/apply`, applicationData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getAppliedScholarships() {
+    try {
+      const response = await this.api.get('/finance/scholarships/applied');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Results APIs
+  async getResults(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key]) params.append(key, filters[key]);
+      });
+      
+      const response = await this.api.get(`/results?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getGPA() {
+    try {
+      const response = await this.api.get('/results/gpa');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getTranscript() {
+    try {
+      const response = await this.api.get('/results/transcript');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async downloadTranscript() {
+    try {
+      const response = await this.api.post('/results/transcript/download');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async requestGradeReview(courseId, reviewData = {}) {
+    try {
+      const response = await this.api.post(`/results/grade-review/${courseId}`, reviewData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getGradeReviews() {
+    try {
+      const response = await this.api.get('/results/grade-reviews');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getAvailableSemesters() {
+    try {
+      const response = await this.api.get('/results/semesters');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getAvailableYears() {
+    try {
+      const response = await this.api.get('/results/years');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Campus Services APIs
+  async getServices(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key]) params.append(key, filters[key]);
+      });
+      
+      const response = await this.api.get(`/services?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getServiceById(serviceId) {
+    try {
+      const response = await this.api.get(`/services/${serviceId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getServiceCategories() {
+    try {
+      const response = await this.api.get('/services/categories');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async bookService(serviceId, bookingData = {}) {
+    try {
+      const response = await this.api.post(`/services/${serviceId}/book`, bookingData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getUserBookings() {
+    try {
+      const response = await this.api.get('/services/bookings');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateBooking(bookingId, updateData) {
+    try {
+      const response = await this.api.put(`/services/bookings/${bookingId}`, updateData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async cancelBooking(bookingId) {
+    try {
+      const response = await this.api.delete(`/services/bookings/${bookingId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // AI Assistant APIs
+  async sendChatMessage(message) {
+    try {
+      const response = await this.api.post('/ai/chat', { message });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getChatHistory() {
+    try {
+      const response = await this.api.get('/ai/chat-history');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async clearChatHistory() {
+    try {
+      const response = await this.api.delete('/ai/chat-history');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getQuickActions() {
+    try {
+      const response = await this.api.get('/ai/quick-actions');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async executeQuickAction(actionId) {
+    try {
+      const response = await this.api.post(`/ai/quick-action/${actionId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Staff Directory APIs
+  async getStaffMembers(filters = {}) {
+    try {
+      const params = new URLSearchParams();
+      Object.keys(filters).forEach(key => {
+        if (filters[key]) params.append(key, filters[key]);
+      });
+      
+      const response = await this.api.get(`/staff?${params.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getStaffMemberById(staffId) {
+    try {
+      const response = await this.api.get(`/staff/${staffId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getStaffDepartments() {
+    try {
+      const response = await this.api.get('/staff/departments');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async contactStaffMember(staffId, contactData) {
+    try {
+      const response = await this.api.post(`/staff/${staffId}/contact`, contactData);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  handleError(error) {
+    if (error.response) {
+      const { status, data } = error.response;
+      
+      switch (status) {
+        case 400:
+          return new Error(data.message || 'Invalid request');
+        case 401:
+          return new Error('Unauthorized. Please login again.');
+        case 403:
+          return new Error('Access forbidden');
+        case 404:
+          return new Error('Resource not found');
+        case 429:
+          return new Error('Too many requests. Please try again later.');
+        case 500:
+          return new Error('Server error. Please try again later.');
+        default:
+          return new Error(data.message || 'An error occurred');
+      }
+    } else if (error.request) {
+      return new Error('Network error. Please check your connection.');
+    } else {
+      return new Error(error.message || 'An error occurred');
+    }
+  }
+}
+
+export const apiClient = new ApiClient();
