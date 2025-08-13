@@ -9,7 +9,7 @@ const StudentAttendanceScreen = ({ navigation }) => {
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
   const [records, setRecords] = useState([]);
-  const [summary, setSummary] = useState(null);
+  const [summaryTotals, setSummaryTotals] = useState({ present: 0, absent: 0, late: 0, excused: 0 });
 
   const load = async () => {
     try {
@@ -18,8 +18,34 @@ const StudentAttendanceScreen = ({ navigation }) => {
         apiClient.getStudentAttendance({ from, to }),
         apiClient.getStudentAttendanceSummary({ from, to }),
       ]);
-      if (rec?.success) setRecords(rec.data?.attendance || []);
-      if (sum?.success) setSummary(sum.data || null);
+      const recs = rec?.success ? (rec.data?.attendance || []) : [];
+      setRecords(recs);
+
+      // Normalize summary response shapes and fallback to compute from recs
+      let totals = { present: 0, absent: 0, late: 0, excused: 0 };
+      if (sum?.success && sum.data) {
+        const d = sum.data;
+        const src = d.totals || d.summary || d;
+        const pick = (k) => Number(src?.[k] ?? src?.[`${k}_count`] ?? src?.[k?.toUpperCase?.()] ?? 0) || 0;
+        totals = {
+          present: pick('present'),
+          absent: pick('absent'),
+          late: pick('late'),
+          excused: pick('excused'),
+        };
+      }
+      // If totals are all zero but we have records, compute from records as fallback
+      if ((totals.present + totals.absent + totals.late + totals.excused) === 0 && recs.length > 0) {
+        totals = recs.reduce((acc, r) => {
+          const s = String(r.status || '').toLowerCase();
+          if (s === 'present') acc.present += 1;
+          else if (s === 'absent') acc.absent += 1;
+          else if (s === 'late') acc.late += 1;
+          else if (s === 'excused') acc.excused += 1;
+          return acc;
+        }, { present: 0, absent: 0, late: 0, excused: 0 });
+      }
+      setSummaryTotals(totals);
     } catch (e) {
       Alert.alert('Error', e?.message || 'Failed to load attendance');
     } finally {
@@ -60,14 +86,12 @@ const StudentAttendanceScreen = ({ navigation }) => {
         </TouchableOpacity>
       </View>
 
-      {summary && (
-        <View style={styles.totals}>
-          <View style={[styles.totalCard, { backgroundColor: '#10b981' }]}><Text style={styles.totalText}>Present: {summary.totals?.present || 0}</Text></View>
-          <View style={[styles.totalCard, { backgroundColor: '#ef4444' }]}><Text style={styles.totalText}>Absent: {summary.totals?.absent || 0}</Text></View>
-          <View style={[styles.totalCard, { backgroundColor: '#f59e0b' }]}><Text style={styles.totalText}>Late: {summary.totals?.late || 0}</Text></View>
-          <View style={[styles.totalCard, { backgroundColor: '#3b82f6' }]}><Text style={styles.totalText}>Excused: {summary.totals?.excused || 0}</Text></View>
-        </View>
-      )}
+      <View style={styles.totals}>
+        <View style={[styles.totalCard, { backgroundColor: '#10b981' }]}><Text style={styles.totalText}>Present: {summaryTotals.present}</Text></View>
+        <View style={[styles.totalCard, { backgroundColor: '#ef4444' }]}><Text style={styles.totalText}>Absent: {summaryTotals.absent}</Text></View>
+        <View style={[styles.totalCard, { backgroundColor: '#f59e0b' }]}><Text style={styles.totalText}>Late: {summaryTotals.late}</Text></View>
+        <View style={[styles.totalCard, { backgroundColor: '#3b82f6' }]}><Text style={styles.totalText}>Excused: {summaryTotals.excused}</Text></View>
+      </View>
 
       <FlatList
         data={records}
