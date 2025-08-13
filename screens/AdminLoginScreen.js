@@ -4,8 +4,8 @@ import { useAuth } from '../contexts/AuthContext';
 import { apiClient } from '../services/api';
 
 const AdminLoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('admin@eduai.com');
-  const [password, setPassword] = useState('admin123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
 
   const { login } = useAuth();
@@ -37,7 +37,6 @@ const AdminLoginScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Admin Portal</Text>
         <Text style={styles.subtitle}>Sign in to manage the system</Text>
-        <Text style={styles.demoNote}>Demo: admin@eduai.com / admin123</Text>
       </View>
 
       <View style={styles.loginCard}>

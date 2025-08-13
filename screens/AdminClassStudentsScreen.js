@@ -73,7 +73,8 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error fetching class details:', error);
-      setClassDetails(getMockClassDetails());
+      setClassDetails(null);
+      Alert.alert('Error', error.message || 'Failed to load class');
     }
   };
 
@@ -88,7 +89,8 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error fetching enrolled students:', error);
-      setStudents(getMockEnrolledStudents());
+      setStudents([]);
+      Alert.alert('Error', error.message || 'Failed to load enrolled students');
     } finally {
       setLoading(false);
     }
@@ -104,7 +106,8 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.error('Error fetching available students:', error);
-      setAvailableStudents(getMockAvailableStudents());
+      setAvailableStudents([]);
+      Alert.alert('Error', error.message || 'Failed to load available students');
     }
   };
 

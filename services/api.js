@@ -3,7 +3,7 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 
-import { API_BASE_URL, USE_MOCKS, ALLOW_DEMO_LOGINS } from '../config/environment';
+import { API_BASE_URL } from '../config/environment';
 
 // API Configuration
 
@@ -156,96 +156,17 @@ class ApiClient {
 
   async login(email, password) {
     try {
-      // Demo users (guarded by ALLOW_DEMO_LOGINS)
-      if (ALLOW_DEMO_LOGINS && email === 'admin@eduai.com' && password === 'admin123') {
-        const mockResponse = {
-          success: true,
-          message: 'Login successful',
-          data: {
-            user: {
-              id: 1,
-              email: 'admin@eduai.com',
-              role: 'admin',
-              name: 'Admin User',
-            },
-            tokens: {
-              access_token: 'mock_access_token',
-              refresh_token: 'mock_refresh_token',
-            },
-          },
-        };
+      const response = await this.api.post('/auth/login', {
+        email,
+        password,
+      });
+      if (response.data.success) {
         await this.setTokens(
-          mockResponse.data.tokens.access_token,
-          mockResponse.data.tokens.refresh_token
+          response.data.data.tokens.access_token,
+          response.data.data.tokens.refresh_token
         );
-        return mockResponse;
       }
-      if (ALLOW_DEMO_LOGINS && email === 'teacher@eduai.com' && password === 'teacher123') {
-        const mockResponse = {
-          success: true,
-          message: 'Login successful',
-          data: {
-            user: {
-              id: 3,
-              email: 'teacher@eduai.com',
-              role: 'teacher',
-              name: 'Teacher User',
-            },
-            tokens: {
-              access_token: 'mock_access_token',
-              refresh_token: 'mock_refresh_token',
-            },
-          },
-        };
-        await this.setTokens(
-          mockResponse.data.tokens.access_token,
-          mockResponse.data.tokens.refresh_token
-        );
-        return mockResponse;
-      }
-
-      // Try server login
-      try {
-        const response = await this.api.post('/auth/login', {
-          email,
-          password,
-        });
-
-        if (response.data.success) {
-          await this.setTokens(
-            response.data.data.tokens.access_token,
-            response.data.data.tokens.refresh_token
-          );
-        }
-
-        return response.data;
-      } catch (serverError) {
-        // If server is not available, use mock data for student login
-        if (ALLOW_DEMO_LOGINS && email === 'student@eduai.com' && password === 'password123') {
-          const mockResponse = {
-            success: true,
-            message: 'Login successful',
-            data: {
-              user: {
-                id: 2,
-                email: 'student@eduai.com',
-                role: 'student',
-                name: 'Student User',
-              },
-              tokens: {
-                access_token: 'mock_access_token',
-                refresh_token: 'mock_refresh_token',
-              },
-            },
-          };
-          await this.setTokens(
-            mockResponse.data.tokens.access_token,
-            mockResponse.data.tokens.refresh_token
-          );
-          return mockResponse;
-        }
-        throw this.handleError(serverError);
-      }
+      return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -372,26 +293,6 @@ class ApiClient {
       const response = await this.api.get('/admin/dashboard/stats');
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            stats: {
-              totalStudents: 1250,
-              totalTeachers: 85,
-              totalClasses: 45,
-              totalCourses: 120,
-              totalParents: 1100,
-              activeEnrollments: 1180,
-              recentActivities: [
-                { type: 'student_registration', message: 'New student registered', timestamp: new Date() },
-                { type: 'course_creation', message: 'Course "Advanced Mathematics" created', timestamp: new Date() },
-                { type: 'class_assignment', message: 'Class "Grade 10A" assigned to teacher', timestamp: new Date() }
-              ]
-            }
-          }
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -401,20 +302,6 @@ class ApiClient {
       const response = await this.api.get('/admin/analytics/students');
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            gradeDistribution: { 'A': 30, 'B': 45, 'C': 15, 'D': 8, 'F': 2 },
-            attendanceRate: 92,
-            enrollmentTrends: [
-              { month: 'Jan', count: 120 },
-              { month: 'Feb', count: 135 },
-              { month: 'Mar', count: 142 }
-            ]
-          }
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -426,12 +313,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/users?${queryString}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: { users: [], total: 0, page: 1, per_page: 10 },
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -441,9 +322,6 @@ class ApiClient {
       const response = await this.api.post('/admin/users', userData);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok', data: { user: { id: 1, ...userData } } };
-      }
       throw this.handleError(error);
     }
   }
@@ -453,9 +331,6 @@ class ApiClient {
       const response = await this.api.put(`/admin/users/${userId}`, userData);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok', data: { user: { id: userId, ...userData } } };
-      }
       throw this.handleError(error);
     }
   }
@@ -465,9 +340,6 @@ class ApiClient {
       const response = await this.api.delete(`/admin/users/${userId}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok' };
-      }
       throw this.handleError(error);
     }
   }
@@ -479,9 +351,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/students?${queryString}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, data: { students: [], total: 0, page: 1, per_page: 10 } };
-      }
       throw this.handleError(error);
     }
   }
@@ -493,9 +362,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/teachers?${queryString}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, data: { teachers: [], total: 0, page: 1, per_page: 10 } };
-      }
       throw this.handleError(error);
     }
   }
@@ -507,9 +373,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/classes?${queryString}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, data: { classes: [], total: 0, page: 1, per_page: 10 } };
-      }
       throw this.handleError(error);
     }
   }
@@ -519,9 +382,6 @@ class ApiClient {
       const response = await this.api.post('/admin/classes', classData);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok', data: { class: { id: 1, ...classData } } };
-      }
       throw this.handleError(error);
     }
   }
@@ -533,9 +393,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/courses?${queryString}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, data: { courses: [], total: 0, page: 1, per_page: 10 } };
-      }
       throw this.handleError(error);
     }
   }
@@ -545,9 +402,6 @@ class ApiClient {
       const response = await this.api.post('/admin/courses', courseData);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok', data: { course: { id: 1, ...courseData } } };
-      }
       throw this.handleError(error);
     }
   }
@@ -557,9 +411,6 @@ class ApiClient {
       const response = await this.api.put(`/admin/courses/${courseId}`, courseData);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok', data: { course: { id: courseId, ...courseData } } };
-      }
       throw this.handleError(error);
     }
   }
@@ -569,9 +420,6 @@ class ApiClient {
       const response = await this.api.delete(`/admin/courses/${courseId}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok' };
-      }
       throw this.handleError(error);
     }
   }
@@ -583,54 +431,7 @@ class ApiClient {
       const response = await this.api.get(`/admin/classes?${queryString}`);
       return response.data;
     } catch (error) {
-      // Fallback to mock data
-      return {
-        success: true,
-        data: {
-          classes: [
-            {
-              id: 1,
-              name: 'Grade 10A',
-              grade_level: '10th Grade',
-              academic_year: '2024',
-              teacher: {
-                id: 1,
-                name: 'Dr. Sarah Wilson',
-                subject: 'Mathematics',
-              },
-              room_id: 'R101',
-              capacity: 30,
-              enrolled_students: 25,
-              schedule: [
-                { day: 'Monday', time: '9:00 AM - 10:30 AM' },
-                { day: 'Wednesday', time: '9:00 AM - 10:30 AM' },
-                { day: 'Friday', time: '9:00 AM - 10:30 AM' },
-              ],
-            },
-            {
-              id: 2,
-              name: 'Grade 11B',
-              grade_level: '11th Grade',
-              academic_year: '2024',
-              teacher: {
-                id: 2,
-                name: 'Prof. Michael Chen',
-                subject: 'Physics',
-              },
-              room_id: 'R102',
-              capacity: 35,
-              enrolled_students: 32,
-              schedule: [
-                { day: 'Tuesday', time: '11:00 AM - 12:30 PM' },
-                { day: 'Thursday', time: '11:00 AM - 12:30 PM' },
-              ],
-            },
-          ],
-          total: 2,
-          page: 1,
-          per_page: 10
-        }
-      };
+      throw this.handleError(error);
     }
   }
 
@@ -666,18 +467,7 @@ class ApiClient {
       const response = await this.api.put(`/admin/classes/${classId}`, classData);
       return response.data;
     } catch (error) {
-      // Fallback to mock success
-      return {
-        success: true,
-        message: 'Class updated successfully',
-        data: {
-          class: {
-            id: classId,
-            ...classData,
-            updated_at: new Date().toISOString()
-          }
-        }
-      };
+      throw this.handleError(error);
     }
   }
 
@@ -686,11 +476,7 @@ class ApiClient {
       const response = await this.api.delete(`/admin/classes/${classId}`);
       return response.data;
     } catch (error) {
-      // Fallback to mock success
-      return {
-        success: true,
-        message: 'Class deleted successfully'
-      };
+      throw this.handleError(error);
     }
   }
 
@@ -701,10 +487,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/classes/${classId}/attendance${queryString ? `?${queryString}` : ''}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        const date = params?.date || new Date().toISOString().slice(0, 10);
-        return { success: true, data: { date, records: [] } };
-      }
       throw this.handleError(error);
     }
   }
@@ -714,9 +496,6 @@ class ApiClient {
       const response = await this.api.post(`/admin/classes/${classId}/attendance`, payload);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, message: 'ok', data: payload };
-      }
       throw this.handleError(error);
     }
   }
@@ -727,17 +506,6 @@ class ApiClient {
       const response = await this.api.get('/teacher/classes');
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            classes: [
-              { id: 101, name: 'Grade 10A', grade_level: '10th Grade', academic_year: '2024' },
-              { id: 102, name: 'Grade 11B', grade_level: '11th Grade', academic_year: '2024' },
-            ],
-          },
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -747,18 +515,6 @@ class ApiClient {
       const response = await this.api.get(`/teacher/classes/${classId}/students`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            students: [
-              { id: 1, student_id: 'STU001', first_name: 'John', last_name: 'Doe' },
-              { id: 2, student_id: 'STU002', first_name: 'Jane', last_name: 'Smith' },
-              { id: 3, student_id: 'STU003', first_name: 'Mike', last_name: 'Johnson' },
-            ],
-          },
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -768,18 +524,6 @@ class ApiClient {
       const response = await this.api.get(`/teacher/classes/${classId}/attendance?date=${encodeURIComponent(date)}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            date,
-            attendance: [
-              { attendance_id: 'a1', student_id: 1, status: 'present', notes: '' },
-              { attendance_id: 'a2', student_id: 2, status: 'absent', notes: '' },
-            ],
-          },
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -789,9 +533,6 @@ class ApiClient {
       const response = await this.api.post(`/teacher/classes/${classId}/attendance`, payload);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return { success: true, updated: payload?.entries?.length || 0 };
-      }
       throw this.handleError(error);
     }
   }
@@ -805,18 +546,6 @@ class ApiClient {
       const response = await this.api.get(`/teacher/attendance/summary?${query.toString()}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            totals: { present: 42, absent: 5, late: 3, excused: 2 },
-            byStudent: [
-              { student_id: 1, name: 'John Doe', present: 10, absent: 1, late: 0, excused: 0 },
-              { student_id: 2, name: 'Jane Smith', present: 9, absent: 2, late: 1, excused: 0 },
-            ],
-          },
-        };
-      }
       throw this.handleError(error);
     }
   }
@@ -832,37 +561,6 @@ class ApiClient {
       const response = await this.api.get(`/admin/attendance/audit?${query.toString()}`);
       return response.data;
     } catch (error) {
-      if (USE_MOCKS) {
-        return {
-          success: true,
-          data: {
-            entries: [
-              {
-                id: 'chg_1',
-                timestamp: new Date().toISOString(),
-                class_name: 'Grade 10A',
-                student_name: 'John Doe',
-                date: new Date().toISOString().slice(0, 10),
-                old_status: 'absent',
-                new_status: 'present',
-                changed_by: 'Teacher User',
-                notes: 'Corrected after verification',
-              },
-              {
-                id: 'chg_2',
-                timestamp: new Date(Date.now() - 3600_000).toISOString(),
-                class_name: 'Grade 11B',
-                student_name: 'Jane Smith',
-                date: new Date().toISOString().slice(0, 10),
-                old_status: 'present',
-                new_status: 'late',
-                changed_by: 'Admin User',
-                notes: 'Late by 10 mins',
-              },
-            ],
-          },
-        };
-      }
       throw this.handleError(error);
     }
   }

@@ -3,8 +3,8 @@ import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Platform } 
 import { useAuth } from '../contexts/AuthContext';
 
 const TeacherLoginScreen = ({ navigation }) => {
-  const [email, setEmail] = useState('teacher@eduai.com');
-  const [password, setPassword] = useState('teacher123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const { login } = useAuth();
 
@@ -32,7 +32,6 @@ const TeacherLoginScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.title}>Teacher Portal</Text>
         <Text style={styles.subtitle}>Sign in to manage your classes</Text>
-        <Text style={styles.demoNote}>Demo: teacher@eduai.com / teacher123</Text>
       </View>
 
       <View style={styles.loginCard}>

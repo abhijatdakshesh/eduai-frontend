@@ -15,8 +15,8 @@ import { useAuth } from '../contexts/AuthContext';
 
 const LoginScreen = ({ navigation }) => {
   const { login } = useAuth();
-  const [email, setEmail] = useState('student@eduai.com');
-  const [password, setPassword] = useState('password123');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const passwordInputRef = useRef(null);
 
@@ -71,7 +71,7 @@ const LoginScreen = ({ navigation }) => {
         <View style={styles.header}>
           <Text style={styles.welcomeText}>Welcome Back</Text>
           <Text style={styles.subtitle}>Sign in to continue</Text>
-          <Text style={styles.demoNote}>Demo Credentials: student@eduai.com / password123</Text>
+          {/* Removed demo credentials */}
         </View>
 
         {/* Login Card */}

@@ -32,54 +32,8 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching results:', error);
-      // Fallback to mock data when API fails
-      const mockResults = [
-        {
-          id: 1,
-          course_code: 'CS101',
-          course_name: 'Introduction to Computer Science',
-          grade: 'A-',
-          credits: 3,
-          semester: 'Fall',
-          year: '2024',
-          gpa_points: 3.7,
-          instructor: 'Dr. Sarah Johnson'
-        },
-        {
-          id: 2,
-          course_code: 'MATH201',
-          course_name: 'Calculus II',
-          grade: 'B+',
-          credits: 4,
-          semester: 'Fall',
-          year: '2024',
-          gpa_points: 3.3,
-          instructor: 'Prof. Michael Chen'
-        },
-        {
-          id: 3,
-          course_code: 'PHY101',
-          course_name: 'Physics I',
-          grade: 'A',
-          credits: 4,
-          semester: 'Fall',
-          year: '2024',
-          gpa_points: 4.0,
-          instructor: 'Dr. Emily Rodriguez'
-        },
-        {
-          id: 4,
-          course_code: 'ENG101',
-          course_name: 'English Composition',
-          grade: 'A-',
-          credits: 3,
-          semester: 'Fall',
-          year: '2024',
-          gpa_points: 3.7,
-          instructor: 'Prof. David Thompson'
-        }
-      ];
-      setResults(mockResults);
+      Alert.alert('Error', error.message || 'Failed to fetch results');
+      setResults([]);
     } finally {
       setLoading(false);
     }
@@ -93,8 +47,8 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching GPA:', error);
-      // Fallback to calculated GPA from results
-      setGpa('3.68');
+      Alert.alert('Error', error.message || 'Failed to fetch GPA');
+      setGpa('0.00');
     }
   };
 
@@ -106,8 +60,8 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching semesters:', error);
-      // Fallback to default semesters
-      setSemesters(['All', 'Fall', 'Spring', 'Summer']);
+      Alert.alert('Error', error.message || 'Failed to fetch semesters');
+      setSemesters(['All']);
     }
   };
 
@@ -119,8 +73,8 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error fetching years:', error);
-      // Fallback to default years
-      setYears(['2024', '2023', '2022']);
+      Alert.alert('Error', error.message || 'Failed to fetch years');
+      setYears([]);
     }
   };
 
@@ -145,12 +99,7 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Download error:', error);
-      // Fallback for demo purposes
-      Alert.alert(
-        'Demo Mode',
-        'Transcript download feature is in demo mode. In production, this would download your official transcript.',
-        [{ text: 'OK' }]
-      );
+      Alert.alert('Error', error.message || 'Failed to download transcript');
     }
   };
 
@@ -178,12 +127,7 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
                 }
               } catch (error) {
                 console.error('Grade review error:', error);
-                // Fallback for demo purposes
-                Alert.alert(
-                  'Demo Mode',
-                  'Grade review request submitted successfully! (Demo mode)',
-                  [{ text: 'OK' }]
-                );
+                Alert.alert('Error', error.message || 'Failed to submit review request');
               }
             } else {
               Alert.alert('Error', 'Please provide a reason for the grade review.');
@@ -230,10 +174,7 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
 
   return (
     <View style={styles.container}>
-      {/* Demo Notice */}
-      <View style={styles.demoNotice}>
-        <Text style={styles.demoNoticeText}>📊 Demo Mode: Showing sample academic results</Text>
-      </View>
+      {/* Demo notice removed */}
       
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Academic Results</Text>

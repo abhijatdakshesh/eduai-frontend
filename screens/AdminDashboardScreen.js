@@ -42,26 +42,26 @@ const AdminDashboardScreen = ({ navigation }) => {
       if (response.success) {
         setStats(response.data.stats || {});
       } else {
-        // Fallback to mock data
+        Alert.alert('Error', response.message || 'Failed to fetch admin stats');
         setStats({
-          totalStudents: 1250,
-          totalTeachers: 85,
-          totalClasses: 45,
-          totalCourses: 120,
-          totalParents: 1100,
-          activeEnrollments: 1180,
+          totalStudents: 0,
+          totalTeachers: 0,
+          totalClasses: 0,
+          totalCourses: 0,
+          totalParents: 0,
+          activeEnrollments: 0,
         });
       }
     } catch (error) {
       console.error('Error fetching admin stats:', error);
-      // Fallback to mock data
+      Alert.alert('Error', error.message || 'Failed to fetch admin stats');
       setStats({
-        totalStudents: 1250,
-        totalTeachers: 85,
-        totalClasses: 45,
-        totalCourses: 120,
-        totalParents: 1100,
-        activeEnrollments: 1180,
+        totalStudents: 0,
+        totalTeachers: 0,
+        totalClasses: 0,
+        totalCourses: 0,
+        totalParents: 0,
+        activeEnrollments: 0,
       });
     } finally {
       setLoading(false);

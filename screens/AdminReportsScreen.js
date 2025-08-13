@@ -36,113 +36,21 @@ const AdminReportsScreen = ({ navigation }) => {
       setLoading(true);
       const response = await apiClient.getAdminReport(reportType);
       if (response.success) {
-        setReportData(response.data || getMockReportData(reportType));
+        setReportData(response.data || null);
       } else {
-        setReportData(getMockReportData(reportType));
+        Alert.alert('Error', response.message || 'Failed to load report');
+        setReportData(null);
       }
     } catch (error) {
       console.error('Error fetching report:', error);
-      setReportData(getMockReportData(reportType));
+      Alert.alert('Error', error.message || 'Failed to load report');
+      setReportData(null);
     } finally {
       setLoading(false);
     }
   };
 
-  const getMockReportData = (reportType) => {
-    switch (reportType) {
-      case 'student_performance':
-        return {
-          title: 'Student Performance Report',
-          summary: {
-            total_students: 1250,
-            average_gpa: 3.45,
-            honor_roll: 325,
-            at_risk: 45,
-          },
-          performance_distribution: [
-            { grade: 'A', count: 450, percentage: 36 },
-            { grade: 'B', count: 375, percentage: 30 },
-            { grade: 'C', count: 275, percentage: 22 },
-            { grade: 'D', count: 100, percentage: 8 },
-            { grade: 'F', count: 50, percentage: 4 },
-          ],
-          top_courses: [
-            { name: 'Advanced Mathematics', average_grade: 3.8 },
-            { name: 'Physics 101', average_grade: 3.7 },
-            { name: 'Computer Science', average_grade: 3.6 },
-          ],
-        };
-
-      case 'teacher_evaluation':
-        return {
-          title: 'Teacher Evaluation Report',
-          summary: {
-            total_teachers: 85,
-            average_rating: 4.2,
-            top_rated: 15,
-            needs_improvement: 5,
-          },
-          department_ratings: [
-            { department: 'Mathematics', rating: 4.5 },
-            { department: 'Science', rating: 4.3 },
-            { department: 'English', rating: 4.1 },
-            { department: 'History', rating: 4.0 },
-          ],
-          top_teachers: [
-            { name: 'Dr. Sarah Wilson', department: 'Mathematics', rating: 4.9 },
-            { name: 'Prof. Michael Chen', department: 'Physics', rating: 4.8 },
-            { name: 'Mrs. Emily Brown', department: 'English', rating: 4.7 },
-          ],
-        };
-
-      case 'attendance':
-        return {
-          title: 'Attendance Report',
-          summary: {
-            total_classes: 45,
-            average_attendance: 92,
-            perfect_attendance: 450,
-            chronic_absence: 25,
-          },
-          attendance_by_grade: [
-            { grade: '9th', attendance: 94 },
-            { grade: '10th', attendance: 93 },
-            { grade: '11th', attendance: 91 },
-            { grade: '12th', attendance: 90 },
-          ],
-          lowest_attendance_courses: [
-            { name: 'Early Morning Physics', attendance: 85 },
-            { name: 'Friday Afternoon Math', attendance: 87 },
-            { name: 'Monday Morning English', attendance: 88 },
-          ],
-        };
-
-      case 'enrollment':
-        return {
-          title: 'Enrollment Report',
-          summary: {
-            total_enrollment: 1250,
-            new_students: 320,
-            withdrawn: 45,
-            waitlisted: 75,
-          },
-          enrollment_by_grade: [
-            { grade: '9th', count: 315 },
-            { grade: '10th', count: 308 },
-            { grade: '11th', count: 322 },
-            { grade: '12th', count: 305 },
-          ],
-          popular_courses: [
-            { name: 'Computer Science', enrolled: 150, capacity: 150 },
-            { name: 'Advanced Biology', enrolled: 145, capacity: 150 },
-            { name: 'Creative Writing', enrolled: 140, capacity: 150 },
-          ],
-        };
-
-      default:
-        return null;
-    }
-  };
+  // Removed mock report generator
 
   const handleExportReport = () => {
     Alert.alert('Export Report', 'Report export functionality will be implemented soon!');

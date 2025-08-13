@@ -87,7 +87,7 @@ const AdminSettingsScreen = ({ navigation }) => {
       }
     } catch (error) {
       console.error('Error saving settings:', error);
-      Alert.alert('Success', 'Settings updated successfully! (Demo mode)');
+      Alert.alert('Error', error.message || 'Failed to update settings');
     } finally {
       setLoading(false);
     }
@@ -111,7 +111,7 @@ const AdminSettingsScreen = ({ navigation }) => {
               }
             } catch (error) {
               console.error('Error creating backup:', error);
-              Alert.alert('Success', 'Database backup created successfully! (Demo mode)');
+              Alert.alert('Error', error.message || 'Failed to create backup');
             }
           },
         },
@@ -138,7 +138,7 @@ const AdminSettingsScreen = ({ navigation }) => {
               }
             } catch (error) {
               console.error('Error restoring database:', error);
-              Alert.alert('Success', 'Database restored successfully! (Demo mode)');
+              Alert.alert('Error', error.message || 'Failed to restore database');
             }
           },
         },

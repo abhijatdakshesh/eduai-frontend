@@ -24,89 +24,13 @@ const SimpleCoursesScreen = ({ navigation }) => {
       if (response.success && response.data && response.data.courses) {
         setCourses(response.data.courses);
       } else {
-        // Fallback to mock data when API fails
-        const mockCourses = [
-          {
-            id: 1,
-            code: 'CS101',
-            name: 'Introduction to Computer Science',
-            department: 'Computer Science',
-            credits: 3,
-            instructor: 'Dr. Sarah Johnson',
-            capacity: 50,
-            enrolled: 45,
-            is_enrolled: false,
-            description: 'Fundamental concepts of computer science and programming.'
-          },
-          {
-            id: 2,
-            code: 'MATH201',
-            name: 'Calculus II',
-            department: 'Mathematics',
-            credits: 4,
-            instructor: 'Prof. Michael Chen',
-            capacity: 40,
-            enrolled: 35,
-            is_enrolled: true,
-            description: 'Advanced calculus concepts and applications.'
-          },
-          {
-            id: 3,
-            code: 'PHY101',
-            name: 'Physics I',
-            department: 'Physics',
-            credits: 4,
-            instructor: 'Dr. Emily Rodriguez',
-            capacity: 45,
-            enrolled: 42,
-            is_enrolled: false,
-            description: 'Introduction to classical mechanics and thermodynamics.'
-          }
-        ];
-        setCourses(mockCourses);
+        Alert.alert('Error', response.message || 'Failed to fetch courses');
+        setCourses([]);
       }
     } catch (error) {
       console.error('Error fetching courses:', error);
-      // Fallback to mock data when API fails
-      const mockCourses = [
-        {
-          id: 1,
-          code: 'CS101',
-          name: 'Introduction to Computer Science',
-          department: 'Computer Science',
-          credits: 3,
-          instructor: 'Dr. Sarah Johnson',
-          capacity: 50,
-          enrolled: 45,
-          is_enrolled: false,
-          description: 'Fundamental concepts of computer science and programming.'
-        },
-        {
-          id: 2,
-          code: 'MATH201',
-          name: 'Calculus II',
-          department: 'Mathematics',
-          credits: 4,
-          instructor: 'Prof. Michael Chen',
-          capacity: 40,
-          enrolled: 35,
-          is_enrolled: true,
-          description: 'Advanced calculus concepts and applications.'
-        },
-        {
-          id: 3,
-          code: 'PHY101',
-          name: 'Physics I',
-          department: 'Physics',
-          credits: 4,
-          instructor: 'Dr. Emily Rodriguez',
-          capacity: 45,
-          enrolled: 42,
-          is_enrolled: false,
-          description: 'Introduction to classical mechanics and thermodynamics.'
-        }
-      ];
-      setCourses(mockCourses);
+      Alert.alert('Error', error.message || 'Failed to fetch courses');
+      setCourses([]);
     } finally {
       setLoading(false);
     }
@@ -118,13 +42,13 @@ const SimpleCoursesScreen = ({ navigation }) => {
       if (response.success && response.data && response.data.departments) {
         setDepartments(['all', ...response.data.departments.map(dept => dept.name)]);
       } else {
-        // Fallback to default departments
-        setDepartments(['all', 'Computer Science', 'Mathematics', 'Physics', 'Engineering', 'Business']);
+        Alert.alert('Error', response.message || 'Failed to fetch departments');
+        setDepartments(['all']);
       }
     } catch (error) {
       console.error('Error fetching departments:', error);
-      // Fallback to default departments when API fails
-      setDepartments(['all', 'Computer Science', 'Mathematics', 'Physics', 'Engineering', 'Business']);
+      Alert.alert('Error', error.message || 'Failed to fetch departments');
+      setDepartments(['all']);
     }
   };
 
@@ -206,9 +130,7 @@ const SimpleCoursesScreen = ({ navigation }) => {
   return (
     <View style={styles.container}>
       {/* Demo Notice */}
-      <View style={styles.demoNotice}>
-        <Text style={styles.demoNoticeText}>📚 Demo Mode: Showing sample course data</Text>
-      </View>
+      {/* Demo notice removed */}
       
       <View style={styles.header}>
         <Text style={styles.headerTitle}>Course Management</Text>
