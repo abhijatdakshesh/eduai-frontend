@@ -12,7 +12,8 @@ const ParentDashboardScreen = ({ navigation }) => {
   const load = async () => {
     try {
       setLoading(true);
-      const [kids, anns] = await Promise.all([
+      const [dash, kids, anns] = await Promise.all([
+        apiClient.getParentDashboard(),
         apiClient.getParentChildren(),
         apiClient.getParentAnnouncements({ limit: 5 }),
       ]);

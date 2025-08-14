@@ -585,6 +585,15 @@ class ApiClient {
     }
   }
 
+  async getParentDashboard() {
+    try {
+      const response = await this.api.get('/parent/dashboard');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   async getParentChildAttendance(studentId, params = {}) {
     try {
       const query = new URLSearchParams();
