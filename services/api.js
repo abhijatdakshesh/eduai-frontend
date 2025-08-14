@@ -575,6 +575,73 @@ class ApiClient {
     }
   }
 
+  // Parent APIs
+  async getParentChildren() {
+    try {
+      const response = await this.api.get('/parent/children');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getParentChildAttendance(studentId, params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      const response = await this.api.get(`/parent/children/${encodeURIComponent(studentId)}/attendance${query.toString() ? `?${query.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getParentChildAttendanceSummary(studentId, params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      const response = await this.api.get(`/parent/children/${encodeURIComponent(studentId)}/attendance/summary${query.toString() ? `?${query.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getParentChildResults(studentId, params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.semester) query.append('semester', params.semester);
+      if (params.year) query.append('year', params.year);
+      const response = await this.api.get(`/parent/children/${encodeURIComponent(studentId)}/results${query.toString() ? `?${query.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getParentChildInvoices(studentId) {
+    try {
+      const response = await this.api.get(`/parent/children/${encodeURIComponent(studentId)}/invoices`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getParentAnnouncements(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.limit) query.append('limit', String(params.limit));
+      if (params.after) query.append('after', params.after);
+      const response = await this.api.get(`/parent/announcements${query.toString() ? `?${query.toString()}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Admin Attendance Audit APIs
   async getAdminAttendanceAudit(params = {}) {
     try {

@@ -51,6 +51,14 @@ import MarkAttendanceScreen from './screens/MarkAttendanceScreen';
 import TeacherDashboardScreen from './screens/TeacherDashboardScreen';
 import TeacherLogoutScreen from './screens/TeacherLogoutScreen';
 import AttendanceSummaryScreen from './screens/AttendanceSummaryScreen';
+// Parent Screens
+import ParentLoginScreen from './screens/ParentLoginScreen';
+import ParentDashboardScreen from './screens/ParentDashboardScreen';
+import ParentChildrenScreen from './screens/ParentChildrenScreen';
+import ParentAttendanceScreen from './screens/ParentAttendanceScreen';
+import ParentResultsScreen from './screens/ParentResultsScreen';
+import ParentFeesScreen from './screens/ParentFeesScreen';
+import ParentAnnouncementsScreen from './screens/ParentAnnouncementsScreen';
 
 const Drawer = createDrawerNavigator();
 const Stack = createStackNavigator();
@@ -168,6 +176,7 @@ const AuthStack = () => {
       <Stack.Screen name="ForgotPassword" component={ForgotPasswordScreen} />
       <Stack.Screen name="AdminLogin" component={AdminLoginScreen} />
       <Stack.Screen name="TeacherLogin" component={TeacherLoginScreen} />
+      <Stack.Screen name="ParentLogin" component={ParentLoginScreen} />
     </Stack.Navigator>
   );
 };
@@ -503,6 +512,8 @@ const RootNavigatorComponent = () => {
           </>
         ) : userRole === 'teacher' ? (
           <Stack.Screen name="TeacherApp" component={TeacherStack} />
+        ) : userRole === 'parent' ? (
+          <Stack.Screen name="ParentApp" component={ParentStack} />
         ) : (
           <Stack.Screen name="MainApp" component={MainAppStack} />
         )
@@ -510,6 +521,34 @@ const RootNavigatorComponent = () => {
         <Stack.Screen name="Auth" component={AuthStack} />
       )}
     </Stack.Navigator>
+  );
+};
+// Parent Drawer Navigator
+const ParentStack = () => {
+  return (
+    <Drawer.Navigator
+      initialRouteName="ParentDashboard"
+      screenOptions={{
+        headerStyle: { backgroundColor: theme.colors.primary, elevation: 0, shadowOpacity: 0 },
+        headerTintColor: '#ffffff',
+        headerTitleStyle: { fontWeight: '600', fontSize: 18 },
+        headerTitleAlign: 'center',
+        drawerActiveTintColor: theme.colors.primary,
+        drawerInactiveTintColor: theme.colors.textSecondary,
+        drawerStyle: { backgroundColor: '#ffffff', width: 280 },
+        drawerLabelStyle: { fontSize: 16, fontWeight: '500', marginLeft: -10 },
+        drawerItemStyle: { borderRadius: 8, marginHorizontal: 8, marginVertical: 2 },
+        drawerActiveBackgroundColor: theme.colors.divider,
+        sceneContainerStyle: { backgroundColor: theme.colors.background },
+      }}
+    >
+      <Drawer.Screen name="ParentDashboard" component={ParentDashboardScreen} options={{ title: 'Dashboard', drawerIcon: ({ color, size }) => (<Icon name="📊" size={size} color={color} />), }} />
+      <Drawer.Screen name="ParentChildren" component={ParentChildrenScreen} options={{ title: 'My Children', drawerIcon: ({ color, size }) => (<Icon name="👨‍👩‍👧‍👦" size={size} color={color} />), }} />
+      <Drawer.Screen name="ParentAttendance" component={ParentAttendanceScreen} options={{ title: 'Attendance', drawerIcon: ({ color, size }) => (<Icon name="🗓️" size={size} color={color} />), }} />
+      <Drawer.Screen name="ParentResults" component={ParentResultsScreen} options={{ title: 'Results', drawerIcon: ({ color, size }) => (<Icon name="📈" size={size} color={color} />), }} />
+      <Drawer.Screen name="ParentFees" component={ParentFeesScreen} options={{ title: 'Fees', drawerIcon: ({ color, size }) => (<Icon name="💳" size={size} color={color} />), }} />
+      <Drawer.Screen name="ParentAnnouncements" component={ParentAnnouncementsScreen} options={{ title: 'Announcements', drawerIcon: ({ color, size }) => (<Icon name="📣" size={size} color={color} />), }} />
+    </Drawer.Navigator>
   );
 };
 

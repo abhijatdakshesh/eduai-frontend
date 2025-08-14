@@ -172,6 +172,13 @@ const LoginScreen = ({ navigation }) => {
           >
             <Text style={styles.adminLoginText}>Teacher Login</Text>
           </TouchableOpacity>
+          {/* Parent Login */}
+          <TouchableOpacity 
+            style={styles.adminLogin}
+            onPress={() => navigation.navigate('ParentLogin')}
+          >
+            <Text style={styles.adminLoginText}>Parent Login</Text>
+          </TouchableOpacity>
         </View>
 
         {/* Bottom Section */}
