@@ -4,7 +4,11 @@ import { apiClient } from '../services/api';
 
 const isIOS = Platform.OS === 'ios';
 const SCREEN_WIDTH = Dimensions.get('window').width;
-const STAT_CARD_WIDTH = SCREEN_WIDTH > 360 ? (SCREEN_WIDTH - 48) / 2 : (SCREEN_WIDTH - 40);
+const H_PADDING = 16; // matches statsGrid paddingHorizontal
+const GAP = 16; // vertical spacing already; we'll simulate horizontal gap with space-between
+const STAT_CARD_WIDTH = SCREEN_WIDTH > 420
+  ? (SCREEN_WIDTH - (H_PADDING * 2) - GAP) / 2
+  : SCREEN_WIDTH - (H_PADDING * 2);
 
 const ParentDashboardScreen = ({ navigation }) => {
   const [loading, setLoading] = useState(true);
@@ -148,7 +152,7 @@ const styles = StyleSheet.create({
   header: { backgroundColor: '#1a237e', paddingTop: isIOS ? 60 : 40, paddingBottom: 20, paddingHorizontal: 20 },
   headerTitle: { color: 'white', fontWeight: 'bold', fontSize: isIOS ? 28 : 24, marginBottom: 4 },
   headerSubtitle: { color: '#e3f2fd', fontSize: isIOS ? 16 : 14 },
-  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginTop: -30, justifyContent: 'space-between' },
+  statsGrid: { flexDirection: 'row', flexWrap: 'wrap', paddingHorizontal: 16, marginTop: 12, justifyContent: 'space-between', alignItems: 'stretch' },
   statCard: { width: STAT_CARD_WIDTH, backgroundColor: 'white', borderRadius: 20, padding: 20, marginBottom: 16, alignItems: 'center', justifyContent: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 4 }, shadowOpacity: 0.1, shadowRadius: 12, elevation: 5, minHeight: 120 },
   statNumber: { color: '#1a237e', fontWeight: '800', fontSize: 24, marginBottom: 6 },
   statLabel: { color: '#6b7280', fontWeight: '600', textAlign: 'center' },
