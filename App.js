@@ -51,6 +51,7 @@ import MarkAttendanceScreen from './screens/MarkAttendanceScreen';
 import TeacherDashboardScreen from './screens/TeacherDashboardScreen';
 import TeacherLogoutScreen from './screens/TeacherLogoutScreen';
 import AttendanceSummaryScreen from './screens/AttendanceSummaryScreen';
+import TeacherQRCheckInScreen from './screens/TeacherQRCheckInScreen';
 // Parent Screens
 import ParentLoginScreen from './screens/ParentLoginScreen';
 import ParentDashboardScreen from './screens/ParentDashboardScreen';
@@ -481,6 +482,7 @@ const TeacherStack = () => {
       <Drawer.Screen name="TeacherClasses" component={TeacherClassesScreen} options={{ title: 'My Classes', drawerIcon: ({ color, size }) => (<Icon name="🏫" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherMarkAttendance" component={MarkAttendanceScreen} options={{ title: 'Mark Attendance', drawerIcon: ({ color, size }) => (<Icon name="✅" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherSummary" component={AttendanceSummaryScreen} options={{ title: 'Summary', drawerIcon: ({ color, size }) => (<Icon name="🧾" size={size} color={color} />), }} />
+      <Drawer.Screen name="TeacherQR" component={TeacherQRCheckInScreen} options={{ title: 'QR Check-In', drawerIcon: ({ color, size }) => (<Icon name="📷" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherSchedule" component={SimpleScheduleScreen} options={{ title: 'Schedule', drawerIcon: ({ color, size }) => (<Icon name="📅" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherProfile" component={SimpleProfileScreen} options={{ title: 'Profile', drawerIcon: ({ color, size }) => (<Icon name="👤" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherLogout" component={TeacherLogoutScreen} options={{ title: 'Logout', drawerIcon: ({ color, size }) => (<Icon name="🚪" size={size} color={color} />), }} />

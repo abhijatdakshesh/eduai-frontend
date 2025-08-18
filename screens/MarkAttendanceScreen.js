@@ -16,6 +16,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
+  const [summary, setSummary] = useState({ present: 0, absent: 0, late: 0, excused: 0 });
 
   useBackButton(navigation);
 
@@ -48,6 +49,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           if (key && !map[key]) map[key] = { status: 'present', notes: '' };
         });
         setMarks(map);
+        setSummary({ present: 0, absent: 0, late: 0, excused: 0 });
         setDirty(false);
       } catch (e) {
         setStudents([]);
@@ -80,6 +82,19 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
     setDirty(true);
   };
 
+  const computeSummary = (map) => {
+    const counts = { present: 0, absent: 0, late: 0, excused: 0 };
+    Object.values(map || {}).forEach((v) => {
+      const s = v?.status || 'present';
+      if (counts[s] !== undefined) counts[s] += 1;
+    });
+    setSummary(counts);
+  };
+
+  useEffect(() => {
+    computeSummary(marks);
+  }, [marks]);
+
   const save = async () => {
     try {
       setSaving(true);
@@ -111,6 +126,67 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
     }
   };
 
+  const exportCsvWeb = () => {
+    try {
+      const headers = ['student_id','first_name','last_name','status','notes'];
+      const rows = students.map((s) => {
+        const key = getStudentKey(s);
+        const m = key ? marks[key] : null;
+        return [s.student_id, s.first_name, s.last_name, (m?.status || 'present'), (m?.notes || '')];
+      });
+      const csv = [headers.join(','), ...rows.map(r => r.map((v) => `"${String(v ?? '').replace(/"/g,'""')}"`).join(','))].join('\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `attendance_${classId}_${date}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+    } catch (e) {
+      try { Alert.alert('Error', 'Failed to export CSV'); } catch (_) {}
+    }
+  };
+
+  const importCsvWeb = () => {
+    try {
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.csv,text/csv';
+      input.onchange = async (ev) => {
+        const file = ev.target.files && ev.target.files[0];
+        if (!file) return;
+        const text = await file.text();
+        const lines = text.split(/\r?\n/).filter(Boolean);
+        if (lines.length < 2) return;
+        const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
+        const idxId = header.indexOf('student_id');
+        const idxStatus = header.indexOf('status');
+        const idxNotes = header.indexOf('notes');
+        const idToMark = {};
+        for (let i = 1; i < lines.length; i++) {
+          const cols = lines[i].match(/\"([^\"]*)\"|[^,]+/g)?.map((c) => c.replace(/^\"|\"$/g, '')) || [];
+          const sid = cols[idxId];
+          const st = (cols[idxStatus] || 'present').toLowerCase();
+          const nt = cols[idxNotes] || '';
+          if (sid) idToMark[String(sid)] = { status: st, notes: nt };
+        }
+        const next = { ...marks };
+        students.forEach((s) => {
+          const update = idToMark[String(s.student_id)];
+          if (!update) return;
+          const key = getStudentKey(s);
+          if (!key) return;
+          next[key] = { status: update.status, notes: update.notes };
+        });
+        setMarks(next);
+        setDirty(true);
+      };
+      input.click();
+    } catch (e) {
+      try { Alert.alert('Error', 'Failed to import CSV'); } catch (_) {}
+    }
+  };
+
   const renderRow = ({ item }) => {
     const key = getStudentKey(item) || String(item.id);
     const current = marks[key] || { status: 'present', notes: '' };
@@ -132,12 +208,23 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           ))}
         </View>
         <View style={styles.notesCol}>
-          <TextInput
-            value={current.notes}
-            onChangeText={(t) => updateNotes(key, t)}
-            placeholder="Notes"
-            style={styles.notesInput}
-          />
+          {current.status !== 'present' && (
+            <>
+              <View style={styles.reasonChipsRow}>
+                {['Sick','Personal','Travel','Late Transport','Excused Activity'].map((r) => (
+                  <TouchableOpacity key={r} style={styles.reasonChip} onPress={() => updateNotes(key, r)}>
+                    <Text style={styles.reasonChipText}>{r}</Text>
+                  </TouchableOpacity>
+                ))}
+              </View>
+              <TextInput
+                value={current.notes}
+                onChangeText={(t) => updateNotes(key, t)}
+                placeholder="Reason / Notes"
+                style={styles.notesInput}
+              />
+            </>
+          )}
         </View>
       </View>
     );
@@ -166,10 +253,27 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           <TouchableOpacity style={[styles.actionBtn, styles.absent]} onPress={() => markAll('absent')}>
             <Text style={styles.actionText}>All Absent</Text>
           </TouchableOpacity>
+          {Platform.OS === 'web' && (
+            <>
+              <TouchableOpacity style={[styles.exportBtn]} onPress={exportCsvWeb}>
+                <Text style={styles.exportText}>Export CSV</Text>
+              </TouchableOpacity>
+              <TouchableOpacity style={[styles.importBtn]} onPress={importCsvWeb}>
+                <Text style={styles.exportText}>Import CSV</Text>
+              </TouchableOpacity>
+            </>
+          )}
           <TouchableOpacity style={styles.saveBtn} disabled={saving || !dirty} onPress={save}>
             <Text style={styles.saveText}>{saving ? 'Saving...' : dirty ? 'Save' : 'Saved'}</Text>
           </TouchableOpacity>
         </View>
+      </View>
+
+      <View style={styles.summaryBar}>
+        <View style={[styles.sumPill, styles.sumPresent]}><Text style={styles.sumText}>P: {summary.present}</Text></View>
+        <View style={[styles.sumPill, styles.sumAbsent]}><Text style={styles.sumText}>A: {summary.absent}</Text></View>
+        <View style={[styles.sumPill, styles.sumLate]}><Text style={styles.sumText}>L: {summary.late}</Text></View>
+        <View style={[styles.sumPill, styles.sumExcused]}><Text style={styles.sumText}>E: {summary.excused}</Text></View>
       </View>
 
       {loading ? (
@@ -200,6 +304,9 @@ const styles = StyleSheet.create({
   actionText: { color: 'white', fontWeight: '700' },
   present: { backgroundColor: '#10b981' },
   absent: { backgroundColor: '#ef4444' },
+  exportBtn: { backgroundColor: '#0ea5e9', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
+  importBtn: { backgroundColor: '#0369a1', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
+  exportText: { color: 'white', fontWeight: '700' },
   saveBtn: { backgroundColor: '#1a237e', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10 },
   saveText: { color: 'white', fontWeight: '700' },
   loadingContainer: { padding: 16 },
@@ -220,6 +327,16 @@ const styles = StyleSheet.create({
   statusText: { color: 'white', fontWeight: '800' },
   notesCol: { flex: 1 },
   notesInput: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#fafafa' },
+  reasonChipsRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 },
+  reasonChip: { backgroundColor: '#e0f2fe', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginRight: 6, marginBottom: 6 },
+  reasonChipText: { color: '#0369a1', fontWeight: '700', fontSize: 12 },
+  summaryBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
+  sumPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
+  sumPresent: { backgroundColor: '#10b981' },
+  sumAbsent: { backgroundColor: '#ef4444' },
+  sumLate: { backgroundColor: '#f59e0b' },
+  sumExcused: { backgroundColor: '#3b82f6' },
+  sumText: { color: 'white', fontWeight: '800' },
 });
 
 export default MarkAttendanceScreen;
