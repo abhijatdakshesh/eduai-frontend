@@ -15,6 +15,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
+  const [showSaved, setShowSaved] = useState(false);
 
   useBackButton(navigation);
 
@@ -95,8 +96,11 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
         .filter(Boolean);
       const resp = await apiClient.saveTeacherClassAttendance(classId, { date, entries });
       if (resp?.success) {
-        Alert.alert('Success', 'Attendance saved');
         setDirty(false);
+        // Show both a banner and a native/web alert for clarity
+        setShowSaved(true);
+        setTimeout(() => setShowSaved(false), 2000);
+        try { Alert.alert('Success', 'Attendance saved'); } catch (_) {}
       } else {
         Alert.alert('Error', resp?.message || 'Failed to save');
       }
@@ -145,6 +149,11 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
         <Text style={styles.headerTitle}>{className || 'Mark Attendance'}</Text>
         <Text style={styles.headerSubtitle}>Mark attendance for {date}</Text>
       </View>
+      {showSaved && (
+        <View style={styles.savedBanner}>
+          <Text style={styles.savedBannerText}>Attendance saved</Text>
+        </View>
+      )}
       <View style={styles.toolbar}>
         <View style={styles.dateBox}>
           <Text style={styles.label}>Date</Text>
@@ -195,6 +204,8 @@ const styles = StyleSheet.create({
   saveText: { color: 'white', fontWeight: '700' },
   loadingContainer: { padding: 16 },
   loadingText: { color: '#1a237e' },
+  savedBanner: { backgroundColor: '#10b981', paddingVertical: 8, paddingHorizontal: 16 },
+  savedBannerText: { color: 'white', fontWeight: '700', textAlign: 'center' },
   row: { backgroundColor: 'white', borderRadius: 12, padding: 12, marginTop: 10, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
   studentCol: { flex: 1 },
   studentName: { color: '#1a237e', fontWeight: '700' },
