@@ -111,6 +111,37 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
     }
   };
 
+  // Mark all students with the same status
+  const markAll = (status) => {
+    const next = {};
+    (students || []).forEach((s) => {
+      next[s.id] = { status, note: attendanceByStudentId[s.id]?.note || '' };
+    });
+    setAttendanceByStudentId(next);
+  };
+
+  // Save attendance for the selected date
+  const saveAttendance = async () => {
+    try {
+      setSavingAttendance(true);
+      const entries = (students || []).map((s) => ({
+        student_id: s.id,
+        status: attendanceByStudentId[s.id]?.status || 'present',
+        note: attendanceByStudentId[s.id]?.note || '',
+      }));
+      const resp = await apiClient.markClassAttendance(classId, { date: attendanceDate, entries });
+      if (resp?.success) {
+        Alert.alert('Success', 'Attendance saved successfully!');
+      } else {
+        Alert.alert('Error', resp?.message || 'Failed to save attendance');
+      }
+    } catch (e) {
+      Alert.alert('Error', e?.message || 'Failed to save attendance');
+    } finally {
+      setSavingAttendance(false);
+    }
+  };
+
 
   const handleAddStudents = async () => {
     if (selectedStudents.length === 0) {

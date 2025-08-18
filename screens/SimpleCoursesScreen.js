@@ -175,32 +175,32 @@ const SimpleCoursesScreen = ({ navigation }) => {
         ) : (
           filteredCourses.map((course) => {
             const enrollmentStatus = getEnrollmentStatus(course);
-            return (
-              <View key={course.id} style={styles.courseCard}>
-                <View style={styles.courseHeader}>
-                  <View style={styles.courseInfo}>
-                    <Text style={styles.courseCode}>{course.code}</Text>
-                    <Text style={styles.courseName}>{course.name}</Text>
+          return (
+            <View key={course.id} style={styles.courseCard}>
+              <View style={styles.courseHeader}>
+                <View style={styles.courseInfo}>
+                  <Text style={styles.courseCode}>{course.code}</Text>
+                  <Text style={styles.courseName}>{course.name}</Text>
                     <Text style={styles.courseInstructor}>Instructor: {course.instructor}</Text>
                     <Text style={styles.courseDepartment}>{course.department}</Text>
-                  </View>
+                </View>
                   <View style={styles.courseStats}>
                     <Text style={styles.creditsText}>{course.credits} Credits</Text>
                     <Text style={styles.enrollmentText}>
                       {course.enrolled}/{course.capacity} Students
                     </Text>
-                  </View>
                 </View>
+              </View>
 
-                <View style={styles.courseDetails}>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Schedule:</Text>
-                    <Text style={styles.detailValue}>{course.schedule}</Text>
-                  </View>
-                  <View style={styles.detailRow}>
-                    <Text style={styles.detailLabel}>Room:</Text>
-                    <Text style={styles.detailValue}>{course.room}</Text>
-                  </View>
+              <View style={styles.courseDetails}>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Schedule:</Text>
+                  <Text style={styles.detailValue}>{course.schedule}</Text>
+                </View>
+                <View style={styles.detailRow}>
+                  <Text style={styles.detailLabel}>Room:</Text>
+                  <Text style={styles.detailValue}>{course.room}</Text>
+                </View>
                 </View>
 
                 <View style={styles.courseActions}>
@@ -208,8 +208,8 @@ const SimpleCoursesScreen = ({ navigation }) => {
                     <Text style={[styles.statusText, { color: enrollmentStatus.color }]}>
                       {enrollmentStatus.text}
                     </Text>
-                  </View>
-                  
+              </View>
+
                   {course.is_enrolled ? (
                     <TouchableOpacity
                       style={[styles.actionButton, styles.dropButton]}
@@ -217,7 +217,7 @@ const SimpleCoursesScreen = ({ navigation }) => {
                       disabled={enrolling}
                     >
                       <Text style={styles.dropButtonText}>Drop Course</Text>
-                    </TouchableOpacity>
+                </TouchableOpacity>
                   ) : (
                     <TouchableOpacity
                       style={[
@@ -231,11 +231,11 @@ const SimpleCoursesScreen = ({ navigation }) => {
                       <Text style={styles.enrollButtonText}>
                         {enrollmentStatus.text === 'Full' ? 'Full' : 'Enroll'}
                       </Text>
-                    </TouchableOpacity>
+                </TouchableOpacity>
                   )}
                 </View>
-              </View>
-            );
+            </View>
+          );
           })
         )}
       </ScrollView>
