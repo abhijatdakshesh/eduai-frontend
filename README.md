@@ -224,6 +224,12 @@ For support and questions:
 
 ## 🔮 Future Enhancements
 
+### Feature enhancements
+- **Attendance**: Bulk import (CSV), QR check-in, reason codes, per-day summaries, export to CSV/PDF.
+- **Teacher**: Gradebook basics, assignment posts, class announcements.
+- **Parent**: Push notifications for attendance/fees/results; payment link-out; message center.
+- **Student**: Calendar integration (.ics), reminders, transcript PDF generation.
+
 ### Planned Features
 - **Real-time Chat**: Student-faculty communication
 - **Push Notifications**: Important updates and reminders
