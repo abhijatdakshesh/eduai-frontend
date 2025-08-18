@@ -223,7 +223,7 @@ class ApiClient {
   async resendVerification(email) {
     try {
       const response = await this.api.post('/auth/resend-verification', { email });
-      return response.data;
+    return response.data;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -382,64 +382,6 @@ class ApiClient {
       const response = await this.api.post('/admin/classes', classData);
       return response.data;
     } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  // Admin Course Management APIs
-  async getAdminCourses(params = {}) {
-    try {
-      const queryString = new URLSearchParams(params).toString();
-      const response = await this.api.get(`/admin/courses?${queryString}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async createAdminCourse(courseData) {
-    try {
-      const response = await this.api.post('/admin/courses', courseData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async updateAdminCourse(courseId, courseData) {
-    try {
-      const response = await this.api.put(`/admin/courses/${courseId}`, courseData);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async deleteAdminCourse(courseId) {
-    try {
-      const response = await this.api.delete(`/admin/courses/${courseId}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  // Admin Class Management APIs
-  async getAdminClasses(params = {}) {
-    try {
-      const queryString = new URLSearchParams(params).toString();
-      const response = await this.api.get(`/admin/classes?${queryString}`);
-      return response.data;
-    } catch (error) {
-      throw this.handleError(error);
-    }
-  }
-
-  async createAdminClass(classData) {
-    try {
-      const response = await this.api.post('/admin/classes', classData);
-      return response.data;
-    } catch (error) {
       // Fallback to mock success
       return {
         success: true,
@@ -545,6 +487,43 @@ class ApiClient {
       if (params.classId) query.append('classId', params.classId);
       const response = await this.api.get(`/teacher/attendance/summary?${query.toString()}`);
       return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherClassAttendanceSummary(classId, params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.from) query.append('from', params.from);
+      if (params.to) query.append('to', params.to);
+      const response = await this.api.get(`/teacher/classes/${classId}/attendance/summary?${query.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async importTeacherAttendanceCsv(classId, file, date) {
+    try {
+      const form = new FormData();
+      form.append('file', file);
+      if (date) form.append('date', date);
+      const response = await this.api.post(`/teacher/classes/${classId}/attendance/import`, form, {
+        headers: { 'Content-Type': 'multipart/form-data' },
+      });
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async exportTeacherAttendanceCsv(classId, date) {
+    try {
+      const response = await this.api.get(`/teacher/classes/${classId}/attendance/export?date=${encodeURIComponent(date)}`, {
+        responseType: 'blob',
+      });
+      return response;
     } catch (error) {
       throw this.handleError(error);
     }
@@ -660,6 +639,16 @@ class ApiClient {
       if (params.classId) query.append('classId', params.classId);
       if (params.teacherId) query.append('teacherId', params.teacherId);
       const response = await this.api.get(`/admin/attendance/audit?${query.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Attendance reasons
+  async getAttendanceReasons() {
+    try {
+      const response = await this.api.get('/attendance/reasons');
       return response.data;
     } catch (error) {
       throw this.handleError(error);

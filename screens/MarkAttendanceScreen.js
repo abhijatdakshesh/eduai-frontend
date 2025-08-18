@@ -17,6 +17,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   const [dirty, setDirty] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [summary, setSummary] = useState({ present: 0, absent: 0, late: 0, excused: 0 });
+  const [reasons, setReasons] = useState([]);
 
   useBackButton(navigation);
 
@@ -60,6 +61,23 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
     };
     load();
   }, [classId, date]);
+
+  useEffect(() => {
+    const loadReasons = async () => {
+      try {
+        const resp = await apiClient.getAttendanceReasons();
+        const list = resp?.data?.reasons || resp?.data || [];
+        // Normalize to labels array
+        const r = Array.isArray(list)
+          ? list.map((x) => x.label || x.code || String(x)).filter(Boolean)
+          : [];
+        setReasons(r);
+      } catch (_) {
+        setReasons(['Sick', 'Personal', 'Travel', 'Late Transport', 'Excused Activity']);
+      }
+    };
+    loadReasons();
+  }, []);
 
   const markAll = (status) => {
     const next = {};
@@ -126,16 +144,10 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
     }
   };
 
-  const exportCsvWeb = () => {
+  const exportCsvWeb = async () => {
     try {
-      const headers = ['student_id','first_name','last_name','status','notes'];
-      const rows = students.map((s) => {
-        const key = getStudentKey(s);
-        const m = key ? marks[key] : null;
-        return [s.student_id, s.first_name, s.last_name, (m?.status || 'present'), (m?.notes || '')];
-      });
-      const csv = [headers.join(','), ...rows.map(r => r.map((v) => `"${String(v ?? '').replace(/"/g,'""')}"`).join(','))].join('\n');
-      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8;' });
+      const resp = await apiClient.exportTeacherAttendanceCsv(classId, date);
+      const blob = resp?.data instanceof Blob ? resp.data : new Blob([resp?.data], { type: 'text/csv;charset=utf-8;' });
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
@@ -155,31 +167,25 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
       input.onchange = async (ev) => {
         const file = ev.target.files && ev.target.files[0];
         if (!file) return;
-        const text = await file.text();
-        const lines = text.split(/\r?\n/).filter(Boolean);
-        if (lines.length < 2) return;
-        const header = lines[0].split(',').map((h) => h.trim().toLowerCase());
-        const idxId = header.indexOf('student_id');
-        const idxStatus = header.indexOf('status');
-        const idxNotes = header.indexOf('notes');
-        const idToMark = {};
-        for (let i = 1; i < lines.length; i++) {
-          const cols = lines[i].match(/\"([^\"]*)\"|[^,]+/g)?.map((c) => c.replace(/^\"|\"$/g, '')) || [];
-          const sid = cols[idxId];
-          const st = (cols[idxStatus] || 'present').toLowerCase();
-          const nt = cols[idxNotes] || '';
-          if (sid) idToMark[String(sid)] = { status: st, notes: nt };
+        try {
+          const resp = await apiClient.importTeacherAttendanceCsv(classId, file, date);
+          if (resp?.success) {
+            Alert.alert('Import', 'CSV imported successfully.');
+            // reload attendance after import
+            const existing = await apiClient.getTeacherClassAttendance(classId, date);
+            const map = {};
+            (existing?.data?.attendance || []).forEach((a) => {
+              const key = String(a.student_id);
+              map[key] = { status: a.status || 'present', notes: a.notes || '' };
+            });
+            setMarks(map);
+            setDirty(false);
+          } else {
+            Alert.alert('Import', resp?.message || 'Import failed.');
+          }
+        } catch (err) {
+          Alert.alert('Import', err?.message || 'Import failed.');
         }
-        const next = { ...marks };
-        students.forEach((s) => {
-          const update = idToMark[String(s.student_id)];
-          if (!update) return;
-          const key = getStudentKey(s);
-          if (!key) return;
-          next[key] = { status: update.status, notes: update.notes };
-        });
-        setMarks(next);
-        setDirty(true);
       };
       input.click();
     } catch (e) {
@@ -211,7 +217,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           {current.status !== 'present' && (
             <>
               <View style={styles.reasonChipsRow}>
-                {['Sick','Personal','Travel','Late Transport','Excused Activity'].map((r) => (
+                {(reasons.length ? reasons : ['Sick','Personal','Travel','Late Transport','Excused Activity']).map((r) => (
                   <TouchableOpacity key={r} style={styles.reasonChip} onPress={() => updateNotes(key, r)}>
                     <Text style={styles.reasonChipText}>{r}</Text>
                   </TouchableOpacity>
