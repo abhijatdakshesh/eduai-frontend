@@ -45,7 +45,7 @@ const ParentLoginScreen = ({ navigation }) => {
 
         <View style={styles.quickFillRow}>
           <Text style={styles.quickFillLabel}>Quick fill:</Text>
-          <TouchableOpacity style={styles.quickFillChip} onPress={() => { setEmail('parent@eduai.com'); setPassword('password123'); }}>
+          <TouchableOpacity style={styles.quickFillChip} onPress={() => { setEmail('testparent@school.com'); setPassword('password123'); }}>
             <Text style={styles.quickFillChipText}>Parent</Text>
           </TouchableOpacity>
         </View>

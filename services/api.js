@@ -597,6 +597,15 @@ class ApiClient {
     }
   }
 
+  async getChildInfo(studentId) {
+    try {
+      const response = await this.api.get(`/parent/children/${encodeURIComponent(studentId)}/info`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   async getParentChildResults(studentId, params = {}) {
     try {
       const query = new URLSearchParams();
