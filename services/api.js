@@ -645,6 +645,39 @@ class ApiClient {
     }
   }
 
+  // Admin Courses APIs
+  async getAdminCourses(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      Object.keys(params).forEach(key => {
+        if (params[key]) query.append(key, params[key]);
+      });
+      const response = await this.api.get(`/admin/courses?${query.toString()}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Settings APIs
+  async getAdminSettings() {
+    try {
+      const response = await this.api.get('/admin/settings');
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateAdminSettings(settings) {
+    try {
+      const response = await this.api.put('/admin/settings', settings);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Attendance reasons
   async getAttendanceReasons() {
     try {

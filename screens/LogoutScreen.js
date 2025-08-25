@@ -1,85 +1,27 @@
-import React, { useState } from 'react';
-import { View, StyleSheet, ScrollView, Alert } from 'react-native';
-import {
-  PlatformCard,
-  Title,
-  Paragraph,
-  PlatformButton,
-  PlatformList,
-  PlatformSwitch,
-  PlatformIconButton,
-  PlatformSnackbar,
-  PlatformBadge,
-  PlatformAvatar,
-  Text,
-} from '../components/PlatformWrapper';
+import React, { useState, useEffect } from 'react';
+import { View, StyleSheet, ScrollView, Alert, Text, TouchableOpacity } from 'react-native';
+import AsyncStorage from '@react-native-async-storage/async-storage';
 import { useAuth } from '../contexts/AuthContext';
 
-const LogoutScreen = ({ navigation }) => {
-  const { user, logout } = useAuth();
-  const [settingsModalVisible, setSettingsModalVisible] = useState(false);
-  const [editProfileModalVisible, setEditProfileModalVisible] = useState(false);
+const LogoutScreen = ({ navigation, route }) => {
+  const { user, logout, isAuthenticated } = useAuth();
   const [snackbarVisible, setSnackbarVisible] = useState(false);
   const [snackbarMessage, setSnackbarMessage] = useState('');
 
-  const [settings, setSettings] = useState({
-    notifications: true,
-    darkMode: false,
-    emailUpdates: true,
-    pushNotifications: true,
-  });
+  // Auto-redirect when authentication state changes
+  useEffect(() => {
+    console.log('LogoutScreen useEffect - isAuthenticated changed to:', isAuthenticated);
+    if (!isAuthenticated) {
+      console.log('User is no longer authenticated, should redirect to login');
+      // The app should automatically show the Auth stack now
+    }
+  }, [isAuthenticated]);
 
   const userProfile = {
     name: user ? `${user.first_name} ${user.last_name}` : 'User',
     email: user ? user.email : 'user@example.com',
-    studentId: '2024001',
-    major: 'Computer Science',
-    gpa: 3.8,
-    credits: 75,
-    advisor: 'Dr. Sarah Johnson',
-    graduationDate: '2025-05-15',
-    phone: '+1 (555) 123-4567',
-    address: '123 Student Ave, Campus Town, ST 12345',
-    emergencyContact: {
-      name: 'Jane Doe',
-      relationship: 'Parent',
-      phone: '+1 (555) 987-6543',
-    },
+    role: user ? user.role : 'User',
   };
-
-  const currentCourses = [
-    {
-      id: 1,
-      code: 'CS101',
-      name: 'Introduction to Programming',
-      instructor: 'Dr. Smith',
-      grade: 'A-',
-      credits: 3,
-    },
-    {
-      id: 2,
-      code: 'MATH201',
-      name: 'Calculus I',
-      instructor: 'Dr. Johnson',
-      grade: 'A',
-      credits: 4,
-    },
-    {
-      id: 3,
-      code: 'PHY101',
-      name: 'Physics I',
-      instructor: 'Dr. Brown',
-      grade: 'B+',
-      credits: 4,
-    },
-  ];
-
-  const quickActions = [
-    { title: 'View Academic Record', icon: '📚', onPress: () => {} },
-    { title: 'Download Transcript', icon: '📄', onPress: () => {} },
-    { title: 'Update Contact Info', icon: '📝', onPress: () => setEditProfileModalVisible(true) },
-    { title: 'App Settings', icon: '⚙️', onPress: () => setSettingsModalVisible(true) },
-  ];
 
   const handleLogout = async () => {
     Alert.alert(
@@ -95,16 +37,20 @@ const LogoutScreen = ({ navigation }) => {
           style: 'destructive',
           onPress: async () => {
             try {
+              console.log('Logout button clicked');
+              console.log('Current auth state - user:', user, 'isAuthenticated:', isAuthenticated);
+              
               const result = await logout();
-              setSnackbarMessage(result.message);
+              console.log('Logout result:', result);
+              
+              setSnackbarMessage(result.message || 'Logout successful!');
               setSnackbarVisible(true);
-              setTimeout(() => {
-                navigation.reset({
-                  index: 0,
-                  routes: [{ name: 'Auth' }],
-                });
-              }, 1000);
+              
+              // The authentication state has been cleared
+              // The app should automatically redirect to login screen
+              
             } catch (error) {
+              console.error('Logout error:', error);
               setSnackbarMessage('Logout failed. Please try again.');
               setSnackbarVisible(true);
             }
@@ -114,267 +60,70 @@ const LogoutScreen = ({ navigation }) => {
     );
   };
 
-  const handleSettingChange = (setting, value) => {
-    setSettings(prev => ({ ...prev, [setting]: value }));
-    setSnackbarMessage(`${setting.replace(/([A-Z])/g, ' $1').toLowerCase()} ${value ? 'enabled' : 'disabled'}`);
-    setSnackbarVisible(true);
-  };
-
-  const handleSaveProfile = () => {
-    setSnackbarMessage('Profile updated successfully!');
-    setSnackbarVisible(true);
-    setEditProfileModalVisible(false);
-  };
-
-  const getGradeColor = (grade) => {
-    if (grade.startsWith('A')) return '#4CAF50';
-    if (grade.startsWith('B')) return '#FF9800';
-    if (grade.startsWith('C')) return '#f44336';
-    return '#666';
-  };
-
   return (
     <View style={styles.container}>
-      <ScrollView>
+      <ScrollView contentContainerStyle={styles.scrollContent}>
         {/* Profile Header */}
-        <PlatformCard style={styles.profileCard}>
+        <View style={styles.profileCard}>
           <View style={styles.profileHeader}>
-            <PlatformAvatar.Text 
-              size={80} 
-              label={userProfile.name.split(' ').map(n => n[0]).join('')}
-              style={styles.avatar}
-            />
+            <View style={styles.avatar}>
+              <Text style={styles.avatarText}>
+                {userProfile.name.split(' ').map(n => n[0]).join('')}
+              </Text>
+            </View>
             <View style={styles.profileInfo}>
-              <Title style={styles.profileName}>{userProfile.name}</Title>
-              <Paragraph style={styles.profileEmail}>{userProfile.email}</Paragraph>
-              <Paragraph style={styles.profileId}>Student ID: {userProfile.studentId}</Paragraph>
+              <Text style={styles.profileName}>{userProfile.name}</Text>
+              <Text style={styles.profileEmail}>{userProfile.email}</Text>
+              <Text style={styles.profileRole}>Role: {userProfile.role}</Text>
             </View>
           </View>
+        </View>
 
-          <View style={styles.academicInfo}>
-            <View style={styles.academicItem}>
-              <Title style={styles.academicValue}>{userProfile.gpa}</Title>
-              <Paragraph style={styles.academicLabel}>GPA</Paragraph>
-            </View>
-            <View style={styles.academicItem}>
-              <Title style={styles.academicValue}>{userProfile.credits}</Title>
-              <Paragraph style={styles.academicLabel}>Credits</Paragraph>
-            </View>
-            <View style={styles.academicItem}>
-              <Title style={styles.academicValue}>{userProfile.major}</Title>
-              <Paragraph style={styles.academicLabel}>Major</Paragraph>
-            </View>
+        {/* Quick Info */}
+        <View style={styles.infoCard}>
+          <Text style={styles.sectionTitle}>Account Information</Text>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Name:</Text>
+            <Text style={styles.infoValue}>{userProfile.name}</Text>
           </View>
-        </PlatformCard>
-
-        {/* Quick Actions */}
-        <PlatformCard style={styles.actionsCard}>
-          <Title style={styles.sectionTitle}>Quick Actions</Title>
-          <View style={styles.actionsGrid}>
-            {quickActions.map((action, index) => (
-              <PlatformButton
-                key={index}
-                mode="outlined"
-                onPress={action.onPress}
-                style={styles.actionButton}
-                contentStyle={styles.actionContent}
-              >
-                <Text style={styles.actionIcon}>{action.icon}</Text>
-                <Paragraph style={styles.actionText}>{action.title}</Paragraph>
-              </PlatformButton>
-            ))}
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>Email:</Text>
+            <Text style={styles.infoValue}>{userProfile.email}</Text>
           </View>
-        </PlatformCard>
-
-        {/* Current Courses */}
-        <PlatformCard style={styles.coursesCard}>
-          <Title style={styles.sectionTitle}>Current Courses</Title>
-          {currentCourses.map(course => (
-            <View key={course.id} style={styles.courseItem}>
-              <View style={styles.courseInfo}>
-                <Title style={styles.courseCode}>{course.code}</Title>
-                <Paragraph style={styles.courseName}>{course.name}</Paragraph>
-                <Paragraph style={styles.courseInstructor}>Instructor: {course.instructor}</Paragraph>
-              </View>
-              <View style={styles.courseMeta}>
-                <PlatformBadge style={[styles.gradeBadge, { backgroundColor: getGradeColor(course.grade) }]}>
-                  {course.grade}
-                </PlatformBadge>
-                <Paragraph style={styles.courseCredits}>{course.credits} credits</Paragraph>
-              </View>
-            </View>
-          ))}
-        </PlatformCard>
-
-        {/* Personal Information */}
-        <PlatformCard style={styles.infoCard}>
-          <Title style={styles.sectionTitle}>Personal Information</Title>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Academic Advisor:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.advisor}</Paragraph>
+          <View style={styles.infoItem}>
+            <Text style={styles.infoLabel}>User Type:</Text>
+            <Text style={styles.infoValue}>{userProfile.role}</Text>
           </View>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Expected Graduation:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.graduationDate}</Paragraph>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Phone:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.phone}</Paragraph>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Address:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.address}</Paragraph>
-          </View>
-        </PlatformCard>
-
-        {/* Emergency Contact */}
-        <PlatformCard style={styles.emergencyCard}>
-          <Title style={styles.sectionTitle}>Emergency Contact</Title>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Name:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.emergencyContact.name}</Paragraph>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Relationship:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.emergencyContact.relationship}</Paragraph>
-          </View>
-          
-          <View style={styles.infoSection}>
-            <Paragraph style={styles.infoLabel}>Phone:</Paragraph>
-            <Paragraph style={styles.infoValue}>{userProfile.emergencyContact.phone}</Paragraph>
-          </View>
-        </PlatformCard>
+        </View>
 
         {/* Logout Button */}
-        <PlatformButton
-          mode="contained"
-          onPress={handleLogout}
+        <TouchableOpacity
           style={styles.logoutButton}
-          buttonColor="#f44336"
+          onPress={handleLogout}
         >
-          Logout
-        </PlatformButton>
+          <Text style={styles.logoutButtonText}>Logout</Text>
+        </TouchableOpacity>
+
+        {/* Test Button */}
+        <TouchableOpacity
+          style={[styles.logoutButton, { backgroundColor: '#ff9800', marginTop: 10 }]}
+          onPress={() => {
+            console.log('Test button clicked');
+            Alert.alert('Test', 'Button is working!');
+          }}
+        >
+          <Text style={styles.logoutButtonText}>Test Button</Text>
+        </TouchableOpacity>
+
+
+
+        {/* Success Message */}
+        {snackbarVisible && (
+          <View style={styles.snackbar}>
+            <Text style={styles.snackbarText}>{snackbarMessage}</Text>
+          </View>
+        )}
       </ScrollView>
-
-      {/* Settings Modal */}
-      <PlatformModal
-        visible={settingsModalVisible}
-        onDismiss={() => setSettingsModalVisible(false)}
-        contentContainerStyle={styles.modalContent}
-      >
-        <Title style={styles.modalTitle}>App Settings</Title>
-        
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Paragraph style={styles.settingLabel}>Push Notifications</Paragraph>
-            <Paragraph style={styles.settingDescription}>Receive notifications about important updates</Paragraph>
-          </View>
-          <PlatformSwitch
-            value={settings.pushNotifications}
-            onValueChange={(value) => handleSettingChange('pushNotifications', value)}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Paragraph style={styles.settingLabel}>Email Updates</Paragraph>
-            <Paragraph style={styles.settingDescription}>Receive email notifications</Paragraph>
-          </View>
-          <PlatformSwitch
-            value={settings.emailUpdates}
-            onValueChange={(value) => handleSettingChange('emailUpdates', value)}
-          />
-        </View>
-
-        <View style={styles.settingItem}>
-          <View style={styles.settingInfo}>
-            <Paragraph style={styles.settingLabel}>Dark Mode</Paragraph>
-            <Paragraph style={styles.settingDescription}>Use dark theme for the app</Paragraph>
-          </View>
-          <PlatformSwitch
-            value={settings.darkMode}
-            onValueChange={(value) => handleSettingChange('darkMode', value)}
-          />
-        </View>
-
-        <PlatformButton
-          mode="contained"
-          onPress={() => setSettingsModalVisible(false)}
-          style={styles.modalButton}
-        >
-          Close
-        </PlatformButton>
-      </PlatformModal>
-
-      {/* Edit Profile Modal */}
-      <PlatformModal
-        visible={editProfileModalVisible}
-        onDismiss={() => setEditProfileModalVisible(false)}
-        contentContainerStyle={styles.modalContent}
-      >
-        <Title style={styles.modalTitle}>Edit Profile</Title>
-        
-        <PlatformInput
-          label="Full Name"
-          defaultValue={userProfile.name}
-          style={styles.modalInput}
-        />
-        <PlatformInput
-          label="Phone"
-          defaultValue={userProfile.phone}
-          keyboardType="phone-pad"
-          style={styles.modalInput}
-        />
-        <PlatformInput
-          label="Address"
-          defaultValue={userProfile.address}
-          multiline
-          numberOfLines={3}
-          style={styles.modalInput}
-        />
-        <PlatformInput
-          label="Emergency Contact Name"
-          defaultValue={userProfile.emergencyContact.name}
-          style={styles.modalInput}
-        />
-        <PlatformInput
-          label="Emergency Contact Phone"
-          defaultValue={userProfile.emergencyContact.phone}
-          keyboardType="phone-pad"
-          style={styles.modalInput}
-        />
-
-        <View style={styles.modalButtons}>
-          <PlatformButton
-            mode="outlined"
-            onPress={() => setEditProfileModalVisible(false)}
-            style={styles.modalButton}
-          >
-            Cancel
-          </PlatformButton>
-          <PlatformButton
-            mode="contained"
-            onPress={handleSaveProfile}
-            style={styles.modalButton}
-          >
-            Save Changes
-          </PlatformButton>
-        </View>
-      </PlatformModal>
-
-      <PlatformSnackbar
-        visible={snackbarVisible}
-        onDismiss={() => setSnackbarVisible(false)}
-        duration={3000}
-      >
-        {snackbarMessage}
-      </PlatformSnackbar>
     </View>
   );
 };
@@ -384,17 +133,37 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f5f5f5',
   },
+  scrollContent: {
+    padding: 16,
+  },
   profileCard: {
-    margin: 16,
+    backgroundColor: 'white',
+    borderRadius: 12,
     padding: 20,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   profileHeader: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 20,
   },
   avatar: {
+    width: 80,
+    height: 80,
+    borderRadius: 40,
+    backgroundColor: '#1a237e',
+    justifyContent: 'center',
+    alignItems: 'center',
     marginRight: 16,
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 24,
+    fontWeight: 'bold',
   },
   profileInfo: {
     flex: 1,
@@ -402,181 +171,87 @@ const styles = StyleSheet.create({
   profileName: {
     fontSize: 24,
     fontWeight: 'bold',
+    color: '#1a237e',
     marginBottom: 4,
   },
   profileEmail: {
+    fontSize: 16,
     color: '#666',
     marginBottom: 4,
   },
-  profileId: {
-    color: '#666',
-    fontSize: 12,
+  profileRole: {
+    fontSize: 14,
+    color: '#888',
+    textTransform: 'capitalize',
   },
-  academicInfo: {
-    flexDirection: 'row',
-    justifyContent: 'space-around',
-    borderTopWidth: 1,
-    borderTopColor: '#e0e0e0',
-    paddingTop: 16,
-  },
-  academicItem: {
-    alignItems: 'center',
-  },
-  academicValue: {
-    fontSize: 20,
-    fontWeight: 'bold',
-    color: '#1976d2',
-    marginBottom: 4,
-  },
-  academicLabel: {
-    fontSize: 12,
-    color: '#666',
-  },
-  actionsCard: {
-    margin: 16,
-    marginTop: 0,
+  infoCard: {
+    backgroundColor: 'white',
+    borderRadius: 12,
     padding: 16,
+    marginBottom: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.1,
+    shadowRadius: 4,
+    elevation: 3,
   },
   sectionTitle: {
     fontSize: 18,
     fontWeight: 'bold',
+    color: '#1a237e',
     marginBottom: 16,
   },
-  actionsGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    justifyContent: 'space-between',
-  },
-  actionButton: {
-    width: '48%',
-    marginBottom: 12,
-  },
-  actionContent: {
-    flexDirection: 'column',
-    alignItems: 'center',
-    paddingVertical: 16,
-  },
-  actionIcon: {
-    fontSize: 24,
-    marginBottom: 8,
-  },
-  actionText: {
-    fontSize: 12,
-    textAlign: 'center',
-  },
-  coursesCard: {
-    margin: 16,
-    marginTop: 0,
-    padding: 16,
-  },
-  courseItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
-  },
-  courseInfo: {
-    flex: 1,
-  },
-  courseCode: {
-    fontSize: 16,
-    fontWeight: 'bold',
-    color: '#1976d2',
-    marginBottom: 4,
-  },
-  courseName: {
-    marginBottom: 4,
-  },
-  courseInstructor: {
-    fontSize: 12,
-    color: '#666',
-  },
-  courseMeta: {
-    alignItems: 'flex-end',
-  },
-  gradeBadge: {
-    marginBottom: 4,
-  },
-  courseCredits: {
-    fontSize: 12,
-    color: '#666',
-  },
-  infoCard: {
-    margin: 16,
-    marginTop: 0,
-    padding: 16,
-  },
-  emergencyCard: {
-    margin: 16,
-    marginTop: 0,
-    padding: 16,
-  },
-  infoSection: {
+  infoItem: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
     paddingVertical: 8,
     borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
+    borderBottomColor: '#f0f0f0',
   },
   infoLabel: {
-    fontWeight: 'bold',
+    fontSize: 16,
+    fontWeight: '600',
     color: '#666',
   },
   infoValue: {
+    fontSize: 16,
+    color: '#333',
     flex: 1,
     textAlign: 'right',
+    textTransform: 'capitalize',
   },
   logoutButton: {
-    margin: 16,
-    marginTop: 8,
-    paddingVertical: 8,
+    backgroundColor: '#f44336',
+    borderRadius: 12,
+    padding: 16,
+    alignItems: 'center',
+    marginTop: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  modalContent: {
-    backgroundColor: 'white',
-    margin: 20,
-    padding: 20,
-    borderRadius: 8,
-  },
-  modalTitle: {
+  logoutButtonText: {
+    color: 'white',
     fontSize: 18,
     fontWeight: 'bold',
-    marginBottom: 20,
-    textAlign: 'center',
   },
-  settingItem: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
+  snackbar: {
+    position: 'absolute',
+    bottom: 20,
+    left: 20,
+    right: 20,
+    backgroundColor: '#4CAF50',
+    borderRadius: 8,
+    padding: 16,
     alignItems: 'center',
-    paddingVertical: 12,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e0e0e0',
   },
-  settingInfo: {
-    flex: 1,
-    marginRight: 16,
-  },
-  settingLabel: {
-    fontWeight: 'bold',
-    marginBottom: 4,
-  },
-  settingDescription: {
-    fontSize: 12,
-    color: '#666',
-  },
-  modalInput: {
-    marginBottom: 16,
-  },
-  modalButtons: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    marginTop: 20,
-  },
-  modalButton: {
-    flex: 1,
-    marginHorizontal: 8,
+  snackbarText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
   },
 });
 

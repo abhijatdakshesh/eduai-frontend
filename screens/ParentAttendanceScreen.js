@@ -13,6 +13,11 @@ const ParentAttendanceScreen = ({ route }) => {
   const [loading, setLoading] = useState(false);
 
   const load = async () => {
+    if (!studentId) {
+      Alert.alert('Error', 'Student ID is required');
+      return;
+    }
+    
     try {
       setLoading(true);
       const [rec, sum] = await Promise.all([

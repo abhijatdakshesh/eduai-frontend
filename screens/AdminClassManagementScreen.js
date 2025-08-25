@@ -11,7 +11,6 @@ import {
   Platform,
   Dimensions,
 } from 'react-native';
-import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 
 const { width } = Dimensions.get('window');
@@ -32,8 +31,7 @@ const AdminClassManagementScreen = ({ navigation }) => {
     capacity: '',
   });
 
-  // Back button handler
-  useBackButton(navigation);
+
 
   useEffect(() => {
     fetchClasses();

@@ -20,6 +20,7 @@ import HostelAndTransportationScreen from './screens/HostelAndTransportationScre
 import ChatbotScreen from './screens/ChatbotScreen';
 import HRStaffManagementScreen from './screens/HRStaffManagementScreen';
 import LogoutScreen from './screens/LogoutScreen';
+import ParentLogoutScreen from './screens/ParentLogoutScreen';
 import SimpleCoursesScreen from './screens/SimpleCoursesScreen';
 import SimpleScheduleScreen from './screens/SimpleScheduleScreen';
 import SimpleJobPortalScreen from './screens/SimpleJobPortalScreen';
@@ -53,6 +54,7 @@ import TeacherLogoutScreen from './screens/TeacherLogoutScreen';
 import AttendanceSummaryScreen from './screens/AttendanceSummaryScreen';
 import TeacherQRCheckInScreen from './screens/TeacherQRCheckInScreen';
 import TeacherGradebookScreen from './screens/TeacherGradebookScreen';
+import TeacherUploadResultsScreen from './screens/TeacherUploadResultsScreen';
 import TeacherAnnouncementsScreen from './screens/TeacherAnnouncementsScreen';
 // Parent Screens
 import ParentLoginScreen from './screens/ParentLoginScreen';
@@ -496,8 +498,7 @@ const TeacherStack = () => {
       <Drawer.Screen name="TeacherClasses" component={TeacherClassesScreen} options={{ title: 'My Classes', drawerIcon: ({ color, size }) => (<Icon name="🏫" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherMarkAttendance" component={MarkAttendanceScreen} options={{ title: 'Mark Attendance', drawerIcon: ({ color, size }) => (<Icon name="✅" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherSummary" component={AttendanceSummaryScreen} options={{ title: 'Summary', drawerIcon: ({ color, size }) => (<Icon name="🧾" size={size} color={color} />), }} />
-      <Drawer.Screen name="TeacherQR" component={TeacherQRCheckInScreen} options={{ title: 'QR Check-In', drawerIcon: ({ color, size }) => (<Icon name="📷" size={size} color={color} />), }} />
-      <Drawer.Screen name="TeacherGradebook" component={TeacherGradebookScreen} options={{ title: 'Gradebook', drawerIcon: ({ color, size }) => (<Icon name="🧮" size={size} color={color} />), }} />
+      <Drawer.Screen name="TeacherUploadResults" component={TeacherUploadResultsScreen} options={{ title: 'Upload Results', drawerIcon: ({ color, size }) => (<Icon name="📊" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherAnnouncements" component={TeacherAnnouncementsScreen} options={{ title: 'Announcements', drawerIcon: ({ color, size }) => (<Icon name="📣" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherSchedule" component={SimpleScheduleScreen} options={{ title: 'Schedule', drawerIcon: ({ color, size }) => (<Icon name="📅" size={size} color={color} />), }} />
       <Drawer.Screen name="TeacherProfile" component={SimpleProfileScreen} options={{ title: 'Profile', drawerIcon: ({ color, size }) => (<Icon name="👤" size={size} color={color} />), }} />
@@ -509,6 +510,8 @@ const TeacherStack = () => {
 // Root Navigator Component
 const RootNavigatorComponent = () => {
   const { isAuthenticated, loading, userRole } = useAuth();
+
+  console.log('RootNavigator - isAuthenticated:', isAuthenticated, 'userRole:', userRole, 'loading:', loading);
 
   if (loading) {
     return <LoadingScreen />;
@@ -567,6 +570,7 @@ const ParentStack = () => {
       <Drawer.Screen name="ParentFees" component={ParentFeesScreen} options={{ title: 'Fees', drawerIcon: ({ color, size }) => (<Icon name="💳" size={size} color={color} />), }} />
       <Drawer.Screen name="ParentAnnouncements" component={ParentAnnouncementsScreen} options={{ title: 'Announcements', drawerIcon: ({ color, size }) => (<Icon name="📣" size={size} color={color} />), }} />
       <Drawer.Screen name="ParentMessages" component={ParentMessageCenterScreen} options={{ title: 'Messages', drawerIcon: ({ color, size }) => (<Icon name="✉️" size={size} color={color} />), }} />
+      <Drawer.Screen name="ParentLogout" component={ParentLogoutScreen} options={{ title: 'Logout', drawerIcon: ({ color, size }) => (<Icon name="🚪" size={size} color={color} />), }} />
     </Drawer.Navigator>
   );
 };

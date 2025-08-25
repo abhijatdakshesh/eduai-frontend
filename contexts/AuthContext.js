@@ -35,6 +35,11 @@ export const AuthProvider = ({ children }) => {
     checkAuthStatus();
   }, []);
 
+  // Debug authentication state changes
+  useEffect(() => {
+    console.log('AuthContext - Authentication state changed:', { user, isAuthenticated, loading });
+  }, [user, isAuthenticated, loading]);
+
   const checkAuthStatus = async () => {
     try {
       const token = await AsyncStorage.getItem('accessToken');
@@ -57,9 +62,20 @@ export const AuthProvider = ({ children }) => {
   };
 
   const clearAuth = async () => {
+    console.log('Clearing authentication state...');
+    console.log('Before clear - user:', user, 'isAuthenticated:', isAuthenticated);
+    
     setUser(null);
     setIsAuthenticated(false);
-    await AsyncStorage.clear(); // Clear all storage to ensure complete logout
+    
+    try {
+      await AsyncStorage.clear(); // Clear all storage to ensure complete logout
+      console.log('AsyncStorage cleared successfully');
+    } catch (error) {
+      console.log('Error clearing AsyncStorage:', error);
+    }
+    
+    console.log('Authentication state cleared - user should be null, isAuthenticated should be false');
   };
 
   const login = async (email, password) => {
@@ -105,13 +121,32 @@ export const AuthProvider = ({ children }) => {
   };
 
   const logout = async (logoutAllSessions = false) => {
+    console.log('Logout function called');
+    
+    // Clear all stored data first
     try {
-      await apiClient.logout(logoutAllSessions);
+      await AsyncStorage.clear();
+      console.log('AsyncStorage cleared');
     } catch (error) {
-      console.error('Logout error:', error);
-    } finally {
-      await clearAuth();
+      console.log('Error clearing AsyncStorage:', error);
     }
+    
+    // Try to call the API logout endpoint (but don't wait for it)
+    try {
+      apiClient.logout(logoutAllSessions).catch(error => {
+        console.log('API logout failed (this is normal if backend is not running):', error.message);
+      });
+    } catch (error) {
+      console.log('API logout error:', error.message);
+    }
+    
+    // Immediately clear authentication state
+    console.log('Setting user to null and isAuthenticated to false');
+    setUser(null);
+    setIsAuthenticated(false);
+    
+    console.log('Logout completed successfully');
+    return { success: true, message: 'Logout successful!' };
   };
 
   const updateUser = (updatedUser) => {

@@ -12,6 +12,11 @@ const ParentResultsScreen = ({ route }) => {
   const [results, setResults] = useState([]);
 
   const load = async () => {
+    if (!studentId) {
+      Alert.alert('Error', 'Student ID is required');
+      return;
+    }
+    
     try {
       setLoading(true);
       const resp = await apiClient.getParentChildResults(studentId, { semester, year });

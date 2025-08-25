@@ -10,8 +10,6 @@ import {
   Alert,
   Image,
 } from 'react-native';
-import { useAuth } from '../contexts/AuthContext';
-import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 
 const { width, height } = Dimensions.get('window');
@@ -28,8 +26,7 @@ const AdminDashboardScreen = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(true);
 
-  // Back button handler
-  useBackButton(navigation);
+
 
   useEffect(() => {
     fetchAdminStats();
