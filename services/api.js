@@ -1163,6 +1163,99 @@ class ApiClient {
     }
   }
 
+  // Announcements APIs
+  // Teacher
+  async createAnnouncement(payload) {
+    try {
+      const response = await this.api.post('/teacher/announcements', payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherAnnouncements(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.limit) query.append('limit', String(params.limit));
+      if (params.after) query.append('after', params.after);
+      if (params.pinned !== undefined) query.append('pinned', String(params.pinned));
+      if (params.is_active !== undefined) query.append('is_active', String(params.is_active));
+      const qs = query.toString();
+      const response = await this.api.get(`/teacher/announcements${qs ? `?${qs}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateAnnouncement(announcementId, payload) {
+    try {
+      const response = await this.api.patch(`/teacher/announcements/${encodeURIComponent(announcementId)}`, payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Student
+  async getStudentAnnouncements(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.limit) query.append('limit', String(params.limit));
+      if (params.after) query.append('after', params.after);
+      if (params.classId) query.append('classId', params.classId);
+      if (params.pinned !== undefined) query.append('pinned', String(params.pinned));
+      const qs = query.toString();
+      const response = await this.api.get(`/student/announcements${qs ? `?${qs}` : ''}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async markStudentAnnouncementRead(announcementId) {
+    try {
+      const response = await this.api.patch(`/student/announcements/${encodeURIComponent(announcementId)}/read`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Parent
+  async getParentAnnouncements(params = {}) {
+    try {
+      const query = new URLSearchParams();
+      if (params.limit) query.append('limit', String(params.limit));
+      if (params.after) query.append('after', params.after);
+      if (params.childId) query.append('childId', params.childId);
+      if (params.pinned !== undefined) query.append('pinned', String(params.pinned));
+      const qs = query.toString();
+      // Prefer /parent/announcements/list per backend spec; fall back to /parent/announcements
+      const endpoint = `/parent/announcements/list${qs ? `?${qs}` : ''}`;
+      try {
+        const response = await this.api.get(endpoint);
+        return response.data;
+      } catch (e) {
+        // fallback
+        const response = await this.api.get(`/parent/announcements${qs ? `?${qs}` : ''}`);
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async markParentAnnouncementRead(announcementId) {
+    try {
+      const response = await this.api.patch(`/parent/announcements/${encodeURIComponent(announcementId)}/read`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   handleError(error) {
     if (error.response) {
       const { status, data } = error.response;

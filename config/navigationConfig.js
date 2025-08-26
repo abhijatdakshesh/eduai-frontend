@@ -25,6 +25,8 @@ import SimpleStaffDirectoryScreen from '../screens/SimpleStaffDirectoryScreen';
 import SimpleProfileScreen from '../screens/SimpleProfileScreen';
 import SimpleResultsPortalScreen from '../screens/SimpleResultsPortalScreen';
 import StudentAttendanceScreen from '../screens/StudentAttendanceScreen';
+import StudentAnnouncementsListScreen from '../screens/StudentAnnouncementsListScreen';
+import StudentAnnouncementDetailScreen from '../screens/StudentAnnouncementDetailScreen';
 
 // Import Admin Screens
 import AdminLoginScreen from '../screens/AdminLoginScreen';
@@ -59,6 +61,8 @@ import ParentAttendanceScreen from '../screens/ParentAttendanceScreen';
 import ParentResultsScreen from '../screens/ParentResultsScreen';
 import ParentFeesScreen from '../screens/ParentFeesScreen';
 import ParentAnnouncementsScreen from '../screens/ParentAnnouncementsScreen';
+import ParentAnnouncementsListScreen from '../screens/ParentAnnouncementsListScreen';
+import ParentAnnouncementDetailScreen from '../screens/ParentAnnouncementDetailScreen';
 import ParentMessageCenterScreen from '../screens/ParentMessageCenterScreen';
 import AdminBulkImportScreen from '../screens/AdminBulkImportScreen';
 
@@ -164,6 +168,11 @@ export const mainAppScreens = (theme) => [
     name: 'Chatbot',
     component: SimpleAIAssistantScreen,
     options: createDrawerScreenOptions('AI Assistant', '🤖', theme),
+  },
+  {
+    name: 'Announcements',
+    component: StudentAnnouncementsListScreen,
+    options: createDrawerScreenOptions('Announcements', '📣', theme),
   },
   {
     name: 'HR & Staff',
@@ -304,7 +313,7 @@ export const parentScreens = (theme) => [
   },
   {
     name: 'ParentAnnouncements',
-    component: ParentAnnouncementsScreen,
+    component: ParentAnnouncementsListScreen,
     options: createDrawerScreenOptions('Announcements', '📣', theme),
   },
   {
