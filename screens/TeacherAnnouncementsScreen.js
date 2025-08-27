@@ -1,18 +1,40 @@
 import React, { useState } from 'react';
-import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert } from 'react-native';
+import { View, Text, StyleSheet, TextInput, TouchableOpacity, FlatList, Alert, ActivityIndicator } from 'react-native';
+import { announcementsAPI } from '../services/apiService';
 
 const TeacherAnnouncementsScreen = () => {
   const [text, setText] = useState('');
   const [posts, setPosts] = useState([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  const publish = () => {
+  const publish = async () => {
     if (!text.trim()) {
       Alert.alert('Announcements', 'Write something to post.');
       return;
     }
-    setPosts([{ id: Date.now().toString(), text, ts: new Date().toISOString() }, ...posts]);
-    setText('');
-    Alert.alert('Announcements', 'Announcement published.');
+
+    try {
+      setSubmitting(true);
+      const payload = {
+        title: text.substring(0, 80),
+        body: text,
+        audience: 'both',
+        scope_type: 'global',
+      };
+      const res = await announcementsAPI.createForTeacher(payload);
+      if (res.success) {
+        const created = res.data?.announcement || { id: Date.now().toString(), text, ts: new Date().toISOString() };
+        setPosts([{ id: created.id?.toString() || Date.now().toString(), text, ts: created.created_at || new Date().toISOString() }, ...posts]);
+        setText('');
+        Alert.alert('Announcements', 'Announcement published.');
+      } else {
+        Alert.alert('Announcements', res.message || 'Failed to publish');
+      }
+    } catch (e) {
+      Alert.alert('Announcements', e.message || 'Failed to publish');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -28,8 +50,8 @@ const TeacherAnnouncementsScreen = () => {
           value={text}
           onChangeText={setText}
         />
-        <TouchableOpacity style={styles.postBtn} onPress={publish}>
-          <Text style={styles.postText}>Post</Text>
+        <TouchableOpacity style={[styles.postBtn, submitting && { opacity: 0.7 }]} onPress={publish} disabled={submitting}>
+          {submitting ? <ActivityIndicator color="#fff" /> : <Text style={styles.postText}>Post</Text>}
         </TouchableOpacity>
       </View>
       <FlatList

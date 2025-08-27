@@ -304,6 +304,29 @@ export const resultsAPI = {
   },
 };
 
+// Announcements API
+export const announcementsAPI = {
+  // Teacher create announcement
+  createForTeacher: async (payload) => {
+    try {
+      const response = await apiClient.createAnnouncement(payload);
+      return ApiResponse.success(response.data, 'Announcement created');
+    } catch (error) {
+      return handleApiError(error, 'Failed to create announcement');
+    }
+  },
+
+  // Teacher list announcements
+  listForTeacher: async (params = {}) => {
+    try {
+      const response = await apiClient.getTeacherAnnouncements(params);
+      return ApiResponse.success(response.data, 'Announcements fetched');
+    } catch (error) {
+      return handleApiError(error, 'Failed to fetch announcements');
+    }
+  },
+};
+
 // Reports API
 export const reportsAPI = {
   getReports: async (filters = {}) => {

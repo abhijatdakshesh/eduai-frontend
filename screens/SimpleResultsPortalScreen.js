@@ -28,7 +28,9 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
       
       const response = await apiClient.getResults(filters);
       if (response.success) {
-        setResults(response.data.results || []);
+        setResults(response.data?.results || []);
+      } else {
+        setResults([]);
       }
     } catch (error) {
       console.error('Error fetching results:', error);
@@ -43,7 +45,9 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
     try {
       const response = await apiClient.getGPA();
       if (response.success) {
-        setGpa(response.data.gpa || '0.00');
+        setGpa(response.data?.gpa || '0.00');
+      } else {
+        setGpa('0.00');
       }
     } catch (error) {
       console.error('Error fetching GPA:', error);
@@ -56,7 +60,10 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
     try {
       const response = await apiClient.getAvailableSemesters();
       if (response.success) {
-        setSemesters(['All', ...response.data.semesters]);
+        const list = Array.isArray(response.data?.semesters) ? response.data.semesters : [];
+        setSemesters(['All', ...list]);
+      } else {
+        setSemesters(['All']);
       }
     } catch (error) {
       console.error('Error fetching semesters:', error);
@@ -69,7 +76,9 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
     try {
       const response = await apiClient.getAvailableYears();
       if (response.success) {
-        setYears(response.data.years);
+        setYears(Array.isArray(response.data?.years) ? response.data.years : []);
+      } else {
+        setYears([]);
       }
     } catch (error) {
       console.error('Error fetching years:', error);
@@ -156,13 +165,15 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
     }
   };
 
-  const filteredResults = results.filter(result => {
-    const matchesSearch = result.course_name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         result.course_code.toLowerCase().includes(searchQuery.toLowerCase());
+  const filteredResults = (Array.isArray(results) ? results : []).filter((result) => {
+    const courseName = (result?.course_name || '').toLowerCase();
+    const courseCode = (result?.course_code || '').toLowerCase();
+    const query = (searchQuery || '').toLowerCase();
+    const matchesSearch = courseName.includes(query) || courseCode.includes(query);
     return matchesSearch;
   });
 
-  const totalCredits = results.reduce((sum, course) => sum + course.credits, 0);
+  const totalCredits = (Array.isArray(results) ? results : []).reduce((sum, course) => sum + (Number(course?.credits) || 0), 0);
 
   if (loading) {
     return (
@@ -271,30 +282,30 @@ const SimpleResultsPortalScreen = ({ navigation }) => {
             <View key={result.id} style={styles.resultCard}>
               <View style={styles.resultHeader}>
                 <View style={styles.courseInfo}>
-                  <Text style={styles.courseCode}>{result.course_code}</Text>
-                  <Text style={styles.courseName}>{result.course_name}</Text>
-                  <Text style={styles.instructor}>Instructor: {result.instructor}</Text>
+                  <Text style={styles.courseCode}>{result.course_code || 'N/A'}</Text>
+                  <Text style={styles.courseName}>{result.course_name || 'Untitled course'}</Text>
+                  <Text style={styles.instructor}>Instructor: {result.instructor || 'Unknown'}</Text>
                 </View>
                 <View style={styles.gradeSection}>
                   <View style={[styles.gradeBadge, { backgroundColor: getGradeColor(result.grade) }]}>
-                    <Text style={styles.gradeText}>{result.grade}</Text>
+                    <Text style={styles.gradeText}>{result.grade || '-'}</Text>
                   </View>
-                  <Text style={styles.pointsText}>{result.points} points</Text>
+                  <Text style={styles.pointsText}>{(result.points ?? 0)} points</Text>
                 </View>
               </View>
 
               <View style={styles.resultDetails}>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Credits:</Text>
-                  <Text style={styles.detailValue}>{result.credits}</Text>
+                  <Text style={styles.detailValue}>{result.credits ?? 0}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Semester:</Text>
-                  <Text style={styles.detailValue}>{result.semester} {result.year}</Text>
+                  <Text style={styles.detailValue}>{result.semester || '-'} {result.year || ''}</Text>
                 </View>
                 <View style={styles.detailRow}>
                   <Text style={styles.detailLabel}>Status:</Text>
-                  <Text style={styles.detailValue}>{result.status}</Text>
+                  <Text style={styles.detailValue}>{result.status || '—'}</Text>
                 </View>
               </View>
 
