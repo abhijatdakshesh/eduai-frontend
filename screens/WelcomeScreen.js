@@ -69,6 +69,7 @@ const WelcomeScreen = ({ navigation }) => {
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
+        bounces={true}
       >
         {/* Header Section */}
         <Animated.View 
@@ -253,14 +254,15 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   scrollContainer: {
-    flexGrow: 1,
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 60 : 40,
     paddingBottom: 40,
+    minHeight: height,
   },
   header: {
     alignItems: 'center',
     marginBottom: 40,
+    paddingTop: 20,
   },
   logoContainer: {
     marginBottom: 24,
@@ -339,7 +341,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    backdropFilter: 'blur(10px)',
   },
   featureIconContainer: {
     width: 48,
@@ -367,8 +368,7 @@ const styles = StyleSheet.create({
     lineHeight: 16,
   },
   buttonSection: {
-    flex: 1,
-    justifyContent: 'flex-end',
+    marginBottom: 40,
   },
   mainButtons: {
     marginBottom: 32,
