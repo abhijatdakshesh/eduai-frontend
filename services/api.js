@@ -326,6 +326,49 @@ class ApiClient {
     }
   }
 
+  // Role-specific create endpoints with fallback to /admin/users
+  async createAdminStudent(studentData) {
+    try {
+      try {
+        const response = await this.api.post('/admin/students', studentData);
+        return response.data;
+      } catch (e) {
+        const response = await this.api.post('/admin/users', { ...studentData, role: 'student' });
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async createAdminTeacher(teacherData) {
+    try {
+      try {
+        const response = await this.api.post('/admin/teachers', teacherData);
+        return response.data;
+      } catch (e) {
+        const response = await this.api.post('/admin/users', { ...teacherData, role: 'teacher' });
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async createAdminParent(parentData) {
+    try {
+      try {
+        const response = await this.api.post('/admin/parents', parentData);
+        return response.data;
+      } catch (e) {
+        const response = await this.api.post('/admin/users', { ...parentData, role: 'parent' });
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   async updateAdminUser(userId, userData) {
     try {
       const response = await this.api.put(`/admin/users/${userId}`, userData);
@@ -339,6 +382,107 @@ class ApiClient {
     try {
       const response = await this.api.delete(`/admin/users/${userId}`);
       return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Role-specific update/delete fallbacks
+  async updateAdminStudent(studentId, payload) {
+    try {
+      const response = await this.api.put(`/admin/students/${encodeURIComponent(studentId)}`, payload);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        const response = await this.api.put(`/admin/users/${encodeURIComponent(studentId)}`, payload);
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  async deleteAdminStudent(studentId) {
+    try {
+      const response = await this.api.delete(`/admin/students/${encodeURIComponent(studentId)}`);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        const response = await this.api.delete(`/admin/users/${encodeURIComponent(studentId)}`);
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  async updateAdminTeacher(teacherId, payload) {
+    try {
+      const response = await this.api.put(`/admin/teachers/${encodeURIComponent(teacherId)}`, payload);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        const response = await this.api.put(`/admin/users/${encodeURIComponent(teacherId)}`, payload);
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  async deleteAdminTeacher(teacherId) {
+    try {
+      const response = await this.api.delete(`/admin/teachers/${encodeURIComponent(teacherId)}`);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        const response = await this.api.delete(`/admin/users/${encodeURIComponent(teacherId)}`);
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  async updateAdminParent(parentId, payload) {
+    try {
+      const response = await this.api.put(`/admin/parents/${encodeURIComponent(parentId)}`, payload);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        const response = await this.api.put(`/admin/users/${encodeURIComponent(parentId)}`, payload);
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  async deleteAdminParent(parentId) {
+    try {
+      const response = await this.api.delete(`/admin/parents/${encodeURIComponent(parentId)}`);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        const response = await this.api.delete(`/admin/users/${encodeURIComponent(parentId)}`);
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  // Admin: fetch children linked to a parent
+  async getAdminParentChildren(parentId) {
+    try {
+      try {
+        const response = await this.api.get(`/admin/parents/${encodeURIComponent(parentId)}/children`);
+        return response.data;
+      } catch (e) {
+        // Fallback to parent-scoped if admin route not available and token allowed
+        const response = await this.api.get(`/parent/children?parentId=${encodeURIComponent(parentId)}`);
+        return response.data;
+      }
     } catch (error) {
       throw this.handleError(error);
     }
@@ -361,6 +505,24 @@ class ApiClient {
       const queryString = new URLSearchParams(params).toString();
       const response = await this.api.get(`/admin/teachers?${queryString}`);
       return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Parent Management APIs
+  async getAdminParents(params = {}) {
+    try {
+      const queryString = new URLSearchParams(params).toString();
+      // Prefer dedicated parents endpoint; fallback to users with role filter
+      try {
+        const response = await this.api.get(`/admin/parents${queryString ? `?${queryString}` : ''}`);
+        return response.data;
+      } catch (e) {
+        const qs = new URLSearchParams({ ...(params || {}), role: 'parents' }).toString();
+        const response = await this.api.get(`/admin/users?${qs}`);
+        return response.data;
+      }
     } catch (error) {
       throw this.handleError(error);
     }
@@ -416,6 +578,100 @@ class ApiClient {
   async deleteAdminClass(classId) {
     try {
       const response = await this.api.delete(`/admin/classes/${classId}`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Class Details
+  async getAdminClass(classId) {
+    try {
+      // Prefer admin-scoped endpoint, fallback to public
+      try {
+        const response = await this.api.get(`/admin/classes/${encodeURIComponent(classId)}`);
+        return response.data;
+      } catch (e) {
+        const response = await this.api.get(`/classes/${encodeURIComponent(classId)}`);
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Class roster (students)
+  async getClassStudents(classId) {
+    try {
+      // Prefer admin-scoped endpoint, fallback to public
+      try {
+        const response = await this.api.get(`/admin/classes/${encodeURIComponent(classId)}/students`);
+        return response.data;
+      } catch (e) {
+        const response = await this.api.get(`/classes/${encodeURIComponent(classId)}/students`);
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Students not yet enrolled in the class
+  async getAvailableStudents(classId) {
+    try {
+      // Try explicit available endpoint; fallback to admin students with filter
+      try {
+        const response = await this.api.get(`/admin/classes/${encodeURIComponent(classId)}/students/available`);
+        return response.data;
+      } catch (primaryError) {
+        const query = new URLSearchParams();
+        query.append('availableForClass', String(classId));
+        const response = await this.api.get(`/admin/students?${query.toString()}`);
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Bulk enroll students into a class
+  async enrollStudentsInClass(classId, studentIds = []) {
+    try {
+      const payload = { studentIds };
+      // Prefer admin-scoped bulk add
+      const response = await this.api.post(`/admin/classes/${encodeURIComponent(classId)}/students`, payload);
+      return response.data;
+    } catch (primaryError) {
+      try {
+        // Fallback to a public classes endpoint if exists
+        const response = await this.api.post(`/classes/${encodeURIComponent(classId)}/students`, { studentIds });
+        return response.data;
+      } catch (error) {
+        throw this.handleError(error);
+      }
+    }
+  }
+
+  // Remove a student from a class
+  async removeStudentFromClass(classId, studentId) {
+    try {
+      // Prefer admin-scoped delete
+      try {
+        const response = await this.api.delete(`/admin/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(studentId)}`);
+        return response.data;
+      } catch (e) {
+        const response = await this.api.delete(`/classes/${encodeURIComponent(classId)}/students/${encodeURIComponent(studentId)}`);
+        return response.data;
+      }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Link a parent to a child (student)
+  async linkParentToChild(parentId, studentId) {
+    try {
+      const response = await this.api.post(`/admin/parents/${encodeURIComponent(parentId)}/children/${encodeURIComponent(studentId)}`);
       return response.data;
     } catch (error) {
       throw this.handleError(error);

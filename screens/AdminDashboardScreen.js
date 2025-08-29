@@ -26,8 +26,7 @@ const AdminDashboardScreen = ({ navigation }) => {
     activeEnrollments: 0,
   });
   const [loading, setLoading] = useState(true);
-
-
+  const { logout } = useAuth();
 
   useEffect(() => {
     fetchAdminStats();
@@ -98,8 +97,6 @@ const AdminDashboardScreen = ({ navigation }) => {
       </View>
     );
   }
-
-  const { logout } = useAuth();
 
   const handleLogout = async () => {
     Alert.alert(

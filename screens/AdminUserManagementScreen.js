@@ -30,7 +30,20 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
     email: '',
     phone: '',
     role: type === 'students' ? 'student' : type === 'teachers' ? 'teacher' : 'parent',
+    // Optional password for creating base user accounts
+    password: '',
+    // Student-specific fields
+    student_id: '',
+    grade_level: '',
+    academic_year: '',
   });
+
+  // Parent-child linking UI state (only for parents tab)
+  const [linkingParentId, setLinkingParentId] = useState(null);
+  const [studentSearch, setStudentSearch] = useState('');
+  const [studentCandidates, setStudentCandidates] = useState([]);
+  const [selectedStudentId, setSelectedStudentId] = useState(null);
+  const [linking, setLinking] = useState(false);
 
   // Back button handler
   useBackButton(navigation);
@@ -42,9 +55,29 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
   const fetchUsers = async () => {
     try {
       setLoading(true);
-      const response = await apiClient.getAdminUsers({ role: filter === 'all' ? type : filter });
-      if (response.success) {
-        setUsers(response.data.users || []);
+      let response;
+      // Prefer role-specific endpoints for better compatibility
+      if ((filter === 'all' ? type : filter) === 'students') {
+        response = await apiClient.getAdminStudents();
+      } else if ((filter === 'all' ? type : filter) === 'teachers') {
+        response = await apiClient.getAdminTeachers();
+      } else if ((filter === 'all' ? type : filter) === 'parents') {
+        response = await apiClient.getAdminParents();
+      } else {
+        response = await apiClient.getAdminUsers({ role: filter === 'all' ? type : filter });
+      }
+      if (response?.success) {
+        const data = response.data || {};
+        const list =
+          data.users ||
+          data.students ||
+          data.parents ||
+          data.teachers ||
+          data.items ||
+          data.results ||
+          (Array.isArray(data) ? data : []) ||
+          [];
+        setUsers(Array.isArray(list) ? list : []);
       } else {
         setUsers([]);
       }
@@ -56,6 +89,69 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
     }
   };
 
+  // Search students to link to a parent
+  const searchStudentsForLink = async () => {
+    try {
+      const query = studentSearch?.trim();
+      const params = {};
+      if (query) params.q = query;
+      let resp;
+      // Prefer dedicated students endpoint
+      try {
+        resp = await apiClient.getAdminStudents(params);
+      } catch (e) {
+        resp = await apiClient.getAdminUsers({ role: 'students', ...(query ? { q: query } : {}) });
+      }
+      if (resp?.success) {
+        const data = resp.data || {};
+        const list = data.students || data.users || data.items || (Array.isArray(data) ? data : []);
+        setStudentCandidates(Array.isArray(list) ? list : []);
+      } else {
+        setStudentCandidates([]);
+        Alert.alert('Error', resp.message || 'Failed to search students');
+      }
+    } catch (e) {
+      setStudentCandidates([]);
+      Alert.alert('Error', e?.message || 'Failed to search students');
+    }
+  };
+
+  const startLinkingForParent = (parentId) => {
+    setLinkingParentId(parentId);
+    setStudentSearch('');
+    setStudentCandidates([]);
+    setSelectedStudentId(null);
+  };
+
+  const cancelLinking = () => {
+    setLinkingParentId(null);
+    setStudentSearch('');
+    setStudentCandidates([]);
+    setSelectedStudentId(null);
+  };
+
+  const confirmLinkParentChild = async () => {
+    if (!linkingParentId || !selectedStudentId) {
+      Alert.alert('Error', 'Select a student to link.');
+      return;
+    }
+    try {
+      setLinking(true);
+      const resp = await apiClient.linkParentToChild(linkingParentId, selectedStudentId);
+      if (resp.success) {
+        Alert.alert('Success', resp.message || 'Parent linked to child');
+        cancelLinking();
+        fetchUsers();
+      } else {
+        Alert.alert('Error', resp.message || 'Failed to link parent to child');
+      }
+    } catch (e) {
+      Alert.alert('Error', e?.message || 'Failed to link parent to child');
+    } finally {
+      setLinking(false);
+    }
+  };
+
   const handleAddUser = async () => {
     if (!newUser.first_name || !newUser.last_name || !newUser.email) {
       Alert.alert('Error', 'Please fill in all required fields');
@@ -63,8 +159,51 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
     }
 
     try {
-      const response = await apiClient.createAdminUser(newUser);
-      if (response.success) {
+      let response;
+      if (type === 'students') {
+        // Validate student-specific fields
+        if (!newUser.student_id) {
+          Alert.alert('Error', 'Please provide a Student ID');
+          return;
+        }
+        // Step 1: create base user (role student), capture user_id
+        const baseUserPayload = {
+          first_name: newUser.first_name,
+          last_name: newUser.last_name,
+          email: newUser.email,
+          phone: newUser.phone,
+          role: 'student',
+          user_type: 'student',
+          password: newUser.password || 'ChangeMe123!',
+        };
+        const baseUserResp = await apiClient.createAdminUser(baseUserPayload);
+        if (!baseUserResp?.success) {
+          Alert.alert('Error', baseUserResp?.message || 'Failed to create user account');
+          return;
+        }
+        const baseData = baseUserResp.data || {};
+        const createdUser = baseData.user || baseData.created || baseData.account || baseData;
+        const userId = createdUser?.id;
+        if (!userId) {
+          Alert.alert('Error', 'User created but ID not found in response');
+          return;
+        }
+        // Step 2: create student profile with user_id
+        const studentPayload = {
+          user_id: userId,
+          student_id: newUser.student_id,
+          grade_level: newUser.grade_level,
+          academic_year: newUser.academic_year,
+        };
+        response = await apiClient.createAdminStudent(studentPayload);
+      } else if (type === 'teachers') {
+        response = await apiClient.createAdminTeacher(newUser);
+      } else if (type === 'parents') {
+        response = await apiClient.createAdminParent(newUser);
+      } else {
+        response = await apiClient.createAdminUser(newUser);
+      }
+      if (response?.success) {
         Alert.alert('Success', 'User created successfully!');
         setShowAddForm(false);
         setNewUser({
@@ -73,6 +212,10 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
           email: '',
           phone: '',
           role: newUser.role,
+          password: '',
+          student_id: '',
+          grade_level: '',
+          academic_year: '',
         });
         fetchUsers();
       } else {
@@ -85,7 +228,18 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
   };
 
   const handleEditUser = (user) => {
-    Alert.alert('Edit User', 'Edit functionality will be implemented soon!');
+    // Toggle inline edit form for this user
+    setEditingUserId(editingUserId === user.id ? null : user.id);
+    setEditForm({
+      first_name: user.first_name || '',
+      last_name: user.last_name || '',
+      email: user.email || '',
+      phone: user.phone || '',
+      grade_level: user.grade_level || '',
+      department: user.department || '',
+      specialization: user.specialization || '',
+      relationship: user.relationship || '',
+    });
   };
 
   const handleDeleteUser = (user) => {
@@ -114,6 +268,40 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
         },
       ]
     );
+  };
+
+  // Inline editing state
+  const [editingUserId, setEditingUserId] = useState(null);
+  const [savingEdit, setSavingEdit] = useState(false);
+  const [editForm, setEditForm] = useState({});
+
+  const saveEditedUser = async () => {
+    if (!editingUserId) return;
+    try {
+      setSavingEdit(true);
+      const payload = { ...editForm };
+      let resp;
+      if (type === 'students') {
+        resp = await apiClient.updateAdminStudent(editingUserId, payload);
+      } else if (type === 'teachers') {
+        resp = await apiClient.updateAdminTeacher(editingUserId, payload);
+      } else if (type === 'parents') {
+        resp = await apiClient.updateAdminParent(editingUserId, payload);
+      } else {
+        resp = await apiClient.updateAdminUser(editingUserId, payload);
+      }
+      if (resp?.success) {
+        Alert.alert('Success', 'User updated successfully!');
+        setEditingUserId(null);
+        fetchUsers();
+      } else {
+        Alert.alert('Error', resp?.message || 'Failed to update user');
+      }
+    } catch (e) {
+      Alert.alert('Error', e?.message || 'Failed to update user');
+    } finally {
+      setSavingEdit(false);
+    }
   };
 
   const filteredUsers = users.filter(user => {
@@ -156,6 +344,9 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
         {type === 'parents' && (
           <Text style={styles.userDetail}>Relationship: {item.relationship}</Text>
         )}
+        {type === 'parents' && (
+          <ParentChildrenBadges parentId={item.id} />
+        )}
       </View>
       <View style={styles.userActions}>
         <TouchableOpacity
@@ -170,9 +361,140 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
         >
           <Text style={styles.deleteButtonText}>Delete</Text>
         </TouchableOpacity>
+        {type === 'parents' && (
+          <TouchableOpacity
+            style={[styles.editButton, { backgroundColor: '#10b981' }]}
+            onPress={() => startLinkingForParent(item.id)}
+          >
+            <Text style={styles.editButtonText}>Link Child</Text>
+          </TouchableOpacity>
+        )}
       </View>
+
+      {/* Inline edit form */}
+      {editingUserId === item.id && (
+        <View style={styles.editPanel}>
+          <Text style={styles.formTitle}>Edit {getRoleLabel()}</Text>
+          <TextInput style={styles.formInput} placeholder="First Name" value={editForm.first_name} onChangeText={(t) => setEditForm({ ...editForm, first_name: t })} />
+          <TextInput style={styles.formInput} placeholder="Last Name" value={editForm.last_name} onChangeText={(t) => setEditForm({ ...editForm, last_name: t })} />
+          <TextInput style={styles.formInput} placeholder="Email" value={editForm.email} onChangeText={(t) => setEditForm({ ...editForm, email: t })} autoCapitalize="none" keyboardType="email-address" />
+          <TextInput style={styles.formInput} placeholder="Phone" value={editForm.phone} onChangeText={(t) => setEditForm({ ...editForm, phone: t })} keyboardType="phone-pad" />
+          {type === 'students' && (
+            <TextInput style={styles.formInput} placeholder="Grade Level" value={editForm.grade_level} onChangeText={(t) => setEditForm({ ...editForm, grade_level: t })} />
+          )}
+          {type === 'teachers' && (
+            <>
+              <TextInput style={styles.formInput} placeholder="Department" value={editForm.department} onChangeText={(t) => setEditForm({ ...editForm, department: t })} />
+              <TextInput style={styles.formInput} placeholder="Specialization" value={editForm.specialization} onChangeText={(t) => setEditForm({ ...editForm, specialization: t })} />
+            </>
+          )}
+          {type === 'parents' && (
+            <TextInput style={styles.formInput} placeholder="Relationship" value={editForm.relationship} onChangeText={(t) => setEditForm({ ...editForm, relationship: t })} />
+          )}
+          <View style={styles.formActions}>
+            <TouchableOpacity style={styles.cancelButton} onPress={() => setEditingUserId(null)}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.saveButton, { opacity: savingEdit ? 0.7 : 1 }]} onPress={saveEditedUser} disabled={savingEdit}>
+              <Text style={styles.saveButtonText}>{savingEdit ? 'Saving...' : 'Save'}</Text>
+            </TouchableOpacity>
+          </View>
+        </View>
+      )}
+      {type === 'parents' && linkingParentId === item.id && (
+        <View style={styles.linkPanel}>
+          <Text style={styles.linkTitle}>Link Child to {item.first_name} {item.last_name}</Text>
+          <TextInput
+            style={styles.formInput}
+            placeholder="Search students by name or email"
+            value={studentSearch}
+            onChangeText={setStudentSearch}
+            onSubmitEditing={searchStudentsForLink}
+          />
+          <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 8 }}>
+            <TouchableOpacity style={[styles.saveButton, { flex: 1, marginRight: 6 }]} onPress={searchStudentsForLink}>
+              <Text style={styles.saveButtonText}>Search</Text>
+            </TouchableOpacity>
+            <TouchableOpacity style={[styles.cancelButton, { flex: 1, marginLeft: 6 }]} onPress={cancelLinking}>
+              <Text style={styles.cancelButtonText}>Cancel</Text>
+            </TouchableOpacity>
+          </View>
+          <FlatList
+            data={studentCandidates}
+            keyExtractor={(s) => s.id.toString()}
+            renderItem={({ item: s }) => (
+              <TouchableOpacity
+                style={[styles.candidateRow, selectedStudentId === s.id && styles.candidateRowSelected]}
+                onPress={() => setSelectedStudentId(selectedStudentId === s.id ? null : s.id)}
+              >
+                <Text style={styles.candidateName}>{s.first_name} {s.last_name}</Text>
+                <Text style={styles.candidateMeta}>ID: {s.student_id} • {s.email}</Text>
+              </TouchableOpacity>
+            )}
+            ListEmptyComponent={<Text style={styles.emptyStateText}>No students found. Try searching.</Text>}
+            style={{ maxHeight: 220, marginBottom: 10 }}
+          />
+          <TouchableOpacity
+            style={[styles.saveButton, { backgroundColor: '#10b981', opacity: linking ? 0.7 : 1 }]}
+            onPress={confirmLinkParentChild}
+            disabled={linking}
+          >
+            <Text style={styles.saveButtonText}>{linking ? 'Linking...' : selectedStudentId ? 'Link Selected Student' : 'Select a Student'}</Text>
+          </TouchableOpacity>
+        </View>
+      )}
     </View>
   );
+
+  // Small subcomponent to show linked children badges (lazy fetch per parent)
+  const ParentChildrenBadges = ({ parentId }) => {
+    const [loaded, setLoaded] = useState(false);
+    const [loadingChildren, setLoadingChildren] = useState(false);
+    const [children, setChildren] = useState([]);
+
+    const loadChildren = async () => {
+      try {
+        setLoadingChildren(true);
+        const resp = await apiClient.getAdminParentChildren(parentId);
+        if (resp?.success) {
+          const data = resp.data || {};
+          const list = data.children || data.students || data.items || (Array.isArray(data) ? data : []);
+          setChildren(Array.isArray(list) ? list : []);
+          setLoaded(true);
+        } else {
+          setChildren([]);
+          setLoaded(true);
+        }
+      } catch (e) {
+        setChildren([]);
+        setLoaded(true);
+      } finally {
+        setLoadingChildren(false);
+      }
+    };
+
+    useEffect(() => {
+      // Lazy-load once component mounts for this parent card
+      loadChildren();
+      // eslint-disable-next-line react-hooks/exhaustive-deps
+    }, []);
+
+    if (!loaded) {
+      return <Text style={styles.userDetail}>{loadingChildren ? 'Loading children…' : ''}</Text>;
+    }
+    if (children.length === 0) {
+      return <Text style={styles.userDetail}>No linked children</Text>;
+    }
+    return (
+      <View style={{ flexDirection: 'row', flexWrap: 'wrap', marginTop: 6 }}>
+        {children.map((c) => (
+          <View key={c.id} style={{ backgroundColor: '#e3f2fd', borderColor: '#90caf9', borderWidth: 1, paddingHorizontal: 8, paddingVertical: 4, borderRadius: 999, marginRight: 6, marginBottom: 6 }}>
+            <Text style={{ color: '#1a237e', fontSize: 12, fontWeight: '600' }}>{(c.first_name || c.firstName) + ' ' + (c.last_name || c.lastName || '')}</Text>
+          </View>
+        ))}
+      </View>
+    );
+  };
 
   if (loading) {
     return (
@@ -249,6 +571,39 @@ const AdminUserManagementScreen = ({ navigation, route }) => {
             onChangeText={(text) => setNewUser({...newUser, phone: text})}
             keyboardType="phone-pad"
           />
+
+          {/* Optional password for base account */}
+          <TextInput
+            style={styles.formInput}
+            placeholder="Password (optional)"
+            value={newUser.password}
+            onChangeText={(text) => setNewUser({ ...newUser, password: text })}
+            secureTextEntry
+          />
+
+          {/* Student-specific fields */}
+          {type === 'students' && (
+            <>
+              <TextInput
+                style={styles.formInput}
+                placeholder="Student ID (required)"
+                value={newUser.student_id}
+                onChangeText={(text) => setNewUser({ ...newUser, student_id: text })}
+              />
+              <TextInput
+                style={styles.formInput}
+                placeholder="Grade Level"
+                value={newUser.grade_level}
+                onChangeText={(text) => setNewUser({ ...newUser, grade_level: text })}
+              />
+              <TextInput
+                style={styles.formInput}
+                placeholder="Academic Year (e.g., 2025-2026)"
+                value={newUser.academic_year}
+                onChangeText={(text) => setNewUser({ ...newUser, academic_year: text })}
+              />
+            </>
+          )}
 
           <View style={styles.formActions}>
             <TouchableOpacity
@@ -492,6 +847,13 @@ const styles = StyleSheet.create({
     color: 'white',
     fontSize: isIOS ? 14 : 12,
     fontWeight: 'bold',
+  },
+  editPanel: {
+    backgroundColor: 'white',
+    borderTopWidth: 1,
+    borderTopColor: '#f3f4f6',
+    marginTop: isIOS ? 12 : 10,
+    paddingTop: isIOS ? 12 : 10,
   },
   emptyState: {
     flex: 1,
