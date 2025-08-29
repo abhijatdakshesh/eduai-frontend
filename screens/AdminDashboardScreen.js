@@ -11,6 +11,7 @@ import {
   Image,
 } from 'react-native';
 import { apiClient } from '../services/api';
+import { useAuth } from '../contexts/AuthContext';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
