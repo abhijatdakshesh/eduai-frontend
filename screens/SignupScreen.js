@@ -287,9 +287,17 @@ const SignupScreen = ({ navigation }) => {
 
           <TouchableOpacity
             style={styles.loginButton}
-                    onPress={() => navigation.navigate('Login')}
+            onPress={() => navigation.navigate('Login')}
           >
             <Text style={styles.loginText}>Already have an account? Sign In</Text>
+          </TouchableOpacity>
+
+          {/* Back to Welcome Button */}
+          <TouchableOpacity
+            style={styles.backToWelcomeButton}
+            onPress={() => navigation.navigate('Welcome')}
+          >
+            <Text style={styles.backToWelcomeText}>← Back to Welcome</Text>
           </TouchableOpacity>
         </View>
         </View>
@@ -387,6 +395,16 @@ const styles = StyleSheet.create({
     color: '#1a237e',
     fontSize: 14,
     textDecorationLine: 'underline',
+  },
+  backToWelcomeButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  backToWelcomeText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '500',
   },
   checkboxContainer: {
     marginBottom: 20,

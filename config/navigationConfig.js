@@ -2,6 +2,7 @@ import React from 'react';
 import { Text } from 'react-native';
 
 // Import all screens
+import WelcomeScreen from '../screens/WelcomeScreen';
 import LoginScreen from '../screens/LoginScreen';
 import SignupScreen from '../screens/SignupScreen';
 import ForgotPasswordScreen from '../screens/ForgotPasswordScreen';
@@ -330,6 +331,10 @@ export const parentScreens = (theme) => [
 
 // Authentication Stack Configuration
 export const authScreens = [
+  {
+    name: 'Welcome',
+    component: WelcomeScreen,
+  },
   {
     name: 'Login',
     component: LoginScreen,

@@ -198,6 +198,17 @@ const LoginScreen = ({ navigation }) => {
               Don't have an account? <Text style={styles.signupTextBold}>Sign Up</Text>
             </Text>
           </TouchableOpacity>
+
+          {/* Back to Welcome Button */}
+          <TouchableOpacity
+            style={styles.backToWelcomeButton}
+            onPress={() => navigation.navigate('Welcome')}
+            activeOpacity={0.7}
+          >
+            <Text style={styles.backToWelcomeText}>
+              ← Back to Welcome
+            </Text>
+          </TouchableOpacity>
         </View>
       </ScrollView>
     </KeyboardAvoidingView>
@@ -346,6 +357,16 @@ const styles = StyleSheet.create({
   signupTextBold: {
     color: '#4f46e5',
     fontWeight: '600',
+  },
+  backToWelcomeButton: {
+    alignItems: 'center',
+    paddingVertical: 12,
+    marginTop: 16,
+  },
+  backToWelcomeText: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontWeight: '500',
   },
   adminLogin: {
     alignItems: 'center',

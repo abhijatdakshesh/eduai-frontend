@@ -31,6 +31,7 @@ const Stack = createStackNavigator();
 const AuthStack = () => {
   return (
     <Stack.Navigator 
+      initialRouteName="Welcome"
       screenOptions={{ 
         headerShown: false,
         cardStyle: { backgroundColor: theme.colors.background }
