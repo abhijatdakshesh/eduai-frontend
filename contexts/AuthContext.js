@@ -84,9 +84,40 @@ export const AuthProvider = ({ children }) => {
       const response = await apiClient.login(email, password);
       
       if (response.success) {
-        setUser(normalizeUser(response.data.user));
-        setIsAuthenticated(true);
-        return { success: true, message: 'Login successful!' };
+        // Try to extract user from login response in a robust way
+        const userFromLogin =
+          response.data?.user ||
+          response.data?.profile ||
+          response.data?.current_user ||
+          response.data?.me ||
+          response.user ||
+          response.profile ||
+          response.current_user ||
+          response.me ||
+          response.data?.data?.user ||
+          null;
+
+        if (userFromLogin) {
+          setUser(normalizeUser(userFromLogin));
+          setIsAuthenticated(true);
+          return { success: true, message: 'Login successful!' };
+        }
+
+        // Fall back to fetching profile immediately if user wasn't in the login response
+        try {
+          const profile = await apiClient.getProfile();
+          if (profile.success && profile.data?.user) {
+            setUser(normalizeUser(profile.data.user));
+            setIsAuthenticated(true);
+            return { success: true, message: 'Login successful!' };
+          }
+        } catch (profileError) {
+          console.log('Login succeeded but failed to fetch profile:', profileError?.message);
+        }
+
+        // If we reach here, treat as failure to set user even though tokens may exist
+        await clearAuth();
+        return { success: false, message: 'Login succeeded but user profile could not be loaded.' };
       } else {
         return { success: false, message: response.message };
       }
