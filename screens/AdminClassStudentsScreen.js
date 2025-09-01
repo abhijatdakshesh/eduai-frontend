@@ -14,7 +14,7 @@ import {
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 
-const { width } = Dimensions.get('window');
+const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
 
 const AdminClassStudentsScreen = ({ navigation, route }) => {
@@ -142,7 +142,6 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
     }
   };
 
-
   const handleAddStudents = async () => {
     if (selectedStudents.length === 0) {
       Alert.alert('Error', 'Please select at least one student');
@@ -234,66 +233,90 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
 
   const renderStudentCard = ({ item }) => (
     <View style={styles.studentCard}>
-      <View style={styles.studentInfo}>
-        <Text style={styles.studentName}>{item.first_name} {item.last_name}</Text>
-        <Text style={styles.studentDetail}>ID: {item.student_id}</Text>
-        <Text style={styles.studentDetail}>Email: {item.email}</Text>
-        <Text style={styles.studentDetail}>Enrolled: {item.enrollment_date}</Text>
-        <View style={styles.performanceContainer}>
-          <View style={styles.performanceItem}>
-            <Text style={styles.performanceLabel}>Attendance</Text>
-            <Text style={[ 
-              styles.performanceValue,
-              { color: item.attendance >= 90 ? '#10b981' : item.attendance >= 75 ? '#f59e0b' : '#ef4444' }
-            ]}>{item.attendance}%</Text>
-          </View>
-          <View style={styles.performanceItem}>
-            <Text style={styles.performanceLabel}>Current Grade</Text>
-            <Text style={styles.performanceValue}>{item.current_grade}</Text>
-          </View>
+      <View style={styles.studentHeader}>
+        <View style={styles.studentAvatar}>
+          <Text style={styles.avatarText}>
+            {(item.first_name?.[0] || '') + (item.last_name?.[0] || '')}
+          </Text>
         </View>
-        <View style={styles.attendanceControls}>
-          <Text style={styles.attendanceLabel}>Mark:</Text>
+        <View style={styles.studentInfo}>
+          <Text style={styles.studentName}>{item.first_name} {item.last_name}</Text>
+          <Text style={styles.studentId}>ID: {item.student_id}</Text>
+          <Text style={styles.studentEmail}>{item.email}</Text>
+        </View>
+        <View style={styles.studentActions}>
           <TouchableOpacity
-            style={[styles.attendanceBadge, styles.presentBadge, attendanceByStudentId[item.id]?.status === 'present' && styles.attendanceSelected]}
-            onPress={() => setAttendanceByStudentId({ ...attendanceByStudentId, [item.id]: { ...(attendanceByStudentId[item.id] || {}), status: 'present' } })}
+            style={[styles.actionButton, styles.viewButton]}
+            onPress={() => handleViewGrades(item)}
           >
-            <Text style={styles.attendanceBadgeText}>P</Text>
+            <Text style={styles.actionButtonText}>Grades</Text>
           </TouchableOpacity>
           <TouchableOpacity
-            style={[styles.attendanceBadge, styles.absentBadge, attendanceByStudentId[item.id]?.status === 'absent' && styles.attendanceSelected]}
-            onPress={() => setAttendanceByStudentId({ ...attendanceByStudentId, [item.id]: { ...(attendanceByStudentId[item.id] || {}), status: 'absent' } })}
+            style={[styles.actionButton, styles.removeButton]}
+            onPress={() => handleRemoveStudent(item)}
           >
-            <Text style={styles.attendanceBadgeText}>A</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={[styles.attendanceBadge, styles.lateBadge, attendanceByStudentId[item.id]?.status === 'late' && styles.attendanceSelected]}
-            onPress={() => setAttendanceByStudentId({ ...attendanceByStudentId, [item.id]: { ...(attendanceByStudentId[item.id] || {}), status: 'late' } })}
-          >
-            <Text style={styles.attendanceBadgeText}>L</Text>
+            <Text style={styles.actionButtonText}>Remove</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.studentActions}>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.gradesButton]}
-          onPress={() => handleViewGrades(item)}
-        >
-          <Text style={styles.actionButtonText}>Grades</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.attendanceButton]}
-          onPress={() => handleViewAttendance(item)}
-        >
-          <Text style={styles.actionButtonText}>Attendance</Text>
-        </TouchableOpacity>
-        <TouchableOpacity
-          style={[styles.actionButton, styles.removeButton]}
-          onPress={() => handleRemoveStudent(item)}
-        >
-          <Text style={styles.actionButtonText}>Remove</Text>
-        </TouchableOpacity>
+      <View style={styles.performanceSection}>
+        <View style={styles.performanceItem}>
+          <Text style={styles.performanceLabel}>Attendance</Text>
+          <Text style={[
+            styles.performanceValue,
+            { color: (item.attendance || 0) >= 90 ? '#10b981' : (item.attendance || 0) >= 75 ? '#f59e0b' : '#ef4444' }
+          ]}>{item.attendance || 0}%</Text>
+        </View>
+        <View style={styles.performanceItem}>
+          <Text style={styles.performanceLabel}>Current Grade</Text>
+          <Text style={styles.performanceValue}>{item.current_grade || 'N/A'}</Text>
+        </View>
+      </View>
+
+      <View style={styles.attendanceSection}>
+        <Text style={styles.attendanceTitle}>Mark Attendance:</Text>
+        <View style={styles.attendanceButtons}>
+          <TouchableOpacity
+            style={[
+              styles.attendanceButton,
+              styles.presentButton,
+              attendanceByStudentId[item.id]?.status === 'present' && styles.attendanceButtonActive
+            ]}
+            onPress={() => setAttendanceByStudentId({
+              ...attendanceByStudentId,
+              [item.id]: { ...(attendanceByStudentId[item.id] || {}), status: 'present' }
+            })}
+          >
+            <Text style={styles.attendanceButtonText}>Present</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.attendanceButton,
+              styles.absentButton,
+              attendanceByStudentId[item.id]?.status === 'absent' && styles.attendanceButtonActive
+            ]}
+            onPress={() => setAttendanceByStudentId({
+              ...attendanceByStudentId,
+              [item.id]: { ...(attendanceByStudentId[item.id] || {}), status: 'absent' }
+            })}
+          >
+            <Text style={styles.attendanceButtonText}>Absent</Text>
+          </TouchableOpacity>
+          <TouchableOpacity
+            style={[
+              styles.attendanceButton,
+              styles.lateButton,
+              attendanceByStudentId[item.id]?.status === 'late' && styles.attendanceButtonActive
+            ]}
+            onPress={() => setAttendanceByStudentId({
+              ...attendanceByStudentId,
+              [item.id]: { ...(attendanceByStudentId[item.id] || {}), status: 'late' }
+            })}
+          >
+            <Text style={styles.attendanceButtonText}>Late</Text>
+          </TouchableOpacity>
+        </View>
       </View>
     </View>
   );
@@ -333,148 +356,155 @@ const AdminClassStudentsScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       {/* Header */}
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>{classDetails.name}</Text>
-        <Text style={styles.headerSubtitle}>
-          {classDetails.grade_level} • Room {classDetails.room_id}
-        </Text>
-        <Text style={styles.headerTeacher}>
-          Teacher: {classDetails.teacher.name}
-        </Text>
-      </View>
-
-      {/* Class Schedule */}
-      <ScrollView
-        horizontal
-        showsHorizontalScrollIndicator={false}
-        style={styles.scheduleContainer}
-      >
-        {classDetails.schedule.map((slot, index) => (
-          <View key={index} style={styles.scheduleCard}>
-            <Text style={styles.scheduleDay}>{slot.day}</Text>
-            <Text style={styles.scheduleTime}>{slot.time}</Text>
-          </View>
-        ))}
-      </ScrollView>
-
-      {/* Enrollment Stats */}
-      <View style={styles.statsContainer}>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{classDetails.enrolled_students}</Text>
-          <Text style={styles.statLabel}>Enrolled</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>
-            {classDetails.capacity - classDetails.enrolled_students}
+        <View style={styles.headerContent}>
+          <Text style={styles.headerTitle}>{classDetails?.name || 'Loading...'}</Text>
+          <Text style={styles.headerSubtitle}>
+            {classDetails?.grade_level || '-'} • Room {classDetails?.room_id || '-'}
           </Text>
-          <Text style={styles.statLabel}>Available</Text>
-        </View>
-        <View style={styles.statCard}>
-          <Text style={styles.statNumber}>{classDetails.capacity}</Text>
-          <Text style={styles.statLabel}>Capacity</Text>
+          <Text style={styles.headerTeacher}>
+            Teacher: {classDetails?.teacher?.name || classDetails?.teacher_name || 'Unassigned'}
+          </Text>
         </View>
       </View>
 
-      {/* Attendance Controls */}
-      <View style={styles.attendanceBar}>
-        <View style={styles.dateContainer}>
-          <Text style={styles.dateLabel}>Date</Text>
-          <TextInput
-            style={styles.dateInput}
-            value={attendanceDate}
-            onChangeText={setAttendanceDate}
-            placeholder="YYYY-MM-DD"
-          />
-        </View>
-        <View style={styles.markAllContainer}>
-          <TouchableOpacity style={[styles.markAllButton, styles.presentBadge]} onPress={() => markAll('present')}>
-            <Text style={styles.markAllText}>All P</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.markAllButton, styles.absentBadge]} onPress={() => markAll('absent')}>
-            <Text style={styles.markAllText}>All A</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.markAllButton, styles.lateBadge]} onPress={() => markAll('late')}>
-            <Text style={styles.markAllText}>All L</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.saveAttendanceButton} onPress={saveAttendance} disabled={savingAttendance}>
-            <Text style={styles.saveAttendanceText}>{savingAttendance ? 'Saving...' : 'Save'}</Text>
-          </TouchableOpacity>
-        </View>
-      </View>
 
-      {/* Search and Add */}
-      <View style={styles.searchContainer}>
-        <TextInput
-          style={styles.searchInput}
-          placeholder="Search students..."
-          value={searchQuery}
-          onChangeText={setSearchQuery}
-        />
-        <TouchableOpacity
-          style={styles.addButton}
-          onPress={() => setShowAddForm(true)}
-        >
-          <Text style={styles.addButtonText}>+ Add Students</Text>
-        </TouchableOpacity>
-      </View>
 
-      {/* Add Students Form */}
-      {showAddForm && (
-        <View style={styles.addForm}>
-          <View style={styles.addFormHeader}>
-            <Text style={styles.addFormTitle}>Add Students</Text>
-            <Text style={styles.addFormSubtitle}>
-              Select students to add to this class
-            </Text>
+      <ScrollView 
+        style={styles.scrollContainer}
+        showsVerticalScrollIndicator={false}
+        contentContainerStyle={styles.scrollContent}
+      >
+        {/* Enrollment Stats */}
+        <View style={styles.statsContainer}>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{classDetails?.enrolled_students ?? 0}</Text>
+            <Text style={styles.statLabel}>Enrolled</Text>
           </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>
+              {(classDetails?.capacity ?? 0) - (classDetails?.enrolled_students ?? 0)}
+            </Text>
+            <Text style={styles.statLabel}>Available</Text>
+          </View>
+          <View style={styles.statCard}>
+            <Text style={styles.statNumber}>{classDetails?.capacity ?? 0}</Text>
+            <Text style={styles.statLabel}>Capacity</Text>
+          </View>
+        </View>
 
-          <FlatList
-            data={availableStudents}
-            renderItem={renderAvailableStudentItem}
-            keyExtractor={(item) => item.id.toString()}
-            style={styles.availableStudentsList}
-            showsVerticalScrollIndicator={false}
-            ListEmptyComponent={
-              <View style={styles.emptyState}>
-                <Text style={styles.emptyStateText}>No available students</Text>
-              </View>
-            }
-          />
-
-          <View style={styles.addFormActions}>
-            <TouchableOpacity
-              style={styles.cancelButton}
-              onPress={() => {
-                setShowAddForm(false);
-                setSelectedStudents([]);
-              }}
+        {/* Attendance Controls */}
+        <View style={styles.attendanceBar}>
+          <View style={styles.dateContainer}>
+            <Text style={styles.dateLabel}>Date</Text>
+            <TextInput
+              style={styles.dateInput}
+              value={attendanceDate}
+              onChangeText={setAttendanceDate}
+              placeholder="YYYY-MM-DD"
+            />
+          </View>
+          <View style={styles.markAllContainer}>
+            <TouchableOpacity 
+              style={[styles.markAllButton, styles.presentButton]} 
+              onPress={() => markAll('present')}
             >
-              <Text style={styles.cancelButtonText}>Cancel</Text>
+              <Text style={styles.markAllText}>All Present</Text>
             </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.enrollButton}
-              onPress={handleAddStudents}
+            <TouchableOpacity 
+              style={[styles.markAllButton, styles.absentButton]} 
+              onPress={() => markAll('absent')}
             >
-              <Text style={styles.enrollButtonText}>
-                Enroll {selectedStudents.length} Student{selectedStudents.length !== 1 ? 's' : ''}
+              <Text style={styles.markAllText}>All Absent</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={styles.saveAttendanceButton} 
+              onPress={saveAttendance} 
+              disabled={savingAttendance}
+            >
+              <Text style={styles.saveAttendanceText}>
+                {savingAttendance ? 'Saving...' : 'Save'}
               </Text>
             </TouchableOpacity>
           </View>
         </View>
-      )}
 
-      {/* Students List */}
-      <FlatList
-        data={filteredStudents}
-        renderItem={renderStudentCard}
-        keyExtractor={(item) => item.id.toString()}
-        style={styles.studentsList}
-        showsVerticalScrollIndicator={false}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyStateText}>No students enrolled</Text>
+        {/* Search and Add */}
+        <View style={styles.searchContainer}>
+          <TextInput
+            style={styles.searchInput}
+            placeholder="Search students..."
+            value={searchQuery}
+            onChangeText={setSearchQuery}
+          />
+          <TouchableOpacity
+            style={styles.addButton}
+            onPress={() => setShowAddForm(true)}
+          >
+            <Text style={styles.addButtonText}>+ Add Students</Text>
+          </TouchableOpacity>
+        </View>
+
+        {/* Add Students Form */}
+        {showAddForm && (
+          <View style={styles.addForm}>
+            <View style={styles.addFormHeader}>
+              <Text style={styles.addFormTitle}>Add Students</Text>
+              <Text style={styles.addFormSubtitle}>
+                Select students to add to this class
+              </Text>
+            </View>
+
+            <FlatList
+              data={availableStudents}
+              renderItem={renderAvailableStudentItem}
+              keyExtractor={(item) => item.id.toString()}
+              style={styles.availableStudentsList}
+              showsVerticalScrollIndicator={false}
+              scrollEnabled={false}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No available students</Text>
+                </View>
+              }
+            />
+
+            <View style={styles.addFormActions}>
+              <TouchableOpacity
+                style={styles.cancelButton}
+                onPress={() => {
+                  setShowAddForm(false);
+                  setSelectedStudents([]);
+                }}
+              >
+                <Text style={styles.cancelButtonText}>Cancel</Text>
+              </TouchableOpacity>
+              <TouchableOpacity
+                style={styles.enrollButton}
+                onPress={handleAddStudents}
+              >
+                <Text style={styles.enrollButtonText}>
+                  Enroll {selectedStudents.length} Student{selectedStudents.length !== 1 ? 's' : ''}
+                </Text>
+              </TouchableOpacity>
+            </View>
           </View>
-        }
-      />
+        )}
+
+        {/* Students List */}
+        <FlatList
+          data={filteredStudents}
+          renderItem={renderStudentCard}
+          keyExtractor={(item) => item.id.toString()}
+          style={styles.studentsList}
+          showsVerticalScrollIndicator={false}
+          scrollEnabled={false}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyStateText}>No students enrolled</Text>
+            </View>
+          }
+        />
+      </ScrollView>
     </View>
   );
 };
@@ -495,121 +525,191 @@ const styles = StyleSheet.create({
     color: '#1a237e',
   },
   header: {
-    paddingHorizontal: isIOS ? 20 : 16,
-    paddingTop: isIOS ? 60 : 40,
-    paddingBottom: isIOS ? 20 : 16,
     backgroundColor: '#1a237e',
+    paddingTop: isIOS ? 60 : 40,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 30,
+    borderBottomRightRadius: 30,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 8 },
+    shadowOpacity: 0.3,
+    shadowRadius: 12,
+    elevation: 8,
+  },
+  headerContent: {
+    paddingHorizontal: 20,
+    alignItems: 'flex-start',
+    justifyContent: 'center',
   },
   headerTitle: {
-    fontSize: isIOS ? 28 : 24,
+    fontSize: isIOS ? 32 : 28,
     fontWeight: 'bold',
     color: 'white',
-    marginBottom: 4,
+    marginBottom: 12,
+    textAlign: 'left',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   headerSubtitle: {
-    fontSize: isIOS ? 16 : 14,
+    fontSize: isIOS ? 18 : 16,
     color: '#e3f2fd',
-    marginBottom: 2,
+    marginBottom: 20,
+    textAlign: 'left',
+    fontWeight: '500',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   headerTeacher: {
-    fontSize: isIOS ? 14 : 12,
+    fontSize: isIOS ? 16 : 14,
     color: '#e3f2fd',
     fontStyle: 'italic',
+    textAlign: 'left',
+    marginTop: 12,
+    fontWeight: '400',
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   scheduleContainer: {
     backgroundColor: 'white',
-    paddingHorizontal: isIOS ? 16 : 12,
-    paddingVertical: isIOS ? 12 : 10,
+    paddingVertical: 16,
+    marginTop: -15,
+    marginHorizontal: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  scheduleContent: {
+    paddingHorizontal: 16,
   },
   scheduleCard: {
-    backgroundColor: '#f3f4f6',
-    borderRadius: isIOS ? 12 : 8,
-    padding: isIOS ? 16 : 12,
-    marginRight: isIOS ? 8 : 6,
+    backgroundColor: '#f8fafc',
+    borderRadius: 16,
+    padding: 16,
+    marginRight: 12,
     alignItems: 'center',
+    minWidth: 90,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
   },
   scheduleDay: {
-    fontSize: isIOS ? 14 : 12,
-    fontWeight: '600',
+    fontSize: isIOS ? 16 : 14,
+    fontWeight: '700',
     color: '#1a237e',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   scheduleTime: {
-    fontSize: isIOS ? 12 : 10,
-    color: '#6b7280',
+    fontSize: isIOS ? 14 : 12,
+    color: '#64748b',
+    fontWeight: '500',
   },
   statsContainer: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    paddingHorizontal: isIOS ? 20 : 16,
-    paddingVertical: isIOS ? 16 : 12,
+    paddingHorizontal: 20,
+    paddingVertical: 20,
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   statCard: {
     alignItems: 'center',
+    justifyContent: 'center',
+    flex: 1,
+    paddingHorizontal: 8,
   },
   statNumber: {
-    fontSize: isIOS ? 24 : 20,
+    fontSize: isIOS ? 28 : 24,
     fontWeight: 'bold',
     color: '#1a237e',
-    marginBottom: 4,
+    marginBottom: 6,
+    textAlign: 'center',
   },
   statLabel: {
     fontSize: isIOS ? 14 : 12,
     color: '#6b7280',
+    fontWeight: '500',
+    textAlign: 'center',
   },
   searchContainer: {
     flexDirection: 'row',
-    paddingHorizontal: isIOS ? 20 : 16,
-    paddingVertical: isIOS ? 16 : 12,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   searchInput: {
     flex: 1,
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: isIOS ? 12 : 8,
-    paddingHorizontal: isIOS ? 16 : 12,
-    paddingVertical: isIOS ? 12 : 10,
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     fontSize: isIOS ? 16 : 14,
-    backgroundColor: '#f9fafb',
-    marginRight: isIOS ? 12 : 10,
+    backgroundColor: '#f8fafc',
+    marginRight: 16,
+    fontWeight: '500',
   },
   addButton: {
     backgroundColor: '#10b981',
-    borderRadius: isIOS ? 12 : 8,
-    paddingHorizontal: isIOS ? 16 : 12,
-    paddingVertical: isIOS ? 12 : 10,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
     justifyContent: 'center',
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addButtonText: {
     color: 'white',
-    fontSize: isIOS ? 14 : 12,
+    fontSize: isIOS ? 16 : 14,
     fontWeight: 'bold',
   },
   addForm: {
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginHorizontal: 20,
+    marginTop: 20,
+    borderRadius: 20,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   addFormHeader: {
-    padding: isIOS ? 20 : 16,
+    padding: 24,
     borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    borderBottomColor: '#e2e8f0',
   },
   addFormTitle: {
-    fontSize: isIOS ? 18 : 16,
+    fontSize: isIOS ? 20 : 18,
     fontWeight: 'bold',
     color: '#1a237e',
-    marginBottom: 4,
+    marginBottom: 6,
   },
   addFormSubtitle: {
-    fontSize: isIOS ? 14 : 12,
-    color: '#6b7280',
+    fontSize: isIOS ? 16 : 14,
+    color: '#64748b',
   },
   availableStudentsList: {
     maxHeight: 300,
@@ -618,10 +718,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    paddingHorizontal: isIOS ? 20 : 16,
-    paddingVertical: isIOS ? 12 : 10,
+    paddingHorizontal: 24,
+    paddingVertical: 16,
     borderBottomWidth: 1,
-    borderBottomColor: '#f3f4f6',
+    borderBottomColor: '#f1f5f9',
   },
   availableStudentItemSelected: {
     backgroundColor: '#e3f2fd',
@@ -630,21 +730,22 @@ const styles = StyleSheet.create({
     flex: 1,
   },
   availableStudentName: {
-    fontSize: isIOS ? 16 : 14,
+    fontSize: isIOS ? 18 : 16,
     fontWeight: '600',
-    color: '#374151',
-    marginBottom: 2,
+    color: '#1a237e',
+    marginBottom: 4,
   },
   availableStudentDetail: {
     fontSize: isIOS ? 14 : 12,
-    color: '#6b7280',
+    color: '#64748b',
   },
   checkbox: {
-    width: 24,
-    height: 24,
-    borderWidth: 2,
-    borderColor: '#d1d5db',
-    borderRadius: 6,
+    width: 28,
+    height: 28,
+    borderWidth: 3,
+    borderColor: '#cbd5e1',
+    borderRadius: 8,
+    backgroundColor: 'white',
   },
   checkboxSelected: {
     backgroundColor: '#1a237e',
@@ -653,17 +754,22 @@ const styles = StyleSheet.create({
   addFormActions: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    padding: isIOS ? 20 : 16,
+    padding: 24,
     borderTopWidth: 1,
-    borderTopColor: '#e5e7eb',
+    borderTopColor: '#e2e8f0',
   },
   cancelButton: {
     flex: 1,
-    backgroundColor: '#6b7280',
-    borderRadius: isIOS ? 12 : 8,
-    paddingVertical: isIOS ? 12 : 10,
+    backgroundColor: '#64748b',
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginRight: isIOS ? 8 : 6,
+    marginRight: 12,
+    shadowColor: '#64748b',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   cancelButtonText: {
     color: 'white',
@@ -673,160 +779,179 @@ const styles = StyleSheet.create({
   enrollButton: {
     flex: 1,
     backgroundColor: '#10b981',
-    borderRadius: isIOS ? 12 : 8,
-    paddingVertical: isIOS ? 12 : 10,
+    borderRadius: 16,
+    paddingVertical: 16,
     alignItems: 'center',
-    marginLeft: isIOS ? 8 : 6,
+    marginLeft: 12,
+    shadowColor: '#10b981',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   enrollButtonText: {
     color: 'white',
     fontSize: isIOS ? 16 : 14,
     fontWeight: 'bold',
   },
-  studentsList: {
+  scrollContainer: {
     flex: 1,
-    paddingHorizontal: isIOS ? 20 : 16,
+  },
+  scrollContent: {
+    paddingBottom: 20,
+  },
+  studentsList: {
+    paddingHorizontal: 20,
+    marginTop: 20,
   },
   attendanceBar: {
     flexDirection: 'row',
     alignItems: 'flex-end',
     justifyContent: 'space-between',
-    paddingHorizontal: isIOS ? 20 : 16,
-    paddingVertical: isIOS ? 12 : 10,
+    paddingHorizontal: 20,
+    paddingVertical: 16,
     backgroundColor: 'white',
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+    marginTop: 20,
+    marginHorizontal: 20,
+    borderRadius: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   dateContainer: {
     flex: 1,
-    marginRight: 12,
+    marginRight: 16,
   },
   dateLabel: {
-    fontSize: isIOS ? 14 : 12,
-    color: '#374151',
-    marginBottom: 6,
+    fontSize: isIOS ? 16 : 14,
+    color: '#1a237e',
+    marginBottom: 8,
     fontWeight: '600',
   },
   dateInput: {
-    borderWidth: 1,
-    borderColor: '#d1d5db',
-    borderRadius: isIOS ? 12 : 8,
-    paddingHorizontal: isIOS ? 12 : 10,
-    paddingVertical: isIOS ? 10 : 8,
-    backgroundColor: '#f9fafb',
+    borderWidth: 2,
+    borderColor: '#e2e8f0',
+    borderRadius: 16,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: '#f8fafc',
+    fontSize: isIOS ? 16 : 14,
+    fontWeight: '500',
   },
   markAllContainer: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   markAllButton: {
-    paddingHorizontal: 12,
-    paddingVertical: 8,
-    borderRadius: 8,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
     marginRight: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
   markAllText: {
     color: 'white',
     fontWeight: '700',
-    fontSize: 12,
+    fontSize: isIOS ? 14 : 12,
   },
   saveAttendanceButton: {
     backgroundColor: '#1a237e',
-    paddingHorizontal: 14,
-    paddingVertical: 10,
-    borderRadius: 10,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    shadowColor: '#1a237e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 4,
   },
   saveAttendanceText: {
     color: 'white',
     fontWeight: '700',
-  },
-  attendanceControls: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    marginTop: isIOS ? 10 : 8,
-  },
-  attendanceLabel: {
-    fontSize: isIOS ? 12 : 10,
-    color: '#6b7280',
-    marginRight: 8,
-  },
-  attendanceBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 6,
-    borderRadius: 8,
-    marginRight: 6,
-  },
-  attendanceSelected: {
-    borderWidth: 2,
-    borderColor: 'rgba(0,0,0,0.1)'
-  },
-  presentBadge: { backgroundColor: '#10b981' },
-  absentBadge: { backgroundColor: '#ef4444' },
-  lateBadge: { backgroundColor: '#f59e0b' },
-  attendanceBadgeText: {
-    color: 'white',
-    fontWeight: '800',
+    fontSize: isIOS ? 14 : 12,
   },
   studentCard: {
     backgroundColor: 'white',
-    borderRadius: isIOS ? 16 : 12,
-    padding: isIOS ? 20 : 16,
-    marginVertical: isIOS ? 8 : 6,
+    borderRadius: 16,
+    padding: 20,
+    marginVertical: 8,
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
+    shadowOffset: { width: 0, height: 4 },
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  studentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginBottom: 20,
+  },
+  studentAvatar: {
+    width: 60,
+    height: 60,
+    borderRadius: 30,
+    backgroundColor: '#1a237e',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginRight: 16,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.2,
+    shadowRadius: 8,
+    elevation: 4,
+  },
+  avatarText: {
+    color: 'white',
+    fontSize: 20,
+    fontWeight: 'bold',
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 2 },
+    textShadowRadius: 4,
   },
   studentInfo: {
-    marginBottom: isIOS ? 16 : 12,
+    flex: 1,
   },
   studentName: {
-    fontSize: isIOS ? 18 : 16,
+    fontSize: isIOS ? 20 : 18,
     fontWeight: 'bold',
     color: '#1a237e',
     marginBottom: 4,
   },
-  studentDetail: {
-    fontSize: isIOS ? 14 : 12,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  performanceContainer: {
-    flexDirection: 'row',
-    marginTop: isIOS ? 12 : 10,
-    paddingTop: isIOS ? 12 : 10,
-    borderTopWidth: 1,
-    borderTopColor: '#f3f4f6',
-  },
-  performanceItem: {
-    flex: 1,
-  },
-  performanceLabel: {
-    fontSize: isIOS ? 12 : 10,
-    color: '#6b7280',
-    marginBottom: 2,
-  },
-  performanceValue: {
+  studentId: {
     fontSize: isIOS ? 16 : 14,
-    fontWeight: '600',
-    color: '#1a237e',
+    color: '#64748b',
+    marginBottom: 2,
+    fontWeight: '500',
+  },
+  studentEmail: {
+    fontSize: isIOS ? 14 : 12,
+    color: '#94a3b8',
+    fontWeight: '400',
   },
   studentActions: {
     flexDirection: 'row',
-    justifyContent: 'flex-end',
   },
   actionButton: {
-    paddingHorizontal: isIOS ? 16 : 12,
-    paddingVertical: isIOS ? 8 : 6,
-    borderRadius: isIOS ? 8 : 6,
-    marginLeft: isIOS ? 8 : 6,
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 12,
+    marginLeft: 8,
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 3,
   },
-  gradesButton: {
+  viewButton: {
     backgroundColor: '#3b82f6',
-  },
-  attendanceButton: {
-    backgroundColor: '#f59e0b',
   },
   removeButton: {
     backgroundColor: '#ef4444',
@@ -836,17 +961,88 @@ const styles = StyleSheet.create({
     fontSize: isIOS ? 14 : 12,
     fontWeight: 'bold',
   },
+  performanceSection: {
+    flexDirection: 'row',
+    marginBottom: 20,
+    paddingTop: 20,
+    borderTopWidth: 1,
+    borderTopColor: '#f1f5f9',
+  },
+  performanceItem: {
+    flex: 1,
+    alignItems: 'center',
+  },
+  performanceLabel: {
+    fontSize: isIOS ? 14 : 12,
+    color: '#64748b',
+    marginBottom: 6,
+    fontWeight: '500',
+  },
+  performanceValue: {
+    fontSize: isIOS ? 18 : 16,
+    fontWeight: 'bold',
+    color: '#1a237e',
+  },
+  attendanceSection: {
+    paddingTop: 24,
+    borderTopWidth: 2,
+    borderTopColor: '#e2e8f0',
+    marginTop: 8,
+  },
+  attendanceTitle: {
+    fontSize: isIOS ? 18 : 16,
+    fontWeight: '700',
+    color: '#1a237e',
+    marginBottom: 16,
+  },
+  attendanceButtons: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    gap: 8,
+  },
+  attendanceButton: {
+    flex: 1,
+    paddingVertical: 14,
+    borderRadius: 14,
+    alignItems: 'center',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 3 },
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    elevation: 4,
+  },
+  presentButton: {
+    backgroundColor: '#10b981',
+  },
+  absentButton: {
+    backgroundColor: '#ef4444',
+  },
+  lateButton: {
+    backgroundColor: '#f59e0b',
+  },
+  attendanceButtonActive: {
+    borderWidth: 3,
+    borderColor: '#1a237e',
+    transform: [{ scale: 1.05 }],
+  },
+  attendanceButtonText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: isIOS ? 14 : 12,
+  },
   emptyState: {
     flex: 1,
     justifyContent: 'center',
     alignItems: 'center',
-    paddingVertical: 40,
+    paddingVertical: 60,
   },
   emptyStateText: {
-    fontSize: isIOS ? 16 : 14,
-    color: '#9ca3af',
+    fontSize: isIOS ? 18 : 16,
+    color: '#94a3b8',
     textAlign: 'center',
+    fontWeight: '500',
   },
 });
 
 export default AdminClassStudentsScreen;
+
