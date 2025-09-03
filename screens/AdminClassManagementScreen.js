@@ -136,30 +136,31 @@ const AdminClassManagementScreen = ({ navigation }) => {
     );
   };
 
-  const filteredClasses = classes.filter(classItem => {
-    const matchesSearch = classItem.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         classItem.grade_level.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                         classItem.teacher.name.toLowerCase().includes(searchQuery.toLowerCase());
-    return matchesSearch;
+  const filteredClasses = (classes || []).filter(classItem => {
+    const name = String(classItem?.name || '').toLowerCase();
+    const grade = String(classItem?.grade_level || '').toLowerCase();
+    const teacherName = String(classItem?.teacher?.name || classItem?.teacher_name || '').toLowerCase();
+    const q = (searchQuery || '').toLowerCase();
+    return name.includes(q) || grade.includes(q) || teacherName.includes(q);
   });
 
   const renderClassCard = ({ item }) => (
     <View style={styles.classCard}>
       <View style={styles.classInfo}>
-        <Text style={styles.className}>{item.name}</Text>
-        <Text style={styles.classDetail}>Grade Level: {item.grade_level}</Text>
-        <Text style={styles.classDetail}>Teacher: {item.teacher.name}</Text>
-        <Text style={styles.classDetail}>Room: {item.room_id}</Text>
+        <Text style={styles.className}>{item?.name || 'Untitled Class'}</Text>
+        <Text style={styles.classDetail}>Grade Level: {item?.grade_level || '-'}</Text>
+        <Text style={styles.classDetail}>Teacher: {item?.teacher?.name || item?.teacher_name || 'Unassigned'}</Text>
+        <Text style={styles.classDetail}>Room: {item?.room_id || '-'}</Text>
         <Text style={styles.classDetail}>
-          Students: {item.enrolled_students}/{item.capacity}
+          Students: {item?.enrolled_students ?? 0}/{item?.capacity ?? '-'}
         </Text>
         
         {/* Schedule */}
         <View style={styles.scheduleContainer}>
           <Text style={styles.scheduleTitle}>Schedule:</Text>
-          {item.schedule.map((slot, index) => (
+          {(item?.schedule || []).map((slot, index) => (
             <Text key={index} style={styles.scheduleText}>
-              {slot.day}: {slot.time}
+              {slot?.day || '-'}: {slot?.time || '-'}
             </Text>
           ))}
         </View>
@@ -309,7 +310,7 @@ const AdminClassManagementScreen = ({ navigation }) => {
       <FlatList
         data={filteredClasses}
         renderItem={renderClassCard}
-        keyExtractor={(item) => item.id.toString()}
+        keyExtractor={(item) => String(item?.id ?? Math.random())}
         style={styles.classesList}
         showsVerticalScrollIndicator={false}
         ListEmptyComponent={
