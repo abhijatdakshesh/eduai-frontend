@@ -31,49 +31,62 @@ const HomeScreen = ({ navigation }) => {
       
       if (statsResponse.success && quickActionsResponse.success) {
         // Transform backend data to frontend format
-        const backendStats = statsResponse.data.stats;
+        const backendStats = statsResponse.data.stats || [];
         const backendActivities = statsResponse.data.recent_activities || [];
         const backendMetrics = statsResponse.data.performance_metrics || [];
         
-        // Transform stats to frontend format
-        const transformedStats = [
-          { 
-            title: 'My GPA', 
-            value: parseFloat(backendStats.gpa).toFixed(2), 
-            icon: '🎓', 
-            color: '#8b5cf6', 
-            bgColor: '#faf5ff',
-            gradient: ['#8b5cf6', '#a855f7'],
-            subtitle: 'Current Semester'
-          },
-          { 
-            title: 'Courses Enrolled', 
-            value: backendStats.courses_enrolled || '0', 
-            icon: '📖', 
-            color: '#06b6d4', 
-            bgColor: '#ecfeff',
-            gradient: ['#06b6d4', '#0891b2'],
-            subtitle: 'This Semester'
-          },
-          { 
-            title: 'Assignments Due', 
-            value: backendStats.assignments_due?.toString() || '0', 
-            icon: '📝', 
-      color: '#f59e0b', 
-      bgColor: '#fffbeb',
-            gradient: ['#f59e0b', '#d97706'],
-            subtitle: 'Next 7 Days'
-          },
-          { 
-            title: 'Attendance', 
-            value: `${backendStats.attendance_percentage || 0}%`, 
-            icon: '✅', 
-            color: '#10b981', 
-            bgColor: '#f0fdf4',
-            gradient: ['#10b981', '#059669'],
-            subtitle: 'This Month'
-          },
-        ];
+        // Transform stats to frontend format - backend returns array of stat objects
+        const transformedStats = backendStats.map(stat => {
+          // Map backend stat IDs to frontend format
+          let title, subtitle, icon, color, gradient;
+          
+          switch (stat.id) {
+            case 'gpa':
+              title = 'My GPA';
+              subtitle = 'Current Semester';
+              icon = '🎓';
+              color = '#8b5cf6';
+              gradient = ['#8b5cf6', '#a855f7'];
+              break;
+            case 'courses_enrolled':
+              title = 'Courses Enrolled';
+              subtitle = 'This Semester';
+              icon = '📖';
+              color = '#06b6d4';
+              gradient = ['#06b6d4', '#0891b2'];
+              break;
+            case 'assignments_due':
+              title = 'Assignments Due';
+              subtitle = 'Next 7 Days';
+              icon = '📝';
+              color = '#f59e0b';
+              gradient = ['#f59e0b', '#d97706'];
+              break;
+            case 'attendance':
+              title = 'Attendance';
+              subtitle = 'This Month';
+              icon = '✅';
+              color = '#10b981';
+              gradient = ['#10b981', '#059669'];
+              break;
+            default:
+              title = stat.title || 'Stat';
+              subtitle = 'Current';
+              icon = stat.icon || '📊';
+              color = stat.color || '#6366f1';
+              gradient = [color, color];
+          }
+          
+          return {
+            title,
+            value: stat.value?.toString() || '0',
+            icon,
+            color,
+            bgColor: color + '10',
+            gradient,
+            subtitle
+          };
+        });
 
         // Transform activities to frontend format
         const transformedActivities = backendActivities.map(activity => ({
