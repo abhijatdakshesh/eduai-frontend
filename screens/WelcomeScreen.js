@@ -95,7 +95,7 @@ const WelcomeScreen = ({ navigation }) => {
           </View>
           
           <Text style={styles.title}>Welcome to</Text>
-          <Text style={styles.appName}>Campus Connect</Text>
+          <Text style={styles.appName}>EduAI</Text>
           <Text style={styles.subtitle}>
             Your Complete Academic Management Solution
           </Text>
@@ -130,7 +130,7 @@ const WelcomeScreen = ({ navigation }) => {
               </View>
               <Text style={styles.featureTitle}>Attendance Tracking</Text>
               <Text style={styles.featureDescription}>
-                Monitor attendance with QR codes and reports
+                Monitor Real Time Attendance and Progress Reports
               </Text>
             </View>
 
@@ -138,9 +138,9 @@ const WelcomeScreen = ({ navigation }) => {
               <View style={styles.featureIconContainer}>
                 <Text style={styles.featureIcon}>📈</Text>
               </View>
-              <Text style={styles.featureTitle}>Academic Results</Text>
+              <Text style={styles.featureTitle}>Internship & Job Portal</Text>
               <Text style={styles.featureDescription}>
-                View grades, GPA, and performance analytics
+                Apply for Internships & Off-Campus Jobs with your GPA and performance analytics
               </Text>
             </View>
 
@@ -241,7 +241,7 @@ const WelcomeScreen = ({ navigation }) => {
             Connecting Education, Empowering Growth
           </Text>
           <Text style={styles.footerSubtext}>
-            © 2024 Campus Connect. All rights reserved.
+            © 2024 Raycraft Technologies. All rights reserved.
           </Text>
         </Animated.View>
       </ScrollView>
