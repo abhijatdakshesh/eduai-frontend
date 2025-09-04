@@ -164,11 +164,20 @@ export const AuthProvider = ({ children }) => {
     
     // Try to call the API logout endpoint (but don't wait for it)
     try {
-      apiClient.logout(logoutAllSessions).catch(error => {
-        console.log('API logout failed (this is normal if backend is not running):', error.message);
-      });
+      const token = await AsyncStorage.getItem('accessToken');
+      if (token && token !== 'demo_access_token') {
+        apiClient.logout(logoutAllSessions).catch(error => {
+          // Only log if it's not a 401 error (which is expected when token is invalid)
+          if (!error.message.includes('Unauthorized')) {
+            console.log('API logout failed:', error.message);
+          }
+        });
+      }
     } catch (error) {
-      console.log('API logout error:', error.message);
+      // Only log if it's not a 401 error
+      if (!error.message.includes('Unauthorized')) {
+        console.log('API logout error:', error.message);
+      }
     }
     
     // Immediately clear authentication state

@@ -21,15 +21,16 @@ const SimpleCoursesScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await apiClient.getCourses();
-      if (response.success && response.data && response.data.courses) {
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setCourses(response.data);
+      } else if (response.success && response.data && response.data.courses) {
         setCourses(response.data.courses);
       } else {
-        Alert.alert('Error', response.message || 'Failed to fetch courses');
+        console.log('Courses response:', response);
         setCourses([]);
       }
     } catch (error) {
       console.error('Error fetching courses:', error);
-      Alert.alert('Error', error.message || 'Failed to fetch courses');
       setCourses([]);
     } finally {
       setLoading(false);
@@ -39,15 +40,16 @@ const SimpleCoursesScreen = ({ navigation }) => {
   const fetchDepartments = async () => {
     try {
       const response = await apiClient.getCourseDepartments();
-      if (response.success && response.data && response.data.departments) {
+      if (response.success && response.data && Array.isArray(response.data)) {
+        setDepartments(['all', ...response.data.map(dept => dept.name)]);
+      } else if (response.success && response.data && response.data.departments) {
         setDepartments(['all', ...response.data.departments.map(dept => dept.name)]);
       } else {
-        Alert.alert('Error', response.message || 'Failed to fetch departments');
+        console.log('Departments response:', response);
         setDepartments(['all']);
       }
     } catch (error) {
       console.error('Error fetching departments:', error);
-      Alert.alert('Error', error.message || 'Failed to fetch departments');
       setDepartments(['all']);
     }
   };
@@ -109,13 +111,13 @@ const SimpleCoursesScreen = ({ navigation }) => {
   const filteredCourses = courses.filter(course => {
     const matchesSearch = course.name.toLowerCase().includes(searchQuery.toLowerCase()) ||
                          course.code.toLowerCase().includes(searchQuery.toLowerCase());
-    const matchesDepartment = selectedDepartment === 'all' || course.department === selectedDepartment;
+    const matchesDepartment = selectedDepartment === 'all' || course.department_name === selectedDepartment;
     return matchesSearch && matchesDepartment;
   });
 
   const getEnrollmentStatus = (course) => {
-    if (course.enrolled >= course.capacity) return { text: 'Full', color: '#ef4444' };
-    if (course.is_enrolled) return { text: 'Enrolled', color: '#10b981' };
+    if (course.current_enrollment >= course.max_enrollment) return { text: 'Full', color: '#ef4444' };
+    if (course.enrollment_status === 'enrolled') return { text: 'Enrolled', color: '#10b981' };
     return { text: 'Available', color: '#10b981' };
   };
 
@@ -181,25 +183,25 @@ const SimpleCoursesScreen = ({ navigation }) => {
                 <View style={styles.courseInfo}>
                   <Text style={styles.courseCode}>{course.code}</Text>
                   <Text style={styles.courseName}>{course.name}</Text>
-                    <Text style={styles.courseInstructor}>Instructor: {course.instructor}</Text>
-                    <Text style={styles.courseDepartment}>{course.department}</Text>
+                    <Text style={styles.courseInstructor}>Instructor: {course.instructor_name}</Text>
+                    <Text style={styles.courseDepartment}>{course.department_name}</Text>
                 </View>
                   <View style={styles.courseStats}>
                     <Text style={styles.creditsText}>{course.credits} Credits</Text>
                     <Text style={styles.enrollmentText}>
-                      {course.enrolled}/{course.capacity} Students
+                      {course.current_enrollment}/{course.max_enrollment} Students
                     </Text>
                 </View>
               </View>
 
               <View style={styles.courseDetails}>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Schedule:</Text>
-                  <Text style={styles.detailValue}>{course.schedule}</Text>
+                  <Text style={styles.detailLabel}>Semester:</Text>
+                  <Text style={styles.detailValue}>{course.semester} {course.year}</Text>
                 </View>
                 <View style={styles.detailRow}>
-                  <Text style={styles.detailLabel}>Room:</Text>
-                  <Text style={styles.detailValue}>{course.room}</Text>
+                  <Text style={styles.detailLabel}>Description:</Text>
+                  <Text style={styles.detailValue}>{course.description}</Text>
                 </View>
                 </View>
 
@@ -210,7 +212,7 @@ const SimpleCoursesScreen = ({ navigation }) => {
                     </Text>
               </View>
 
-                  {course.is_enrolled ? (
+                  {course.enrollment_status === 'enrolled' ? (
                     <TouchableOpacity
                       style={[styles.actionButton, styles.dropButton]}
                       onPress={() => handleDrop(course.id)}

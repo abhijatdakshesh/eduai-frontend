@@ -1,7 +1,7 @@
 // Environment configuration
 const ENV = {
   development: {
-    API_BASE_URL: 'http://localhost:3001/api/v1',
+    API_BASE_URL: 'http://192.168.1.151:3001/api/v1',
     ENVIRONMENT: 'development',
     USE_MOCKS: false,
     ALLOW_DEMO_LOGINS: false,

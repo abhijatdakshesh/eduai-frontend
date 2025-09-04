@@ -6,6 +6,7 @@ import { Provider as PaperProvider } from 'react-native-paper';
 import { GestureHandlerRootView } from 'react-native-gesture-handler';
 import { BackHandler, Alert, Platform } from 'react-native';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
+import ErrorBoundary from './components/ErrorBoundary';
 
 // Import consolidated configurations
 import { theme } from './config/theme';
@@ -213,15 +214,17 @@ export default function App() {
   }, []);
 
   return (
-    <AuthProvider>
-      <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
-        <PaperProvider theme={theme}>
-          <NavigationContainer theme={theme}>
-            <RootNavigator />
-          </NavigationContainer>
-        </PaperProvider>
-      </GestureHandlerRootView>
-    </AuthProvider>
+    <ErrorBoundary>
+      <AuthProvider>
+        <GestureHandlerRootView style={{ flex: 1, backgroundColor: theme.colors.background }}>
+          <PaperProvider theme={theme}>
+            <NavigationContainer theme={theme}>
+              <RootNavigator />
+            </NavigationContainer>
+          </PaperProvider>
+        </GestureHandlerRootView>
+      </AuthProvider>
+    </ErrorBoundary>
   );
 }
 
