@@ -27,6 +27,9 @@ class ApiClient {
         const token = await AsyncStorage.getItem('accessToken');
         if (token) {
           config.headers.Authorization = `Bearer ${token}`;
+          console.log('API: Adding token to request:', token.substring(0, 20) + '...');
+        } else {
+          console.log('API: No token found in AsyncStorage');
         }
 
         // Add device info headers
@@ -701,9 +704,12 @@ class ApiClient {
   // Teacher APIs
   async getTeacherClasses() {
     try {
+      console.log('API: Getting teacher classes...');
       const response = await this.api.get('/teacher/classes');
+      console.log('API: Teacher classes response:', response.data);
       return response.data;
     } catch (error) {
+      console.log('API: Teacher classes error:', error);
       throw this.handleError(error);
     }
   }
