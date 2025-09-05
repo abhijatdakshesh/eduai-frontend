@@ -331,7 +331,7 @@ const ParentDashboardScreen = ({ navigation }) => {
           <View style={styles.quickActions}>
             <TouchableOpacity 
               style={styles.quickActionButton}
-              onPress={() => navigation.navigate('ParentMessageCenter')}
+              onPress={() => navigation.navigate('ParentMessages')}
             >
               <Text style={styles.quickActionIcon}>💬</Text>
               <Text style={styles.quickActionText}>Message Center</Text>
@@ -347,10 +347,34 @@ const ParentDashboardScreen = ({ navigation }) => {
             
             <TouchableOpacity 
               style={styles.quickActionButton}
-              onPress={() => navigation.navigate('ScheduleScreen')}
+              onPress={() => navigation.navigate('ParentChildren')}
             >
-              <Text style={styles.quickActionIcon}>📚</Text>
-              <Text style={styles.quickActionText}>Schedule</Text>
+              <Text style={styles.quickActionIcon}>👨‍👩‍👧‍👦</Text>
+              <Text style={styles.quickActionText}>My Children</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.quickActionButton}
+              onPress={() => navigation.navigate('ParentAttendance')}
+            >
+              <Text style={styles.quickActionIcon}>🗓️</Text>
+              <Text style={styles.quickActionText}>Attendance</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.quickActionButton}
+              onPress={() => navigation.navigate('ParentResults')}
+            >
+              <Text style={styles.quickActionIcon}>📈</Text>
+              <Text style={styles.quickActionText}>Results</Text>
+            </TouchableOpacity>
+            
+            <TouchableOpacity 
+              style={styles.quickActionButton}
+              onPress={() => navigation.navigate('ParentAnnouncements')}
+            >
+              <Text style={styles.quickActionIcon}>📣</Text>
+              <Text style={styles.quickActionText}>Announcements</Text>
             </TouchableOpacity>
           </View>
         </View>
@@ -645,16 +669,17 @@ const styles = StyleSheet.create({
   },
   quickActions: {
     flexDirection: 'row',
+    flexWrap: 'wrap',
     justifyContent: 'space-between',
     paddingHorizontal: 20,
   },
   quickActionButton: {
     backgroundColor: 'white',
     borderRadius: 12,
-    padding: 16,
+    padding: 12,
     alignItems: 'center',
-    flex: 1,
-    marginHorizontal: 4,
+    width: '30%',
+    marginBottom: 12,
     shadowColor: '#000',
     shadowOffset: { width: 0, height: 1 },
     shadowOpacity: 0.05,
@@ -666,10 +691,11 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   quickActionText: {
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
     color: '#1a237e',
     textAlign: 'center',
+    lineHeight: 14,
   },
 });
 
