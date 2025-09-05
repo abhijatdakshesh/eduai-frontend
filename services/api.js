@@ -701,18 +701,54 @@ class ApiClient {
     }
   }
 
-  // Teacher APIs
-  async getTeacherClasses() {
-    try {
-      console.log('API: Getting teacher classes...');
-      const response = await this.api.get('/teacher/classes');
-      console.log('API: Teacher classes response:', response.data);
-      return response.data;
-    } catch (error) {
-      console.log('API: Teacher classes error:', error);
-      throw this.handleError(error);
+      // Teacher APIs
+    async getTeacherClasses() {
+      try {
+        console.log('API: Getting teacher classes...');
+        const response = await this.api.get('/teacher/classes');
+        console.log('API: Teacher classes response:', response.data);
+        return response.data;
+      } catch (error) {
+        console.log('API: Teacher classes error:', error);
+        throw this.handleError(error);
+      }
     }
-  }
+
+    async getTeacherProfile() {
+      try {
+        console.log('API: Getting teacher profile...');
+        const response = await this.api.get('/teacher/profile');
+        console.log('API: Teacher profile response:', response.data);
+        return response.data;
+      } catch (error) {
+        console.log('API: Teacher profile error:', error);
+        throw this.handleError(error);
+      }
+    }
+
+    async updateTeacherProfile(profileData) {
+      try {
+        console.log('API: Updating teacher profile...');
+        const response = await this.api.put('/teacher/profile', profileData);
+        console.log('API: Teacher profile update response:', response.data);
+        return response.data;
+      } catch (error) {
+        console.log('API: Teacher profile update error:', error);
+        throw this.handleError(error);
+      }
+    }
+
+    async getTeacherStats() {
+      try {
+        console.log('API: Getting teacher stats...');
+        const response = await this.api.get('/teacher/stats');
+        console.log('API: Teacher stats response:', response.data);
+        return response.data;
+      } catch (error) {
+        console.log('API: Teacher stats error:', error);
+        throw this.handleError(error);
+      }
+    }
 
   async getTeacherClassStudents(classId) {
     try {

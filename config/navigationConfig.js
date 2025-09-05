@@ -53,6 +53,7 @@ import TeacherQRCheckInScreen from '../screens/TeacherQRCheckInScreen';
 import TeacherGradebookScreen from '../screens/TeacherGradebookScreen';
 import TeacherUploadResultsScreen from '../screens/TeacherUploadResultsScreen';
 import TeacherAnnouncementsScreen from '../screens/TeacherAnnouncementsScreen';
+import TeacherProfileScreen from '../screens/TeacherProfileScreen';
 
 // Parent Screens
 import ParentLoginScreen from '../screens/ParentLoginScreen';
@@ -275,7 +276,7 @@ export const teacherScreens = (theme) => [
   },
   {
     name: 'TeacherProfile',
-    component: SimpleProfileScreen,
+    component: TeacherProfileScreen,
     options: createDrawerScreenOptions('Profile', '👤', theme),
   },
   {
