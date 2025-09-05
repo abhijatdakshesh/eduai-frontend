@@ -79,31 +79,60 @@ const ParentDashboardScreen = ({ navigation }) => {
   };
 
   const handleLogout = async () => {
-    Alert.alert(
-      'Logout',
-      'Are you sure you want to logout?',
-      [
-        {
-          text: 'Cancel',
-          style: 'cancel',
-        },
-        {
-          text: 'Logout',
-          style: 'destructive',
-          onPress: async () => {
-            try {
-              console.log('Logout from dashboard clicked');
-              const result = await logout();
-              console.log('Logout result:', result);
-              Alert.alert('Success', 'Logged out successfully!');
-            } catch (error) {
-              console.error('Logout error:', error);
-              Alert.alert('Error', 'Logout failed. Please try again.');
+    console.log('Parent Dashboard: Logout button pressed!');
+    
+    // Use browser's native confirm for web compatibility
+    const confirmed = window.confirm('Are you sure you want to logout?');
+    
+    if (confirmed) {
+      try {
+        console.log('Parent Dashboard: Starting logout process');
+        
+        // Call logout function
+        const logoutResult = await logout();
+        console.log('Parent Dashboard: Logout result:', logoutResult);
+        
+        // Add a small delay to ensure state updates
+        setTimeout(() => {
+          console.log('Parent Dashboard: Attempting navigation reset after delay');
+          
+          // Force navigation reset with multiple fallback approaches
+          try {
+            // Method 1: Try to get root navigator and reset
+            const parent = navigation.getParent();
+            const root = parent?.getParent();
+            
+            console.log('Parent Dashboard: Navigation hierarchy - parent:', !!parent, 'root:', !!root);
+            
+            if (root) {
+              console.log('Parent Dashboard: Resetting via root navigator');
+              root.reset({ index: 0, routes: [{ name: 'Auth' }] });
+            } else if (parent) {
+              console.log('Parent Dashboard: Resetting via parent navigator');
+              parent.reset({ index: 0, routes: [{ name: 'Auth' }] });
+            } else {
+              console.log('Parent Dashboard: Resetting via current navigator');
+              navigation.reset({ index: 0, routes: [{ name: 'Auth' }] });
             }
-          },
-        },
-      ]
-    );
+          } catch (navError) {
+            console.log('Parent Dashboard: Navigation reset failed:', navError);
+            // Fallback: Navigate to ParentLogout screen
+            try {
+              navigation.navigate('ParentLogout');
+            } catch (navError2) {
+              console.log('Parent Dashboard: All navigation methods failed:', navError2);
+              window.alert('Navigation failed. Please restart the app.');
+            }
+          }
+        }, 100);
+        
+      } catch (error) {
+        console.error('Parent Dashboard: Logout error:', error);
+        window.alert('Logout failed. Please try again.');
+      }
+    } else {
+      console.log('Parent Dashboard: Logout cancelled by user');
+    }
   };
 
   const StatCard = ({ number, label, color, icon, onPress }) => (
