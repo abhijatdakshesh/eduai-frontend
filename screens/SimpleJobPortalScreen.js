@@ -55,7 +55,9 @@ const SimpleJobPortalScreen = ({ navigation }) => {
             company: job.company,
             location: job.location,
             type: job.job_type,
-            salary: `$${job.salary_min?.toLocaleString()} - $${job.salary_max?.toLocaleString()}`,
+            salary: job.salary_min && job.salary_max ? 
+              `$${job.salary_min.toLocaleString()} - $${job.salary_max.toLocaleString()}` : 
+              'Salary not specified',
             description: job.description,
             applications: parseInt(job.application_count) || 0,
             postedDate: new Date(job.posted_date).toLocaleDateString(),
