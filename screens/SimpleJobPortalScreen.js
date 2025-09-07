@@ -45,12 +45,8 @@ const SimpleJobPortalScreen = ({ navigation }) => {
               applicationUrl = 'https://jobs.citi.com/job/-/-/287/85729446288';
             } else if (companyLower.includes('cisco')) {
               applicationUrl = 'https://jobs.cisco.com/jobs/IsAJob?projectId=1449112&tags=2027summerinternship';
-            } else if (companyLower.includes('linkedin')) {
-              applicationUrl = 'https://www.linkedin.com/jobs/collections/recommended/';
-            } else {
-              // Generic fallback - company careers page
-              applicationUrl = `https://${companyLower.replace(/\s+/g, '').toLowerCase()}.com/careers`;
             }
+            // No fallback for other companies - they will show the "contact company directly" message
           }
           
           return {
