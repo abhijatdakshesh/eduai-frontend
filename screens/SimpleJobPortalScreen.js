@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Dimensions, Alert } from 'react-native';
+import { View, Text, StyleSheet, ScrollView, TouchableOpacity, TextInput, Platform, Dimensions, Alert, Linking } from 'react-native';
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 
@@ -44,7 +44,8 @@ const SimpleJobPortalScreen = ({ navigation }) => {
           postedDate: new Date(job.posted_date).toLocaleDateString(),
           logo: '🏢', // Default logo
           requirements: job.requirements,
-          deadline: job.deadline
+          deadline: job.deadline,
+          application_url: job.application_url // Include application URL
         }));
         setJobs(transformedJobs);
       }
@@ -63,6 +64,7 @@ const SimpleJobPortalScreen = ({ navigation }) => {
           applications: 45,
           postedDate: '2 days ago',
           logo: '🏢',
+          application_url: 'https://techcorp.com/careers/software-engineer',
         },
         {
           id: 2,
@@ -75,6 +77,7 @@ const SimpleJobPortalScreen = ({ navigation }) => {
           applications: 23,
           postedDate: '1 week ago',
           logo: '📊',
+          application_url: 'https://dataflow.com/careers/intern',
         },
         {
           id: 3,
@@ -87,6 +90,7 @@ const SimpleJobPortalScreen = ({ navigation }) => {
           applications: 67,
           postedDate: '3 days ago',
           logo: '🎨',
+          application_url: 'https://designstudio.com/careers/ux-designer',
         },
       ];
       setJobs(mockJobs);
@@ -154,31 +158,55 @@ const SimpleJobPortalScreen = ({ navigation }) => {
 
   const handleViewJob = (job) => {
     const deadline = job.deadline ? new Date(job.deadline).toLocaleDateString() : 'No deadline';
+    const applicationInfo = job.application_url ? 
+      `\n\nApplication URL: ${job.application_url}` : 
+      '\n\nApplication: Contact company directly';
+    
     Alert.alert(
       'Job Details',
-      `${job.title}\n\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\nSalary: ${job.salary}\nPosted: ${job.postedDate}\nDeadline: ${deadline}\n\nDescription:\n${job.description}\n\nRequirements:\n${job.requirements || 'Not specified'}`,
-      [{ text: 'OK' }]
+      `${job.title}\n\nCompany: ${job.company}\nLocation: ${job.location}\nType: ${job.type}\nSalary: ${job.salary}\nPosted: ${job.postedDate}\nDeadline: ${deadline}${applicationInfo}\n\nDescription:\n${job.description}\n\nRequirements:\n${job.requirements || 'Not specified'}`,
+      [
+        { text: 'OK' },
+        ...(job.application_url ? [{
+          text: 'Apply Now',
+          onPress: () => handleApplyJob(job)
+        }] : [])
+      ]
     );
   };
 
   const handleApplyJob = async (job) => {
-    try {
-      const response = await apiClient.applyForJob(job.id, {
-        cover_letter: `I am interested in the ${job.title} position at ${job.company}.`,
-        resume_url: 'demo-resume.pdf'
-      });
-      
-      if (response.success) {
-        Alert.alert('Success', 'Application submitted successfully!');
-      } else {
-        Alert.alert('Error', response.message || 'Failed to submit application');
+    // Check if job has an application URL
+    if (job.application_url) {
+      try {
+        // Use browser's native confirm for web compatibility
+        const confirmed = window.confirm(
+          `You will be redirected to ${job.company}'s application page. Continue?`
+        );
+        
+        if (confirmed) {
+          // Open external URL
+          const supported = await Linking.canOpenURL(job.application_url);
+          if (supported) {
+            await Linking.openURL(job.application_url);
+          } else {
+            // Fallback for web - open in new tab
+            if (Platform.OS === 'web') {
+              window.open(job.application_url, '_blank');
+            } else {
+              Alert.alert('Error', 'Cannot open application URL');
+            }
+          }
+        }
+      } catch (error) {
+        console.error('Error opening application URL:', error);
+        Alert.alert('Error', 'Failed to open application page');
       }
-    } catch (error) {
-      console.error('Application error:', error);
-      // Fallback for demo purposes
+    } else {
+      // Fallback for jobs without application URLs
       Alert.alert(
-        'Demo Mode',
-        `Application submitted successfully for ${job.title} at ${job.company}! (Demo mode)`,
+        'Application Info',
+        `To apply for ${job.title} at ${job.company}, please visit their website or contact them directly.`,
         [{ text: 'OK' }]
       );
     }
