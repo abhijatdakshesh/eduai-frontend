@@ -176,22 +176,36 @@ const SimpleJobPortalScreen = ({ navigation }) => {
   };
 
   const handleApplyJob = async (job) => {
+    console.log('Apply button clicked for job:', job);
+    console.log('Job application_url:', job.application_url);
+    
+    // First, show a simple test alert to confirm button is working
+    window.alert(`Apply button clicked for: ${job.title} at ${job.company}`);
+    
     // Check if job has an application URL
     if (job.application_url) {
       try {
+        console.log('Job has application URL, proceeding with redirect');
+        
         // Use browser's native confirm for web compatibility
         const confirmed = window.confirm(
           `You will be redirected to ${job.company}'s application page. Continue?`
         );
         
+        console.log('User confirmed:', confirmed);
+        
         if (confirmed) {
           // Open external URL
           const supported = await Linking.canOpenURL(job.application_url);
+          console.log('URL supported:', supported);
+          
           if (supported) {
             await Linking.openURL(job.application_url);
+            console.log('URL opened successfully');
           } else {
             // Fallback for web - open in new tab
             if (Platform.OS === 'web') {
+              console.log('Opening URL in new tab for web');
               window.open(job.application_url, '_blank');
             } else {
               Alert.alert('Error', 'Cannot open application URL');
@@ -203,6 +217,7 @@ const SimpleJobPortalScreen = ({ navigation }) => {
         Alert.alert('Error', 'Failed to open application page');
       }
     } else {
+      console.log('Job has no application URL, showing fallback message');
       // Fallback for jobs without application URLs
       Alert.alert(
         'Application Info',
