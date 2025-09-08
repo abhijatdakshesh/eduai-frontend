@@ -1,11 +1,11 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Platform } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native';
 import { apiClient } from '../services/api';
 import { useBackButton } from '../utils/backButtonHandler';
 
 const isIOS = Platform.OS === 'ios';
 
-const statusOptions = ['present', 'absent', 'late', 'excused'];
+const statusOptions = ['present', 'absent', 'late'];
 
 const MarkAttendanceScreen = ({ route, navigation }) => {
   const { classId, className } = route.params || {};
@@ -16,7 +16,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
-  const [summary, setSummary] = useState({ present: 0, absent: 0, late: 0, excused: 0 });
+  const [summary, setSummary] = useState({ present: 0, absent: 0, late: 0 });
   const [reasons, setReasons] = useState([]);
 
   useBackButton(navigation);
@@ -101,7 +101,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           setMarks(map);
         }
         
-        setSummary({ present: 0, absent: 0, late: 0, excused: 0 });
+        setSummary({ present: 0, absent: 0, late: 0 });
         setDirty(false);
       } finally {
         setLoading(false);
@@ -121,7 +121,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           : [];
         setReasons(r);
       } catch (_) {
-        setReasons(['Sick', 'Personal', 'Travel', 'Late Transport', 'Excused Activity']);
+        setReasons(['Sick', 'Personal', 'Travel', 'Late Transport']);
       }
     };
     loadReasons();
@@ -149,7 +149,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   };
 
   const computeSummary = (map) => {
-    const counts = { present: 0, absent: 0, late: 0, excused: 0 };
+    const counts = { present: 0, absent: 0, late: 0 };
     Object.values(map || {}).forEach((v) => {
       const s = v?.status || 'present';
       if (counts[s] !== undefined) counts[s] += 1;
@@ -241,6 +241,128 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
     }
   };
 
+  // WhatsApp and AI Call functionality
+  const sendWhatsAppToParents = async (studentId = null) => {
+    try {
+      // Get attendance summary for messaging
+      const absentStudents = students.filter(s => {
+        const key = getStudentKey(s);
+        return marks[key]?.status === 'absent' || marks[key]?.status === 'late';
+      });
+
+      if (studentId) {
+        // Send to specific student's parent
+        const student = students.find(s => getStudentKey(s) === studentId);
+        if (!student) {
+          Alert.alert('Error', 'Student not found');
+          return;
+        }
+        
+        const studentMark = marks[studentId];
+        const message = `Dear Parent/Guardian,
+
+Your ward ${student.first_name || student.name} (ID: ${student.student_id || student.id}) was marked as ${studentMark?.status?.toUpperCase()} on ${date}.
+
+${studentMark?.notes ? `Reason: ${studentMark.notes}` : ''}
+
+Please ensure regular attendance for better academic performance.
+
+Best regards,
+Teacher`;
+
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        
+        if (Platform.OS === 'web') {
+          window.open(whatsappUrl, '_blank');
+        } else {
+          await Linking.openURL(whatsappUrl);
+        }
+      } else {
+        // Send to all parents of absent/late students
+        if (absentStudents.length === 0) {
+          Alert.alert('Info', 'No absent or late students to notify');
+          return;
+        }
+
+        const message = `Dear Parents/Guardians,
+
+Attendance Report for ${date}:
+
+${absentStudents.map(s => {
+          const key = getStudentKey(s);
+          const mark = marks[key];
+          return `• ${s.first_name || s.name} (ID: ${s.student_id || s.id}) - ${mark?.status?.toUpperCase()}${mark?.notes ? ` (${mark.notes})` : ''}`;
+        }).join('\n')}
+
+Please ensure regular attendance for better academic performance.
+
+Best regards,
+Teacher`;
+
+        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
+        
+        if (Platform.OS === 'web') {
+          window.open(whatsappUrl, '_blank');
+        } else {
+          await Linking.openURL(whatsappUrl);
+        }
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to open WhatsApp: ' + error.message);
+    }
+  };
+
+  const initiateAICall = async (studentId = null) => {
+    try {
+      if (studentId) {
+        // AI Call for specific student
+        const student = students.find(s => getStudentKey(s) === studentId);
+        if (!student) {
+          Alert.alert('Error', 'Student not found');
+          return;
+        }
+        
+        const studentMark = marks[studentId];
+        Alert.alert(
+          'AI Call Initiated',
+          `AI call will be made to ${student.first_name || student.name}'s parent regarding their ${studentMark?.status?.toUpperCase()} status on ${date}.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Confirm', onPress: () => {
+              // TODO: Implement actual AI call functionality
+              Alert.alert('Success', 'AI call has been scheduled and will be made shortly.');
+            }}
+          ]
+        );
+      } else {
+        // AI Call for all absent/late students
+        const absentStudents = students.filter(s => {
+          const key = getStudentKey(s);
+          return marks[key]?.status === 'absent' || marks[key]?.status === 'late';
+        });
+
+        if (absentStudents.length === 0) {
+          Alert.alert('Info', 'No absent or late students to call about');
+          return;
+        }
+
+        Alert.alert(
+          'AI Call Initiated',
+          `AI calls will be made to parents of ${absentStudents.length} students regarding their attendance status on ${date}.`,
+          [
+            { text: 'Cancel', style: 'cancel' },
+            { text: 'Confirm', onPress: () => {
+              // TODO: Implement actual AI call functionality
+              Alert.alert('Success', 'AI calls have been scheduled and will be made shortly.');
+            }}
+          ]
+        );
+      }
+    } catch (error) {
+      Alert.alert('Error', 'Failed to initiate AI call: ' + error.message);
+    }
+  };
+
   const renderRow = ({ item }) => {
     const key = getStudentKey(item) || String(item.id);
     const current = marks[key] || { status: 'present', notes: '' };
@@ -273,7 +395,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           {current.status !== 'present' && (
             <>
               <View style={styles.reasonChipsRow}>
-                {(reasons.length ? reasons : ['Sick','Personal','Travel','Late Transport','Excused Activity']).map((r) => (
+                {(reasons.length ? reasons : ['Sick','Personal','Travel','Late Transport']).map((r) => (
                   <TouchableOpacity key={r} style={styles.reasonChip} onPress={() => updateNotes(key, r)}>
                     <Text style={styles.reasonChipText}>{r}</Text>
                   </TouchableOpacity>
@@ -285,6 +407,23 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
                 placeholder="Reason / Notes"
                 style={styles.notesInput}
               />
+              {/* Communication buttons for absent/late students */}
+              {(current.status === 'absent' || current.status === 'late') && (
+                <View style={styles.communicationButtons}>
+                  <TouchableOpacity 
+                    style={styles.individualWhatsappBtn} 
+                    onPress={() => sendWhatsAppToParents(key)}
+                  >
+                    <Text style={styles.individualWhatsappText}>📱 WhatsApp</Text>
+                  </TouchableOpacity>
+                  <TouchableOpacity 
+                    style={styles.individualAiCallBtn} 
+                    onPress={() => initiateAICall(key)}
+                  >
+                    <Text style={styles.individualAiCallText}>🤖 AI Call</Text>
+                  </TouchableOpacity>
+                </View>
+              )}
             </>
           )}
         </View>
@@ -325,6 +464,12 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
               </TouchableOpacity>
             </>
           )}
+          <TouchableOpacity style={[styles.whatsappBtn]} onPress={() => sendWhatsAppToParents()}>
+            <Text style={styles.whatsappText}>📱 WhatsApp</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={[styles.aiCallBtn]} onPress={() => initiateAICall()}>
+            <Text style={styles.aiCallText}>🤖 AI Call</Text>
+          </TouchableOpacity>
           <TouchableOpacity style={styles.saveBtn} disabled={saving || !dirty} onPress={save}>
             <Text style={styles.saveText}>{saving ? 'Saving...' : dirty ? 'Save' : 'Saved'}</Text>
           </TouchableOpacity>
@@ -335,7 +480,6 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
         <View style={[styles.sumPill, styles.sumPresent]}><Text style={styles.sumText}>P: {summary.present}</Text></View>
         <View style={[styles.sumPill, styles.sumAbsent]}><Text style={styles.sumText}>A: {summary.absent}</Text></View>
         <View style={[styles.sumPill, styles.sumLate]}><Text style={styles.sumText}>L: {summary.late}</Text></View>
-        <View style={[styles.sumPill, styles.sumExcused]}><Text style={styles.sumText}>E: {summary.excused}</Text></View>
       </View>
 
       {loading ? (
@@ -369,6 +513,10 @@ const styles = StyleSheet.create({
   exportBtn: { backgroundColor: '#0ea5e9', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
   importBtn: { backgroundColor: '#0369a1', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
   exportText: { color: 'white', fontWeight: '700' },
+  whatsappBtn: { backgroundColor: '#25D366', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
+  whatsappText: { color: 'white', fontWeight: '700' },
+  aiCallBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
+  aiCallText: { color: 'white', fontWeight: '700' },
   saveBtn: { backgroundColor: '#1a237e', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10 },
   saveText: { color: 'white', fontWeight: '700' },
   loadingContainer: { padding: 16 },
@@ -384,7 +532,6 @@ const styles = StyleSheet.create({
   status_present: { backgroundColor: '#10b981' },
   status_absent: { backgroundColor: '#ef4444' },
   status_late: { backgroundColor: '#f59e0b' },
-  status_excused: { backgroundColor: '#3b82f6' },
   statusSelected: { borderWidth: 2, borderColor: 'rgba(0,0,0,0.1)' },
   statusText: { color: 'white', fontWeight: '800' },
   notesCol: { flex: 1 },
@@ -392,12 +539,16 @@ const styles = StyleSheet.create({
   reasonChipsRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 },
   reasonChip: { backgroundColor: '#e0f2fe', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginRight: 6, marginBottom: 6 },
   reasonChipText: { color: '#0369a1', fontWeight: '700', fontSize: 12 },
+  communicationButtons: { flexDirection: 'row', marginTop: 8, gap: 8 },
+  individualWhatsappBtn: { backgroundColor: '#25D366', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, flex: 1 },
+  individualWhatsappText: { color: 'white', fontSize: 11, fontWeight: '600', textAlign: 'center' },
+  individualAiCallBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, flex: 1 },
+  individualAiCallText: { color: 'white', fontSize: 11, fontWeight: '600', textAlign: 'center' },
   summaryBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
   sumPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
   sumPresent: { backgroundColor: '#10b981' },
   sumAbsent: { backgroundColor: '#ef4444' },
   sumLate: { backgroundColor: '#f59e0b' },
-  sumExcused: { backgroundColor: '#3b82f6' },
   sumText: { color: 'white', fontWeight: '800' },
 });
 

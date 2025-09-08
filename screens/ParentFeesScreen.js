@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert, Modal, TextInput, ScrollView } from 'react-native';
+import * as WebBrowser from 'expo-web-browser';
 import { apiClient } from '../services/api';
 
 const isIOS = Platform.OS === 'ios';
@@ -122,29 +123,59 @@ const ParentFeesScreen = ({ route }) => {
     setProcessingPayment(true);
 
     try {
-      // Simulate payment processing
-      await new Promise(resolve => setTimeout(resolve, 2000));
-      
-      // Update invoice status to paid
-      setInvoices(prevInvoices => 
-        prevInvoices.map(invoice => 
-          invoice.id === selectedInvoice.id 
-            ? { ...invoice, status: 'paid' }
-            : invoice
-        )
-      );
+      // Prepare amount in number (extract digits from formatted amount_due like ₹2,50,000)
+      const numericAmount = Number(String(selectedInvoice.amount_due).replace(/[^\d.]/g, '')) || 0;
 
-      setPaymentModalVisible(false);
-      setSelectedInvoice(null);
-      setCardDetails({ cardNumber: '', expiryDate: '', cvv: '', cardholderName: '' });
-      
-      Alert.alert(
-        'Payment Successful!', 
-        `Payment of ${selectedInvoice.amount_due} for ${selectedInvoice.title} has been processed successfully.`,
-        [{ text: 'OK', style: 'default' }]
-      );
+      // 1) Create order via backend
+      const create = await apiClient.createCashfreeOrder({
+        amount: numericAmount || 1, // fallback to 1 for sandbox
+        customer: {
+          id: `parent_${Date.now()}`,
+          name: 'Parent User',
+          email: 'parent@example.com',
+          phone: '9999999999',
+        },
+      });
+
+      if (!create?.success) {
+        Alert.alert('Error', create?.message || 'Failed to create payment order');
+        setProcessingPayment(false);
+        return;
+      }
+
+      const { orderId, paymentSessionId } = create;
+
+      if (Platform.OS === 'web') {
+        // Ensure Cashfree JS SDK is present
+        if (!window.Cashfree) {
+          await new Promise((resolve, reject) => {
+            const s = document.createElement('script');
+            s.src = 'https://sdk.cashfree.com/js/v3/cashfree.js';
+            s.onload = resolve;
+            s.onerror = reject;
+            document.body.appendChild(s);
+          });
+        }
+        const cashfree = window.Cashfree({ mode: (process.env.EXPO_PUBLIC_CF_MODE || 'sandbox') });
+        await cashfree.checkout({ paymentSessionId, redirectTarget: '_self' });
+        // After redirect completes, your return page should verify. As a safety, verify here too if needed.
+      } else {
+        // Mobile: open hosted checkout in system browser
+        const url = `https://payments.cashfree.com/pg/view/checkout?payment_session_id=${encodeURIComponent(paymentSessionId)}`;
+        await WebBrowser.openBrowserAsync(url);
+        // After user returns, verify
+        const verify = await apiClient.verifyCashfreeOrder(orderId);
+        if (verify?.success && verify?.data?.order_status === 'PAID') {
+          // Mark invoice as paid locally
+          setInvoices(prev => prev.map(inv => inv.id === selectedInvoice.id ? { ...inv, status: 'paid' } : inv));
+          setPaymentModalVisible(false);
+          Alert.alert('Payment Successful', 'Your payment was successful.');
+        } else {
+          Alert.alert('Payment Pending', 'Payment was not completed.');
+        }
+      }
     } catch (error) {
-      Alert.alert('Payment Failed', 'There was an error processing your payment. Please try again.');
+      Alert.alert('Payment Error', error?.message || 'Failed to start payment.');
     } finally {
       setProcessingPayment(false);
     }
@@ -313,7 +344,7 @@ const ParentFeesScreen = ({ route }) => {
               disabled={processingPayment}
             >
               <Text style={styles.payNowButtonText}>
-                {processingPayment ? 'Processing...' : `Pay ${selectedInvoice?.amount_due}`}
+                {processingPayment ? 'Processing...' : `Pay ₹${selectedInvoice?.amount_due}`}
               </Text>
             </TouchableOpacity>
           </View>

@@ -80,8 +80,10 @@ export const AuthProvider = ({ children }) => {
 
   const login = async (email, password) => {
     try {
+      console.log('AuthContext: Starting login for email:', email);
       setLoading(true);
       const response = await apiClient.login(email, password);
+      console.log('AuthContext: Login response:', response);
       
       if (response.success) {
         // Try to extract user from login response in a robust way

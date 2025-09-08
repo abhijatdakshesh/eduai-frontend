@@ -30,7 +30,7 @@ const isIOS = Platform.OS === 'ios';
 
 const ParentAttendanceScreen = ({ route, navigation }) => {
   const { studentId: routeStudentId, childName } = route.params || {};
-  const [studentId, setStudentId] = useState(routeStudentId || '8b86b626-584a-4771-90dd-4d1aedbb4198');
+  const [studentId, setStudentId] = useState(routeStudentId || null);
   const [from, setFrom] = useState('');
   const [to, setTo] = useState(new Date().toISOString().slice(0, 10));
   const [loading, setLoading] = useState(false);
@@ -43,15 +43,19 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
   const [isInitializing, setIsInitializing] = useState(false);
 
   const load = async (isRefresh = false) => {
+    console.log('ParentAttendance: Loading with studentId:', studentId, 'routeStudentId:', routeStudentId);
+    
     if (!studentId && !isInitializing) {
       setIsInitializing(true);
       // Try to get the first child if no studentId is provided
       try {
+        console.log('ParentAttendance: No studentId provided, fetching children...');
         const childrenResponse = await apiClient.getParentChildren();
         if (childrenResponse?.success && childrenResponse.data?.children?.length > 0) {
           const firstChild = childrenResponse.data.children[0];
           // Use the student UUID from the backend
           const childStudentId = firstChild.id || firstChild.student_id;
+          console.log('ParentAttendance: Setting studentId to first child:', childStudentId, 'Child:', firstChild);
           if (childStudentId) {
             // Set the student ID state and return - let useEffect handle the reload
             setStudentId(childStudentId);
@@ -60,6 +64,7 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
           }
         }
       } catch (error) {
+        console.log('ParentAttendance: Error fetching children:', error);
         setIsInitializing(false);
       }
       Alert.alert('Error', 'Student ID is required');
@@ -77,6 +82,8 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
       setLoading(true);
       }
       
+      console.log('ParentAttendance: Fetching attendance data for studentId:', studentId);
+      
       const [rec, sum, child] = await Promise.all([
         apiClient.getParentChildAttendance(studentId, { from, to }),
         apiClient.getParentChildAttendanceSummary(studentId, { from, to }),
@@ -84,6 +91,10 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
           return { success: false, data: null };
         }), // Get additional child info with fallback
       ]);
+      
+      console.log('ParentAttendance: Attendance response:', rec);
+      console.log('ParentAttendance: Summary response:', sum);
+      console.log('ParentAttendance: Child info response:', child);
       
       const recs = rec?.success ? (rec.data?.attendance || []) : [];
       setRecords(recs);
@@ -211,9 +222,16 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
   };
 
   const getAttendancePercentage = () => {
-    const total = summaryTotals.present + summaryTotals.absent + summaryTotals.late + summaryTotals.excused;
-    if (total === 0) return 0;
-    return Math.round(((summaryTotals.present + summaryTotals.excused) / total) * 100);
+    // Total classes that happened = all attendance records (present + absent + late + excused)
+    const totalClassesHappened = summaryTotals.present + summaryTotals.absent + summaryTotals.late + summaryTotals.excused;
+    
+    // Classes attended = present + excused (excused absences are still considered attended)
+    const classesAttended = summaryTotals.present + summaryTotals.excused;
+    
+    if (totalClassesHappened === 0) return 0;
+    
+    // Calculate percentage: (Classes Attended / Total Classes Happened) × 100
+    return Math.round((classesAttended / totalClassesHappened) * 100);
   };
 
   const formatDate = (dateString) => {
@@ -305,12 +323,14 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
 
   const renderSummaryCard = () => {
     const percentage = getAttendancePercentage();
+    const totalClassesHappened = summaryTotals.present + summaryTotals.absent + summaryTotals.late + summaryTotals.excused;
+    const classesAttended = summaryTotals.present + summaryTotals.excused;
     
     return (
       <Card style={styles.summaryCard}>
         <SectionHeader 
           title="Attendance Summary" 
-          subtitle={`${percentage}% attendance rate`}
+          subtitle={`${percentage}% attendance rate (${classesAttended}/${totalClassesHappened} classes)`}
         />
         
         <View style={styles.summaryGrid}>
@@ -486,7 +506,12 @@ const ParentAttendanceScreen = ({ route, navigation }) => {
           ) : (
             <FlatList
               data={filteredRecords}
-              keyExtractor={(item, index) => String(item.id || item.attendance_id || index)}
+              keyExtractor={(item, index) => {
+                // Create a unique key combining multiple identifiers
+                const uniqueKey = `${item.id || item.attendance_id || 'unknown'}-${item.date || 'nodate'}-${index}`;
+                console.log('ParentAttendance: Key for item:', uniqueKey, 'Item:', item);
+                return uniqueKey;
+              }}
               renderItem={renderAttendanceCard}
               scrollEnabled={false}
               showsVerticalScrollIndicator={false}

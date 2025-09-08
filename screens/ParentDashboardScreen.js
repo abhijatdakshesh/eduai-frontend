@@ -13,6 +13,7 @@ import {
   StatusBar,
   Image
 } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
 
@@ -36,34 +37,112 @@ const ParentDashboardScreen = ({ navigation }) => {
   const load = async () => {
     try {
       setLoading(true);
-      const [dash, kids, anns] = await Promise.all([
-        apiClient.getParentDashboard(),
-        apiClient.getParentChildren(),
-        apiClient.getParentAnnouncements({ limit: 5 }),
+      console.log('ParentDashboard: Starting to load data...');
+      
+      // Add cache-busting timestamp to force fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      console.log('ParentDashboard: Using cache buster:', cacheBuster);
+      
+      // Load APIs individually to handle failures gracefully
+      const [dashResult, kidsResult, annsResult] = await Promise.allSettled([
+        apiClient.getParentDashboard().catch(err => {
+          console.log('ParentDashboard: Dashboard API failed:', err.message);
+          return { success: false, error: err.message };
+        }),
+        apiClient.getParentChildren().catch(err => {
+          console.log('ParentDashboard: Children API failed:', err.message);
+          return { success: false, error: err.message };
+        }),
+        apiClient.getParentAnnouncements({ limit: 5 }).catch(err => {
+          console.log('ParentDashboard: Announcements API failed:', err.message);
+          return { success: false, error: err.message };
+        }),
       ]);
-      if (kids?.success) setChildren(kids.data?.children || []);
-      if (anns?.success) setAnnouncements(anns.data?.announcements || []);
-      // Normalize stats from dashboard response with safe fallbacks
+      
+      const dash = dashResult.status === 'fulfilled' ? dashResult.value : { success: false };
+      const kids = kidsResult.status === 'fulfilled' ? kidsResult.value : { success: false };
+      const anns = annsResult.status === 'fulfilled' ? annsResult.value : { success: false };
+      
+      console.log('ParentDashboard: Dashboard response:', dash);
+      console.log('ParentDashboard: Children response:', kids);
+      console.log('ParentDashboard: Announcements response:', anns);
+      
+      // Process children data (this is the critical part)
+      console.log('ParentDashboard: Processing children data...');
+      console.log('ParentDashboard: kids object:', JSON.stringify(kids, null, 2));
+      
+      if (kids?.success) {
+        const childrenData = kids.data?.children || [];
+        console.log('ParentDashboard: Raw children data:', childrenData);
+        console.log('ParentDashboard: Children count:', childrenData.length);
+        console.log('ParentDashboard: Children IDs:', childrenData.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })));
+        
+        // Force state update with detailed logging
+        console.log('ParentDashboard: About to set children state...');
+        setChildren(childrenData);
+        console.log('ParentDashboard: Children state set to:', childrenData);
+      } else {
+        console.log('ParentDashboard: Children API failed:', kids);
+        console.log('ParentDashboard: Setting children to empty array');
+        setChildren([]);
+      }
+      
+      // Process announcements data
+      if (anns?.success) {
+        setAnnouncements(anns.data?.announcements || []);
+      } else {
+        setAnnouncements([]);
+      }
+      
+      // Process stats with fallbacks
       if (dash?.success) {
         const raw = dash.data?.stats || dash.data || {};
         const pickNum = (k, alt) => Number(raw?.[k] ?? raw?.[alt] ?? 0) || 0;
+        const childrenCount = pickNum('children', 'childrenCount') || (kids?.data?.children?.length || 0);
+        console.log('ParentDashboard: Setting stats with childrenCount:', childrenCount);
         setStats({
-          childrenCount: pickNum('children', 'childrenCount') || (kids?.data?.children?.length || 0),
+          childrenCount,
           unreadAnnouncements: pickNum('unreadAnnouncements', 'unread_announcements'),
           unpaidInvoices: pickNum('unpaidInvoices', 'unpaid_invoices'),
           upcomingEvents: pickNum('upcomingEvents', 'upcoming_events'),
         });
       } else {
-        setStats((prev) => ({ ...prev, childrenCount: kids?.data?.children?.length || 0 }));
+        // Dashboard API failed, use children data for stats
+        const childrenCount = kids?.data?.children?.length || 0;
+        console.log('ParentDashboard: Dashboard failed, setting childrenCount from children API:', childrenCount);
+        setStats({
+          childrenCount,
+          unreadAnnouncements: 0,
+          unpaidInvoices: 0,
+          upcomingEvents: 0,
+        });
       }
+      
+      // Show warning if dashboard API failed but other APIs succeeded
+      if (!dash?.success && (kids?.success || anns?.success)) {
+        console.log('ParentDashboard: Dashboard API failed but other data loaded successfully');
+      }
+      
     } catch (e) {
+      console.log('ParentDashboard: Unexpected load error:', e);
       Alert.alert('Error', e?.message || 'Failed to load dashboard');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    console.log('ParentDashboard: Component mounted, loading data...');
+    load(); 
+  }, []);
+
+  // Force refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('ParentDashboard: Screen focused, refreshing data...');
+      load();
+    }, [])
+  );
 
   const onRefresh = useCallback(async () => {
     try {
@@ -299,11 +378,26 @@ const ParentDashboardScreen = ({ navigation }) => {
         {/* Children Section */}
         <View style={styles.section}>
           <View style={styles.sectionHeader}>
-            <Text style={styles.sectionTitle}>My Children</Text>
-            <TouchableOpacity onPress={() => navigation.navigate('ParentChildren')}>
-              <Text style={styles.viewAllLink}>View All</Text>
-            </TouchableOpacity>
+            <View>
+              <Text style={styles.sectionTitle}>My Children</Text>
+              <Text style={styles.debugInfo}>Debug: {children.length} children in state</Text>
+            </View>
+            <View style={styles.sectionHeaderActions}>
+              <TouchableOpacity onPress={() => {
+                console.log('ParentDashboard: Manual refresh button clicked!');
+                console.log('ParentDashboard: Current children state before clear:', children);
+                setChildren([]); // Clear children state
+                console.log('ParentDashboard: Children state cleared, calling load()...');
+                load(); // Reload data
+              }}>
+                <Text style={styles.refreshLink}>🔄 Refresh</Text>
+              </TouchableOpacity>
+              <TouchableOpacity onPress={() => navigation.navigate('ParentChildren')}>
+                <Text style={styles.viewAllLink}>View All</Text>
+              </TouchableOpacity>
+            </View>
           </View>
+          
           
           {children.length === 0 ? (
             <View style={styles.emptyState}>
@@ -319,7 +413,12 @@ const ParentDashboardScreen = ({ navigation }) => {
               horizontal
               showsHorizontalScrollIndicator={false}
               contentContainerStyle={styles.childrenList}
-              keyExtractor={(item) => String(item.id)}
+              keyExtractor={(item, index) => {
+                // Create a unique key combining ID and index to prevent duplicates
+                const uniqueKey = `${item.id || 'unknown'}-${index}`;
+                console.log('ParentDashboard: Child key:', uniqueKey, 'Child:', item);
+                return uniqueKey;
+              }}
               renderItem={({ item }) => <ChildCard child={item} />}
             />
           )}
@@ -384,7 +483,19 @@ const ParentDashboardScreen = ({ navigation }) => {
             
             <TouchableOpacity 
               style={styles.quickActionButton}
-              onPress={() => navigation.navigate('ParentAttendance')}
+              onPress={() => {
+                // If we have children, navigate to the first child's attendance
+                // Otherwise, navigate to children screen to select a child
+                if (children.length > 0) {
+                  const firstChild = children[0];
+                  navigation.navigate('ParentAttendance', { 
+                    studentId: firstChild.id, 
+                    childName: firstChild.first_name 
+                  });
+                } else {
+                  navigation.navigate('ParentChildren');
+                }
+              }}
             >
               <Text style={styles.quickActionIcon}>🗓️</Text>
               <Text style={styles.quickActionText}>Attendance</Text>
@@ -488,6 +599,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
     marginBottom: 16,
   },
+  sectionHeaderActions: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
   sectionTitle: {
     fontSize: 20,
     fontWeight: 'bold',
@@ -497,6 +613,16 @@ const styles = StyleSheet.create({
     color: '#3f51b5',
     fontSize: 14,
     fontWeight: '600',
+  },
+  refreshLink: {
+    color: '#ff9800',
+    fontSize: 14,
+    fontWeight: '600',
+  },
+  debugInfo: {
+    fontSize: 12,
+    color: '#666',
+    fontStyle: 'italic',
   },
   statsGrid: {
     flexDirection: 'row',

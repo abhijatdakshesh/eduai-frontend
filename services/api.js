@@ -24,12 +24,26 @@ class ApiClient {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       async (config) => {
-        const token = await AsyncStorage.getItem('accessToken');
-        if (token) {
-          config.headers.Authorization = `Bearer ${token}`;
-          console.log('API: Adding token to request:', token.substring(0, 20) + '...');
+        // Skip token validation for auth endpoints (login, register, refresh, etc.)
+        if (config.url?.includes('/auth/')) {
+          console.log('API: Skipping token validation for auth endpoint:', config.url);
+          // Still add device info headers for auth endpoints
+          config.headers['X-Device-Id'] = await this.getDeviceId();
+          config.headers['X-Platform'] = Device.osName || 'unknown';
+          config.headers['X-OS-Version'] = Device.osVersion || 'unknown';
+          return config;
+        }
+
+        // Ensure we have a valid token before making the request
+        const hasValidToken = await this.ensureValidToken();
+        if (hasValidToken) {
+          const token = await AsyncStorage.getItem('accessToken');
+          if (token) {
+            config.headers.Authorization = `Bearer ${token}`;
+            console.log('API: Adding valid token to request:', token.substring(0, 20) + '...');
+          }
         } else {
-          console.log('API: No token found in AsyncStorage');
+          console.log('API: No valid token available for request');
         }
 
         // Add device info headers
@@ -48,15 +62,28 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
-        if (error.response?.status === 401 && !originalRequest._retry) {
+        // Skip token refresh for auth endpoints (login, register, refresh, etc.)
+        if (originalRequest.url?.includes('/auth/')) {
+          console.log('API: Skipping token refresh for auth endpoint:', originalRequest.url);
+          return Promise.reject(error);
+        }
+
+        // Handle both 401 (Unauthorized) and 404 (Not Found) errors that might be caused by expired tokens
+        if ((error.response?.status === 401 || error.response?.status === 404) && !originalRequest._retry) {
           originalRequest._retry = true;
 
           try {
+            console.log('API: Token may be expired, attempting refresh...');
             const refreshed = await this.refreshToken();
             if (refreshed) {
+              console.log('API: Token refreshed successfully, retrying request...');
               return this.api(originalRequest);
+            } else {
+              console.log('API: Token refresh failed, clearing tokens...');
+              await this.clearTokens();
             }
           } catch (refreshError) {
+            console.log('API: Token refresh error:', refreshError.message);
             await this.clearTokens();
             // Navigate to login - this will be handled by the auth context
           }
@@ -101,26 +128,35 @@ class ApiClient {
   async refreshToken() {
     try {
       const refreshToken = await AsyncStorage.getItem('refreshToken');
-      if (!refreshToken) return false;
+      if (!refreshToken) {
+        console.log('API: No refresh token found');
+        return false;
+      }
 
+      console.log('API: Attempting to refresh token...');
+      const deviceId = await this.getDeviceId();
+      
       const response = await axios.post(`${API_BASE_URL}/auth/refresh`, {
-        device_id: await this.getDeviceId(),
+        device_id: deviceId,
       }, {
         headers: {
           'Authorization': `Bearer ${refreshToken}`,
-          'X-Device-Id': await this.getDeviceId(),
+          'X-Device-Id': deviceId,
+          'Content-Type': 'application/json',
         }
       });
 
       if (response.data.success) {
         const { access_token, refresh_token } = response.data.data.tokens;
         await this.setTokens(access_token, refresh_token);
+        console.log('API: Token refresh successful');
         return true;
+      } else {
+        console.log('API: Token refresh failed - invalid response');
+        return false;
       }
-      return false;
     } catch (error) {
-      // Don't log token refresh failures as errors - this is normal when tokens expire
-      console.log('Token refresh: No valid refresh token');
+      console.log('API: Token refresh error:', error.response?.status, error.response?.data?.message || error.message);
       return false;
     }
   }
@@ -133,6 +169,37 @@ class ApiClient {
   async clearTokens() {
     await AsyncStorage.removeItem('accessToken');
     await AsyncStorage.removeItem('refreshToken');
+  }
+
+  async isTokenExpired(token) {
+    if (!token) return true;
+    
+    try {
+      // Decode JWT token to check expiration
+      const payload = JSON.parse(atob(token.split('.')[1]));
+      const currentTime = Math.floor(Date.now() / 1000);
+      return payload.exp < currentTime;
+    } catch (error) {
+      console.log('API: Error checking token expiration:', error.message);
+      return true; // If we can't decode, assume it's expired
+    }
+  }
+
+  async ensureValidToken() {
+    const accessToken = await AsyncStorage.getItem('accessToken');
+    
+    if (!accessToken) {
+      console.log('API: No access token found');
+      return false;
+    }
+
+    const isExpired = await this.isTokenExpired(accessToken);
+    if (isExpired) {
+      console.log('API: Access token is expired, refreshing...');
+      return await this.refreshToken();
+    }
+
+    return true;
   }
 
   // Authentication methods
@@ -159,18 +226,24 @@ class ApiClient {
 
   async login(email, password) {
     try {
+      console.log('API: Attempting login for email:', email);
       const response = await this.api.post('/auth/login', {
         email,
         password,
       });
+      console.log('API: Login response status:', response.status);
       if (response.data.success) {
+        console.log('API: Login successful, setting tokens');
         await this.setTokens(
           response.data.data.tokens.access_token,
           response.data.data.tokens.refresh_token
         );
+      } else {
+        console.log('API: Login failed:', response.data.message);
       }
       return response.data;
     } catch (error) {
+      console.log('API: Login error:', error.response?.status, error.response?.data?.message || error.message);
       throw this.handleError(error);
     }
   }
@@ -855,9 +928,15 @@ class ApiClient {
   // Parent APIs
   async getParentChildren() {
     try {
+      console.log('API: Fetching parent children...');
+      console.log('API: Making request to:', '/parent/children');
       const response = await this.api.get('/parent/children');
+      console.log('API: Parent children response status:', response.status);
+      console.log('API: Parent children response data:', JSON.stringify(response.data, null, 2));
       return response.data;
     } catch (error) {
+      console.log('API: Parent children error:', error.response?.status, error.response?.data?.message || error.message);
+      console.log('API: Full error object:', error);
       throw this.handleError(error);
     }
   }
@@ -981,6 +1060,39 @@ class ApiClient {
       const response = await this.api.put('/admin/settings', settings);
       return response.data;
     } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Bulk Import APIs
+  async bulkImportUnified(formData) {
+    try {
+      console.log('API: Uploading unified bulk import file...');
+      const response = await this.api.post('/admin/bulk-import/unified', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('API: Unified bulk import response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Unified bulk import error:', error.response?.status, error.response?.data?.message || error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  async bulkImport(type, formData) {
+    try {
+      console.log(`API: Uploading ${type} bulk import file...`);
+      const response = await this.api.post(`/admin/bulk-import/${type}`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log(`API: ${type} bulk import response:`, response.data);
+      return response.data;
+    } catch (error) {
+      console.log(`API: ${type} bulk import error:`, error.response?.status, error.response?.data?.message || error.message);
       throw this.handleError(error);
     }
   }
@@ -1167,6 +1279,26 @@ class ApiClient {
     try {
       const response = await this.api.get('/finance/fees');
       return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Cashfree Payments (Hosted Checkout)
+  async createCashfreeOrder(payload) {
+    try {
+      // API_BASE_URL already includes the /api/v1 prefix; use relative path only once
+      const response = await this.api.post('/payments/cashfree/order', payload);
+      return response.data; // { success, orderId, paymentSessionId }
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async verifyCashfreeOrder(orderId) {
+    try {
+      const response = await this.api.get(`/payments/cashfree/order/${encodeURIComponent(orderId)}`);
+      return response.data; // { success, data }
     } catch (error) {
       throw this.handleError(error);
     }

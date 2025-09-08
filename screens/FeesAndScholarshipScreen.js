@@ -136,15 +136,15 @@ const FeesAndScholarshipScreen = () => {
         <View style={styles.totalSection}>
           <View style={styles.totalRow}>
             <Paragraph style={styles.totalLabel}>Total Amount:</Paragraph>
-            <Title style={styles.totalAmount}>${feeData.totalAmount.toLocaleString()}</Title>
+            <Title style={styles.totalAmount}>₹{feeData.totalAmount.toLocaleString()}</Title>
           </View>
           <View style={styles.totalRow}>
             <Paragraph style={styles.totalLabel}>Paid Amount:</Paragraph>
-            <Title style={styles.paidAmount}>${feeData.paidAmount.toLocaleString()}</Title>
+            <Title style={styles.paidAmount}>₹{feeData.paidAmount.toLocaleString()}</Title>
           </View>
           <View style={styles.totalRow}>
             <Paragraph style={styles.totalLabel}>Remaining:</Paragraph>
-            <Title style={styles.remainingAmount}>${feeData.remainingAmount.toLocaleString()}</Title>
+            <Title style={styles.remainingAmount}>₹{feeData.remainingAmount.toLocaleString()}</Title>
           </View>
         </View>
 
@@ -180,7 +180,7 @@ const FeesAndScholarshipScreen = () => {
           <View key={index} style={styles.breakdownItem}>
             <View style={styles.breakdownHeader}>
               <Paragraph style={styles.breakdownLabel}>{item.item}</Paragraph>
-              <Paragraph style={styles.breakdownAmount}>${item.amount.toLocaleString()}</Paragraph>
+              <Paragraph style={styles.breakdownAmount}>₹{item.amount.toLocaleString()}</Paragraph>
             </View>
             <View style={styles.breakdownProgress}>
               <PlatformProgressBar 
@@ -189,7 +189,7 @@ const FeesAndScholarshipScreen = () => {
                 style={styles.itemProgressBar}
               />
               <Paragraph style={styles.breakdownPaid}>
-                Paid: ${item.paid.toLocaleString()}
+                Paid: ₹{item.paid.toLocaleString()}
               </Paragraph>
             </View>
           </View>
@@ -205,7 +205,7 @@ const FeesAndScholarshipScreen = () => {
           <View style={styles.scholarshipHeader}>
             <View style={styles.scholarshipInfo}>
               <Title style={styles.scholarshipName}>{scholarship.name}</Title>
-              <Paragraph style={styles.scholarshipAmount}>${scholarship.amount.toLocaleString()}</Paragraph>
+              <Paragraph style={styles.scholarshipAmount}>₹{scholarship.amount.toLocaleString()}</Paragraph>
             </View>
             <PlatformBadge style={[styles.statusBadge, { backgroundColor: getStatusColor(scholarship.status) }]}>
               {scholarship.status.toUpperCase()}
@@ -248,7 +248,7 @@ const FeesAndScholarshipScreen = () => {
         <PlatformCard key={payment.id} style={styles.paymentCard}>
           <View style={styles.paymentHeader}>
             <View style={styles.paymentInfo}>
-              <Title style={styles.paymentAmount}>${payment.amount.toLocaleString()}</Title>
+              <Title style={styles.paymentAmount}>₹{payment.amount.toLocaleString()}</Title>
               <Paragraph style={styles.paymentDescription}>{payment.description}</Paragraph>
               <Paragraph style={styles.paymentDate}>{payment.date}</Paragraph>
             </View>
@@ -286,7 +286,7 @@ const FeesAndScholarshipScreen = () => {
         contentContainerStyle={styles.modalContent}
       >
         <Title style={styles.modalTitle}>Make Payment</Title>
-        <Paragraph style={styles.modalAmount}>Amount: ${feeData.remainingAmount.toLocaleString()}</Paragraph>
+        <Paragraph style={styles.modalAmount}>Amount: ₹{feeData.remainingAmount.toLocaleString()}</Paragraph>
         
         <PlatformInput
           label="Card Number"

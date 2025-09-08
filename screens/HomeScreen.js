@@ -1,8 +1,21 @@
 import React, { useState, useCallback, useEffect } from 'react';
-import { View, Text, StyleSheet, ScrollView, TouchableOpacity, RefreshControl, Platform, Dimensions } from 'react-native';
+import { 
+  View, 
+  Text, 
+  StyleSheet, 
+  ScrollView, 
+  TouchableOpacity, 
+  RefreshControl, 
+  Platform, 
+  Dimensions,
+  Animated,
+  StatusBar,
+  LinearGradient
+} from 'react-native';
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 import { useAuth } from '../contexts/AuthContext';
+import { theme } from '../config/theme';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -17,6 +30,11 @@ const HomeScreen = ({ navigation }) => {
   });
   const [loading, setLoading] = useState(true);
   const { user } = useAuth();
+
+  // Animation values
+  const fadeAnim = useState(new Animated.Value(0))[0];
+  const slideAnim = useState(new Animated.Value(30))[0];
+  const scaleAnim = useState(new Animated.Value(0.95))[0];
 
   // Back button handler for Home screen (shows exit alert)
   useBackButton(navigation, true);
@@ -145,17 +163,11 @@ const HomeScreen = ({ navigation }) => {
                   console.log('Unknown action:', action.id);
               }
             },
-            color: action.id === 'results_view' ? '#8b5cf6' :
-                   action.id === 'schedule_view' ? '#06b6d4' :
-                   action.id === 'course_registration' ? '#f59e0b' :
-                   action.id === 'ai_assistant' ? '#10b981' :
-                   action.id === 'job_search' ? '#ef4444' :
-                   action.id === 'fee_payment' ? '#06b6d4' : '#6366f1'
           })) || [
-            { title: 'My Results', icon: '📊', onPress: () => navigation.navigate('Results Portal'), color: '#8b5cf6' },
-            { title: 'Class Schedule', icon: '📅', onPress: () => navigation.navigate('Schedule'), color: '#06b6d4' },
-            { title: 'Course Materials', icon: '📚', onPress: () => navigation.navigate('Courses'), color: '#f59e0b' },
-            { title: 'AI Assistant', icon: '🤖', onPress: () => navigation.navigate('Chatbot'), color: '#10b981' },
+            { title: 'My Results', icon: '📊', onPress: () => navigation.navigate('Results Portal') },
+            { title: 'Class Schedule', icon: '📅', onPress: () => navigation.navigate('Schedule') },
+            { title: 'Course Materials', icon: '📚', onPress: () => navigation.navigate('Courses') },
+            { title: 'AI Assistant', icon: '🤖', onPress: () => navigation.navigate('Chatbot') },
           ],
           recentActivities: transformedActivities,
           performanceMetrics: transformedMetrics
@@ -203,12 +215,12 @@ const HomeScreen = ({ navigation }) => {
             subtitle: 'This Month'
           },
         ],
-        quickActions: [
-          { title: 'My Results', icon: '📊', onPress: () => navigation.navigate('Results Portal'), color: '#8b5cf6' },
-          { title: 'Class Schedule', icon: '📅', onPress: () => navigation.navigate('Schedule'), color: '#06b6d4' },
-          { title: 'Course Materials', icon: '📚', onPress: () => navigation.navigate('Courses'), color: '#f59e0b' },
-          { title: 'AI Assistant', icon: '🤖', onPress: () => navigation.navigate('Chatbot'), color: '#10b981' },
-        ],
+          quickActions: [
+            { title: 'My Results', icon: '📊', onPress: () => navigation.navigate('Results Portal') },
+            { title: 'Class Schedule', icon: '📅', onPress: () => navigation.navigate('Schedule') },
+            { title: 'Course Materials', icon: '📚', onPress: () => navigation.navigate('Courses') },
+            { title: 'AI Assistant', icon: '🤖', onPress: () => navigation.navigate('Chatbot') },
+          ],
         recentActivities: [
           { title: 'Assignment Submitted', description: 'Data Structures Assignment #3', time: '2 hours ago', type: 'assignment', status: 'completed' },
           { title: 'Grade Updated', description: 'CS101 - Introduction to Programming (A-)', time: '1 day ago', type: 'grade', status: 'completed' },
@@ -229,6 +241,25 @@ const HomeScreen = ({ navigation }) => {
 
   useEffect(() => {
     fetchDashboardData();
+    
+    // Start animations
+    Animated.parallel([
+      Animated.timing(fadeAnim, {
+        toValue: 1,
+        duration: 800,
+        useNativeDriver: true,
+      }),
+      Animated.timing(slideAnim, {
+        toValue: 0,
+        duration: 600,
+        useNativeDriver: true,
+      }),
+      Animated.timing(scaleAnim, {
+        toValue: 1,
+        duration: 500,
+        useNativeDriver: true,
+      }),
+    ]).start();
   }, []);
 
   const onRefresh = useCallback(() => {
@@ -270,90 +301,187 @@ const HomeScreen = ({ navigation }) => {
     }
   };
 
+  const getGreeting = () => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'Morning';
+    if (hour < 17) return 'Afternoon';
+    return 'Evening';
+  };
+
+
   if (loading) {
     return (
       <View style={styles.loadingContainer}>
-        <Text style={styles.loadingText}>Loading dashboard...</Text>
+        <Animated.View style={[styles.loadingContent, { opacity: fadeAnim }]}>
+          <View style={styles.loadingSpinner} />
+          <Text style={styles.loadingText}>Loading your dashboard...</Text>
+          <Text style={styles.loadingSubtext}>Getting the latest updates</Text>
+        </Animated.View>
       </View>
     );
   }
 
   return (
     <View style={styles.container}>
+      <StatusBar barStyle="light-content" backgroundColor={theme.colors.primary} />
+      
       <ScrollView 
         style={styles.scrollView}
         refreshControl={
-          <RefreshControl refreshing={refreshing} onRefresh={onRefresh} />
+          <RefreshControl 
+            refreshing={refreshing} 
+            onRefresh={onRefresh}
+            tintColor="#ffffff"
+            colors={["#ffffff"]}
+          />
         }
+        showsVerticalScrollIndicator={false}
       >
-        {/* Header */}
-        <View style={styles.header}>
-          <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.name || 'Student'}! 👋</Text>
-          <Text style={styles.dateText}>
-            {new Date().toLocaleDateString('en-US', { 
-              weekday: 'long', 
-              year: 'numeric', 
-              month: 'long', 
-              day: 'numeric' 
-            })}
-          </Text>
-        </View>
+        {/* Modern Header with Gradient */}
+        <Animated.View style={[styles.header, { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
+          <View style={styles.headerContent}>
+            <View style={styles.headerTop}>
+              <View style={styles.greetingContainer}>
+                <Text style={styles.greetingText}>Good {getGreeting()},</Text>
+                <Text style={styles.userName}>{user?.name || 'Student'}! 👋</Text>
+              </View>
+              <TouchableOpacity style={styles.notificationButton}>
+                <Text style={styles.notificationIcon}>🔔</Text>
+                <View style={styles.notificationBadge} />
+              </TouchableOpacity>
+            </View>
+            <Text style={styles.dateText}>
+              {new Date().toLocaleDateString('en-US', { 
+                weekday: 'long', 
+                year: 'numeric', 
+                month: 'long', 
+                day: 'numeric' 
+              })}
+            </Text>
+          </View>
+        </Animated.View>
 
-        {/* Stats Cards */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Your Overview</Text>
-        <View style={styles.statsContainer}>
+        {/* Modern Stats Cards */}
+        <Animated.View style={[styles.section, { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Your Overview</Text>
+            <TouchableOpacity style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>View Details</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.statsContainer}>
             {(dashboardData.stats || []).map((stat, index) => (
-            <View key={index} style={styles.statCard}>
-              <View style={styles.statGradient}>
-                <View style={styles.statContent}>
-                  <View style={styles.statIconContainer}>
-                    <Text style={styles.statIcon}>{stat.icon}</Text>
-                  </View>
-                  <View style={styles.statText}>
-                    <Text style={styles.statValue}>{stat.value}</Text>
-                    <Text style={styles.statTitle}>{stat.title}</Text>
+              <Animated.View 
+                key={index} 
+                style={[
+                  styles.statCard,
+                  {
+                    opacity: fadeAnim,
+                    transform: [
+                      { translateY: slideAnim },
+                      { scale: scaleAnim }
+                    ]
+                  }
+                ]}
+              >
+                <View style={[styles.statGradient, { backgroundColor: stat.color + '15' }]}>
+                  <View style={styles.statContent}>
+                    <View style={[styles.statIconContainer, { backgroundColor: stat.color + '20' }]}>
+                      <Text style={styles.statIcon}>{stat.icon}</Text>
+                    </View>
+                    <View style={styles.statText}>
+                      <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
+                      <Text style={styles.statTitle}>{stat.title}</Text>
                       <Text style={styles.statSubtitle}>{stat.subtitle}</Text>
+                    </View>
+                    <View style={styles.statTrend}>
+                      <Text style={styles.trendIcon}>📈</Text>
                     </View>
                   </View>
                 </View>
-              </View>
-            ))}
-            </View>
-        </View>
-
-        {/* Quick Actions */}
-        <View style={styles.section}>
-            <Text style={styles.sectionTitle}>Quick Actions</Text>
-          <View style={styles.quickActionsGrid}>
-            {(dashboardData.quickActions || []).map((action, index) => (
-              <View key={index} style={styles.actionCard}>
-                <TouchableOpacity
-                  style={[styles.actionButton, { backgroundColor: action.color }]}
-                  onPress={action.onPress}
-                >
-                  <View style={styles.actionButtonContent}>
-                  <Text style={styles.actionIcon}>{action.icon}</Text>
-                  <Text style={styles.actionText}>{action.title}</Text>
-                  </View>
-                </TouchableOpacity>
-              </View>
+              </Animated.View>
             ))}
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Recent Activities */}
-        <View style={styles.section}>
+        {/* Modern Quick Actions */}
+        <Animated.View style={[styles.section, { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Quick Actions</Text>
+            <TouchableOpacity style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>All Features</Text>
+            </TouchableOpacity>
+          </View>
+          <View style={styles.quickActionsGrid}>
+            {(dashboardData.quickActions || []).map((action, index) => (
+              <Animated.View 
+                key={index} 
+                style={[
+                  styles.actionCard,
+                  {
+                    opacity: fadeAnim,
+                    transform: [
+                      { translateY: slideAnim },
+                      { scale: scaleAnim }
+                    ]
+                  }
+                ]}
+              >
+                <TouchableOpacity
+                  style={styles.actionButton}
+                  onPress={action.onPress}
+                  activeOpacity={0.8}
+                >
+                  <View style={styles.actionButtonContent}>
+                    <View style={styles.actionIconContainer}>
+                      <Text style={styles.actionIcon}>{action.icon}</Text>
+                    </View>
+                    <Text style={styles.actionText}>{action.title}</Text>
+                    <View style={styles.actionArrow}>
+                      <Text style={styles.arrowIcon}>→</Text>
+                    </View>
+                  </View>
+                </TouchableOpacity>
+              </Animated.View>
+            ))}
+          </View>
+        </Animated.View>
+
+        {/* Modern Recent Activities */}
+        <Animated.View style={[styles.section, { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
           <View style={styles.sectionHeader}>
             <Text style={styles.sectionTitle}>Recent Activities</Text>
-            <TouchableOpacity onPress={() => {}}>
+            <TouchableOpacity style={styles.viewAllButton}>
               <Text style={styles.viewAllText}>View All</Text>
             </TouchableOpacity>
           </View>
           <View style={styles.activitiesContainer}>
             {(dashboardData.recentActivities || []).map((activity, index) => (
-              <View key={index} style={styles.activityCard}>
+              <Animated.View 
+                key={index} 
+                style={[
+                  styles.activityCard,
+                  {
+                    opacity: fadeAnim,
+                    transform: [
+                      { translateY: slideAnim },
+                      { scale: scaleAnim }
+                    ]
+                  }
+                ]}
+              >
                 <View style={styles.activityContent}>
                   <View style={[styles.activityIcon, { backgroundColor: getActivityColor(activity.type) + '20' }]}>
                     <Text style={styles.activityIconText}>{getActivityIcon(activity.type)}</Text>
@@ -361,46 +489,109 @@ const HomeScreen = ({ navigation }) => {
                   <View style={styles.activityInfo}>
                     <Text style={styles.activityTitle}>{activity.title}</Text>
                     <Text style={styles.activityDescription}>{activity.description}</Text>
-                    <Text style={styles.activityTime}>{activity.time}</Text>
-                  </View>
-                  <View style={[styles.statusBadge, { backgroundColor: getStatusColor(activity.status) + '20' }]}>
-                    <Text style={[styles.statusText, { color: getStatusColor(activity.status) }]}>
-                      {activity.status}
-                    </Text>
+                    <View style={styles.activityMeta}>
+                      <Text style={styles.activityTime}>{activity.time}</Text>
+                      <View style={[styles.statusBadge, { backgroundColor: getStatusColor(activity.status) + '20' }]}>
+                        <Text style={[styles.statusText, { color: getStatusColor(activity.status) }]}>
+                          {activity.status}
+                        </Text>
+                      </View>
+                    </View>
                   </View>
                 </View>
-              </View>
+              </Animated.View>
             ))}
           </View>
-        </View>
+        </Animated.View>
 
-        {/* Performance Metrics */}
-        <View style={styles.section}>
-          <Text style={styles.sectionTitle}>Academic Performance</Text>
+        {/* Modern Performance Metrics */}
+        <Animated.View style={[styles.section, { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Academic Performance</Text>
+            <TouchableOpacity style={styles.viewAllButton}>
+              <Text style={styles.viewAllText}>View Report</Text>
+            </TouchableOpacity>
+          </View>
           <View style={styles.metricsContainer}>
             {(dashboardData.performanceMetrics || []).map((metric, index) => (
-              <View key={index} style={styles.metricCard}>
+              <Animated.View 
+                key={index} 
+                style={[
+                  styles.metricCard,
+                  {
+                    opacity: fadeAnim,
+                    transform: [
+                      { translateY: slideAnim },
+                      { scale: scaleAnim }
+                    ]
+                  }
+                ]}
+              >
                 <View style={styles.metricHeader}>
-                  <Text style={styles.metricSubject}>{metric.subject}</Text>
+                  <View style={styles.metricInfo}>
+                    <Text style={styles.metricSubject}>{metric.subject}</Text>
+                    <Text style={styles.metricGpa}>GPA: {metric.gpa}</Text>
+                  </View>
                   <View style={[styles.gpaBadge, { backgroundColor: metric.color }]}>
                     <Text style={styles.gpaText}>{metric.gpa}</Text>
                   </View>
                 </View>
-                <View style={styles.progressBar}>
-                  <View 
-                    style={[
-                      styles.progressFill, 
-                      { 
-                        width: `${metric.progress * 100}%`,
-                        backgroundColor: metric.color 
-                      }
-                    ]} 
-                  />
+                <View style={styles.progressContainer}>
+                  <View style={styles.progressBar}>
+                    <Animated.View 
+                      style={[
+                        styles.progressFill, 
+                        { 
+                          width: `${metric.progress * 100}%`,
+                          backgroundColor: metric.color 
+                        }
+                      ]} 
+                    />
+                  </View>
+                  <Text style={styles.progressText}>{Math.round(metric.progress * 100)}%</Text>
                 </View>
-              </View>
+              </Animated.View>
             ))}
           </View>
-        </View>
+        </Animated.View>
+
+        {/* Modern Widgets Section */}
+        <Animated.View style={[styles.section, { 
+          opacity: fadeAnim,
+          transform: [{ translateY: slideAnim }]
+        }]}>
+          <View style={styles.sectionHeader}>
+            <Text style={styles.sectionTitle}>Today's Highlights</Text>
+          </View>
+          <View style={styles.widgetsContainer}>
+            <Animated.View style={[styles.widgetCard, styles.weatherWidget, {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }]}>
+              <View style={styles.widgetHeader}>
+                <Text style={styles.widgetTitle}>Weather</Text>
+                <Text style={styles.weatherIcon}>☀️</Text>
+              </View>
+              <Text style={styles.weatherTemp}>24°C</Text>
+              <Text style={styles.weatherDesc}>Sunny</Text>
+            </Animated.View>
+
+            <Animated.View style={[styles.widgetCard, styles.eventsWidget, {
+              opacity: fadeAnim,
+              transform: [{ translateY: slideAnim }]
+            }]}>
+              <View style={styles.widgetHeader}>
+                <Text style={styles.widgetTitle}>Upcoming</Text>
+                <Text style={styles.eventsIcon}>📅</Text>
+              </View>
+              <Text style={styles.eventTitle}>CS101 Lab</Text>
+              <Text style={styles.eventTime}>2:00 PM</Text>
+            </Animated.View>
+          </View>
+        </Animated.View>
       </ScrollView>
     </View>
   );
@@ -409,56 +600,143 @@ const HomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f8fafc',
+    backgroundColor: theme.colors.background,
   },
   scrollView: {
     flex: 1,
   },
-  header: {
-    backgroundColor: '#ffffff',
-    paddingTop: isIOS ? 16 : 20,
-    paddingBottom: isIOS ? 16 : 20,
-    borderBottomWidth: 1,
-    borderBottomColor: '#e5e7eb',
+
+  // Loading Styles
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    backgroundColor: theme.colors.background,
   },
-  welcomeText: {
-    fontSize: isIOS ? 24 : 28,
+  loadingContent: {
+    alignItems: 'center',
+  },
+  loadingSpinner: {
+    width: 50,
+    height: 50,
+    borderRadius: 25,
+    borderWidth: 4,
+    borderColor: theme.colors.primary,
+    borderTopColor: 'transparent',
+    marginBottom: 20,
+  },
+  loadingText: {
+    fontSize: theme.fonts.titleLarge.fontSize,
+    color: theme.colors.text,
     fontWeight: 'bold',
+    marginBottom: 8,
+  },
+  loadingSubtext: {
+    fontSize: theme.fonts.bodyMedium.fontSize,
+    color: theme.colors.textSecondary,
+  },
+
+  // Header Styles
+  header: {
+    backgroundColor: theme.colors.primary,
+    paddingTop: Platform.OS === 'ios' ? 60 : 40,
+    paddingBottom: 30,
+    borderBottomLeftRadius: 24,
+    borderBottomRightRadius: 24,
+    ...theme.shadows.large,
+  },
+  headerContent: {
+    paddingHorizontal: 20,
+  },
+  headerTop: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'flex-start',
+    marginBottom: 16,
+  },
+  greetingContainer: {
+    flex: 1,
+  },
+  greetingText: {
+    fontSize: theme.fonts.bodyLarge.fontSize,
+    color: 'rgba(255, 255, 255, 0.8)',
     marginBottom: 4,
-    color: '#1f2937',
   },
   userName: {
-    fontSize: isIOS ? 24 : 28,
+    fontSize: theme.fonts.headlineMedium.fontSize,
     fontWeight: 'bold',
-    marginBottom: 4,
-    color: '#1f2937',
+    color: 'white',
+    marginBottom: 8,
   },
   dateText: {
-    color: '#6b7280',
-    fontSize: isIOS ? 14 : 16,
+    fontSize: theme.fonts.bodyMedium.fontSize,
+    color: 'rgba(255, 255, 255, 0.7)',
   },
+  notificationButton: {
+    position: 'relative',
+    width: 44,
+    height: 44,
+    borderRadius: 22,
+    backgroundColor: 'rgba(255, 255, 255, 0.15)',
+    justifyContent: 'center',
+    alignItems: 'center',
+  },
+  notificationIcon: {
+    fontSize: 20,
+  },
+  notificationBadge: {
+    position: 'absolute',
+    top: 8,
+    right: 8,
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    backgroundColor: '#ef4444',
+  },
+
+  // Section Styles
+  section: {
+    marginHorizontal: 20,
+    marginBottom: 24,
+  },
+  sectionHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  sectionTitle: {
+    fontSize: theme.fonts.titleLarge.fontSize,
+    fontWeight: 'bold',
+    color: theme.colors.text,
+  },
+  viewAllButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 16,
+    backgroundColor: theme.colors.primary + '15',
+  },
+  viewAllText: {
+    fontSize: theme.fonts.labelMedium.fontSize,
+    color: theme.colors.primary,
+    fontWeight: '600',
+  },
+
+  // Stats Styles
   statsContainer: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    paddingHorizontal: isIOS ? 12 : 16,
-    marginTop: isIOS ? 12 : 16,
-    marginBottom: isIOS ? 12 : 16,
+    justifyContent: 'space-between',
   },
   statCard: {
     width: '48%',
-    marginBottom: isIOS ? 8 : 12,
-    marginHorizontal: '1%',
-    borderRadius: isIOS ? 12 : 14,
-    elevation: isIOS ? 2 : 3,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: isIOS ? 2 : 3 },
-    shadowOpacity: isIOS ? 0.08 : 0.09,
-    shadowRadius: isIOS ? 4 : 6,
+    marginBottom: 16,
   },
   statGradient: {
-    backgroundColor: '#ffffff',
-    borderRadius: isIOS ? 12 : 14,
-    padding: isIOS ? 12 : 16,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    ...theme.shadows.medium,
     borderWidth: 1,
     borderColor: '#f3f4f6',
   },
@@ -467,57 +745,42 @@ const styles = StyleSheet.create({
     alignItems: 'center',
   },
   statIconContainer: {
-    width: isIOS ? 44 : 48,
-    height: isIOS ? 44 : 48,
-    borderRadius: isIOS ? 22 : 24,
-    backgroundColor: '#f3f4f6',
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: isIOS ? 12 : 14,
+    marginRight: 16,
   },
   statIcon: {
-    fontSize: isIOS ? 22 : 24,
+    fontSize: 24,
   },
   statText: {
     flex: 1,
   },
   statValue: {
-    fontSize: isIOS ? 20 : 22,
+    fontSize: 24,
     fontWeight: 'bold',
     marginBottom: 4,
-    color: '#1f2937',
   },
   statTitle: {
-    fontSize: isIOS ? 12 : 14,
-    color: '#6b7280',
-    fontWeight: '500',
+    fontSize: theme.fonts.labelLarge.fontSize,
+    color: theme.colors.text,
+    fontWeight: '600',
+    marginBottom: 2,
   },
   statSubtitle: {
-    fontSize: isIOS ? 10 : 12,
-    color: '#9ca3af',
-    fontWeight: '400',
-    marginTop: 2,
+    fontSize: theme.fonts.bodySmall.fontSize,
+    color: theme.colors.textSecondary,
   },
-  section: {
-    marginHorizontal: isIOS ? 12 : 16,
-    marginBottom: isIOS ? 16 : 20,
+  statTrend: {
+    marginLeft: 8,
   },
-  sectionHeader: {
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    alignItems: 'center',
-    marginBottom: isIOS ? 12 : 16,
+  trendIcon: {
+    fontSize: 16,
   },
-  sectionTitle: {
-    fontSize: isIOS ? 18 : 20,
-    fontWeight: 'bold',
-    color: '#1f2937',
-  },
-  viewAllText: {
-    fontSize: isIOS ? 12 : 14,
-    color: '#6366f1',
-    fontWeight: '600',
-  },
+
+  // Quick Actions Styles
   quickActionsGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
@@ -525,144 +788,247 @@ const styles = StyleSheet.create({
   },
   actionCard: {
     width: '48%',
-    marginBottom: isIOS ? 8 : 10,
+    marginBottom: 20,
   },
   actionButton: {
-    borderRadius: isIOS ? 12 : 14,
-    elevation: isIOS ? 1 : 2,
+    borderRadius: 16,
+    backgroundColor: 'white',
     shadowColor: '#000',
-    shadowOffset: { width: 0, height: isIOS ? 1 : 2 },
-    shadowOpacity: isIOS ? 0.08 : 0.09,
-    shadowRadius: isIOS ? 2 : 3,
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.1,
+    shadowRadius: 12,
+    elevation: 8,
+    borderWidth: 1,
+    borderColor: '#f1f5f9',
+    overflow: 'hidden',
   },
   actionButtonContent: {
-    flexDirection: 'column',
+    padding: 20,
     alignItems: 'center',
-    paddingVertical: isIOS ? 16 : 18,
   },
-  actionButtonLabel: {
-    fontSize: isIOS ? 12 : 14,
-    fontWeight: '600',
+  actionIconContainer: {
+    width: 56,
+    height: 56,
+    borderRadius: 28,
+    backgroundColor: '#f8fafc',
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginBottom: 12,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.05,
+    shadowRadius: 6,
+    elevation: 4,
   },
   actionIcon: {
-    fontSize: isIOS ? 28 : 30,
-    marginBottom: isIOS ? 6 : 7,
+    fontSize: 28,
+    color: '#64748b',
   },
   actionText: {
-    fontSize: isIOS ? 12 : 13,
+    fontSize: theme.fonts.bodyMedium.fontSize,
     fontWeight: '600',
-    color: '#ffffff',
+    color: '#374151',
     textAlign: 'center',
+    marginBottom: 8,
+    letterSpacing: 0.3,
   },
+  actionArrow: {
+    width: 32,
+    height: 32,
+    borderRadius: 16,
+    backgroundColor: '#3b82f6',
+    justifyContent: 'center',
+    alignItems: 'center',
+    shadowColor: '#3b82f6',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.2,
+    shadowRadius: 4,
+    elevation: 4,
+  },
+  arrowIcon: {
+    fontSize: 16,
+    color: 'white',
+    fontWeight: 'bold',
+  },
+
+  // Activities Styles
   activitiesContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: isIOS ? 12 : 16,
-    padding: isIOS ? 12 : 16,
-    elevation: isIOS ? 1 : 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: isIOS ? 1 : 2 },
-    shadowOpacity: isIOS ? 0.08 : 0.1,
-    shadowRadius: isIOS ? 2 : 4,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    ...theme.shadows.medium,
   },
   activityCard: {
-    marginBottom: isIOS ? 12 : 16,
+    marginBottom: 16,
   },
   activityContent: {
     flexDirection: 'row',
     alignItems: 'center',
   },
   activityIcon: {
-    width: isIOS ? 40 : 48,
-    height: isIOS ? 40 : 48,
-    borderRadius: isIOS ? 20 : 24,
+    width: 48,
+    height: 48,
+    borderRadius: 24,
     justifyContent: 'center',
     alignItems: 'center',
-    marginRight: isIOS ? 12 : 16,
+    marginRight: 16,
   },
   activityIconText: {
-    fontSize: isIOS ? 18 : 20,
+    fontSize: 20,
   },
   activityInfo: {
     flex: 1,
   },
   activityTitle: {
-    fontSize: isIOS ? 14 : 16,
+    fontSize: theme.fonts.titleMedium.fontSize,
     fontWeight: '600',
-    color: '#1f2937',
+    color: theme.colors.text,
     marginBottom: 4,
   },
   activityDescription: {
-    fontSize: isIOS ? 12 : 14,
-    color: '#6b7280',
-    marginBottom: 4,
+    fontSize: theme.fonts.bodyMedium.fontSize,
+    color: theme.colors.textSecondary,
+    marginBottom: 8,
+  },
+  activityMeta: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
   },
   activityTime: {
-    fontSize: isIOS ? 10 : 12,
-    color: '#9ca3af',
+    fontSize: theme.fonts.bodySmall.fontSize,
+    color: theme.colors.textSecondary,
   },
   statusBadge: {
-    paddingHorizontal: isIOS ? 6 : 8,
-    paddingVertical: isIOS ? 3 : 4,
-    borderRadius: isIOS ? 8 : 12,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
+    borderRadius: 12,
   },
   statusText: {
-    fontSize: isIOS ? 10 : 12,
+    fontSize: theme.fonts.labelSmall.fontSize,
     fontWeight: '600',
     textTransform: 'capitalize',
   },
+
+  // Metrics Styles
   metricsContainer: {
-    backgroundColor: '#ffffff',
-    borderRadius: isIOS ? 12 : 16,
-    padding: isIOS ? 16 : 20,
-    elevation: isIOS ? 1 : 2,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: isIOS ? 1 : 2 },
-    shadowOpacity: isIOS ? 0.08 : 0.1,
-    shadowRadius: isIOS ? 2 : 4,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 20,
+    ...theme.shadows.medium,
   },
   metricCard: {
-    marginBottom: isIOS ? 16 : 20,
+    marginBottom: 20,
   },
   metricHeader: {
     flexDirection: 'row',
     justifyContent: 'space-between',
     alignItems: 'center',
-    marginBottom: isIOS ? 10 : 12,
+    marginBottom: 12,
+  },
+  metricInfo: {
+    flex: 1,
   },
   metricSubject: {
-    fontSize: isIOS ? 14 : 16,
+    fontSize: theme.fonts.titleMedium.fontSize,
     fontWeight: '600',
-    color: '#1f2937',
+    color: theme.colors.text,
+    marginBottom: 2,
+  },
+  metricGpa: {
+    fontSize: theme.fonts.bodySmall.fontSize,
+    color: theme.colors.textSecondary,
   },
   gpaBadge: {
-    paddingHorizontal: isIOS ? 10 : 12,
-    paddingVertical: isIOS ? 4 : 6,
-    borderRadius: isIOS ? 8 : 12,
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: 12,
   },
   gpaText: {
-    fontSize: isIOS ? 12 : 14,
+    fontSize: theme.fonts.labelLarge.fontSize,
     fontWeight: 'bold',
-    color: '#ffffff',
+    color: 'white',
+  },
+  progressContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
   },
   progressBar: {
-    height: isIOS ? 6 : 8,
-    borderRadius: isIOS ? 3 : 4,
+    flex: 1,
+    height: 8,
+    borderRadius: 4,
     backgroundColor: '#e5e7eb',
+    marginRight: 12,
   },
   progressFill: {
     height: '100%',
-    borderRadius: isIOS ? 3 : 4,
+    borderRadius: 4,
   },
-  loadingContainer: {
-    flex: 1,
-    justifyContent: 'center',
+  progressText: {
+    fontSize: theme.fonts.labelMedium.fontSize,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+  },
+
+  // Widgets Styles
+  widgetsContainer: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  widgetCard: {
+    width: '48%',
+    borderRadius: 16,
+    padding: 20,
+    ...theme.shadows.medium,
+  },
+  weatherWidget: {
+    backgroundColor: '#fef3c7',
+    borderWidth: 1,
+    borderColor: '#fbbf24',
+  },
+  eventsWidget: {
+    backgroundColor: '#dbeafe',
+    borderWidth: 1,
+    borderColor: '#3b82f6',
+  },
+  widgetHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
     alignItems: 'center',
-    backgroundColor: '#f8fafc',
+    marginBottom: 12,
   },
-  loadingText: {
-    fontSize: 18,
-    color: '#6366f1',
+  widgetTitle: {
+    fontSize: theme.fonts.labelLarge.fontSize,
+    fontWeight: '600',
+    color: theme.colors.text,
+  },
+  weatherIcon: {
+    fontSize: 20,
+  },
+  eventsIcon: {
+    fontSize: 20,
+  },
+  weatherTemp: {
+    fontSize: 24,
     fontWeight: 'bold',
+    color: '#92400e',
+    marginBottom: 4,
+  },
+  weatherDesc: {
+    fontSize: theme.fonts.bodyMedium.fontSize,
+    color: '#92400e',
+  },
+  eventTitle: {
+    fontSize: theme.fonts.titleMedium.fontSize,
+    fontWeight: '600',
+    color: '#1e40af',
+    marginBottom: 4,
+  },
+  eventTime: {
+    fontSize: theme.fonts.bodyMedium.fontSize,
+    color: '#1e40af',
   },
 });
 

@@ -72,15 +72,15 @@ const SimpleFinanceScreen = () => {
         <View style={styles.totalSection}>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Total Amount:</Text>
-            <Text style={styles.totalAmount}>${feeData.totalAmount.toLocaleString()}</Text>
+            <Text style={styles.totalAmount}>₹{feeData.totalAmount.toLocaleString()}</Text>
           </View>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Paid Amount:</Text>
-            <Text style={styles.paidAmount}>${feeData.paidAmount.toLocaleString()}</Text>
+            <Text style={styles.paidAmount}>₹{feeData.paidAmount.toLocaleString()}</Text>
           </View>
           <View style={styles.totalRow}>
             <Text style={styles.totalLabel}>Remaining:</Text>
-            <Text style={styles.remainingAmount}>${feeData.remainingAmount.toLocaleString()}</Text>
+            <Text style={styles.remainingAmount}>₹{feeData.remainingAmount.toLocaleString()}</Text>
           </View>
         </View>
 
@@ -117,7 +117,7 @@ const SimpleFinanceScreen = () => {
           <View key={index} style={styles.breakdownItem}>
             <View style={styles.breakdownHeader}>
               <Text style={styles.breakdownLabel}>{item.item}</Text>
-              <Text style={styles.breakdownAmount}>${item.amount.toLocaleString()}</Text>
+              <Text style={styles.breakdownAmount}>₹{item.amount.toLocaleString()}</Text>
             </View>
             <View style={styles.breakdownProgress}>
               <View style={styles.itemProgressBar}>
@@ -129,7 +129,7 @@ const SimpleFinanceScreen = () => {
                 />
               </View>
               <Text style={styles.breakdownPaid}>
-                Paid: ${item.paid.toLocaleString()}
+                Paid: ₹{item.paid.toLocaleString()}
               </Text>
             </View>
           </View>
@@ -145,7 +145,7 @@ const SimpleFinanceScreen = () => {
           <View style={styles.scholarshipHeader}>
             <View style={styles.scholarshipInfo}>
               <Text style={styles.scholarshipName}>{scholarship.name}</Text>
-              <Text style={styles.scholarshipAmount}>${scholarship.amount.toLocaleString()}</Text>
+              <Text style={styles.scholarshipAmount}>₹{scholarship.amount.toLocaleString()}</Text>
             </View>
             <View style={[styles.statusBadge, { backgroundColor: getStatusColor(scholarship.status) }]}>
               <Text style={styles.statusText}>{scholarship.status.toUpperCase()}</Text>
@@ -173,7 +173,7 @@ const SimpleFinanceScreen = () => {
         <View key={payment.id} style={styles.paymentCard}>
           <View style={styles.paymentHeader}>
             <View style={styles.paymentInfo}>
-              <Text style={styles.paymentAmount}>${payment.amount.toLocaleString()}</Text>
+              <Text style={styles.paymentAmount}>₹{payment.amount.toLocaleString()}</Text>
               <Text style={styles.paymentDescription}>{payment.description}</Text>
               <Text style={styles.paymentDate}>{payment.date}</Text>
             </View>

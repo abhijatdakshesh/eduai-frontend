@@ -160,9 +160,16 @@ const StudentAttendanceScreen = ({ navigation }) => {
   };
 
   const getAttendancePercentage = () => {
-    const total = summaryTotals.present + summaryTotals.absent + summaryTotals.late + summaryTotals.excused;
-    if (total === 0) return 0;
-    return Math.round(((summaryTotals.present + summaryTotals.excused) / total) * 100);
+    // Total classes that happened = all attendance records (present + absent + late + excused)
+    const totalClassesHappened = summaryTotals.present + summaryTotals.absent + summaryTotals.late + summaryTotals.excused;
+    
+    // Classes attended = present + excused (excused absences are still considered attended)
+    const classesAttended = summaryTotals.present + summaryTotals.excused;
+    
+    if (totalClassesHappened === 0) return 0;
+    
+    // Calculate percentage: (Classes Attended / Total Classes Happened) × 100
+    return Math.round((classesAttended / totalClassesHappened) * 100);
   };
 
   const formatDate = (dateString) => {
@@ -219,12 +226,14 @@ const StudentAttendanceScreen = ({ navigation }) => {
 
   const renderSummaryCard = () => {
     const percentage = getAttendancePercentage();
+    const totalClassesHappened = summaryTotals.present + summaryTotals.absent + summaryTotals.late + summaryTotals.excused;
+    const classesAttended = summaryTotals.present + summaryTotals.excused;
     
     return (
       <Card style={styles.summaryCard}>
         <SectionHeader 
           title="Attendance Summary" 
-          subtitle={`${percentage}% attendance rate`}
+          subtitle={`${percentage}% attendance rate (${classesAttended}/${totalClassesHappened} classes)`}
         />
         
         <View style={styles.summaryGrid}>

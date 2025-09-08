@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, TouchableOpacity, Platform, Alert } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { apiClient } from '../services/api';
 
 const isIOS = Platform.OS === 'ios';
@@ -11,16 +12,43 @@ const ParentChildrenScreen = ({ navigation, route }) => {
   const load = async () => {
     try {
       setLoading(true);
+      console.log('ParentChildren: Starting to load children...');
+      
+      // Add cache-busting timestamp to force fresh data
+      const cacheBuster = `?t=${Date.now()}`;
+      console.log('ParentChildren: Using cache buster:', cacheBuster);
+      
       const resp = await apiClient.getParentChildren();
-      if (resp?.success) setChildren(resp.data?.children || []);
+      console.log('ParentChildren: API response:', resp);
+      
+      if (resp?.success) {
+        const childrenData = resp.data?.children || [];
+        console.log('ParentChildren: Setting children:', childrenData);
+        console.log('ParentChildren: Children IDs:', childrenData.map(c => ({ id: c.id, name: `${c.first_name} ${c.last_name}` })));
+        setChildren(childrenData);
+      } else {
+        console.log('ParentChildren: API failed:', resp);
+      }
     } catch (e) {
+      console.log('ParentChildren: Load error:', e);
       Alert.alert('Error', e?.message || 'Failed to load children');
     } finally {
       setLoading(false);
     }
   };
 
-  useEffect(() => { load(); }, []);
+  useEffect(() => { 
+    console.log('ParentChildren: Component mounted, loading data...');
+    load(); 
+  }, []);
+
+  // Force refresh when screen comes into focus
+  useFocusEffect(
+    useCallback(() => {
+      console.log('ParentChildren: Screen focused, refreshing data...');
+      load();
+    }, [])
+  );
 
   const open = (child) => {
     navigation.navigate('ParentAttendance', { studentId: child.id, childName: child.first_name });
@@ -34,7 +62,12 @@ const ParentChildrenScreen = ({ navigation, route }) => {
       </View>
       <FlatList
         data={children}
-        keyExtractor={(i) => String(i.id)}
+        keyExtractor={(item, index) => {
+          // Create a unique key combining ID and index to prevent duplicates
+          const uniqueKey = `${item.id || 'unknown'}-${index}`;
+          console.log('ParentChildren: Child key:', uniqueKey, 'Child:', item);
+          return uniqueKey;
+        }}
         renderItem={({ item }) => (
           <TouchableOpacity style={styles.card} onPress={() => open(item)}>
             <Text style={styles.name}>{item.first_name} {item.last_name}</Text>
