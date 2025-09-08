@@ -695,7 +695,7 @@ const styles = StyleSheet.create({
 
   // Section Styles
   section: {
-    marginHorizontal: 20,
+    paddingHorizontal: 20,
     marginBottom: 24,
   },
   sectionHeader: {
