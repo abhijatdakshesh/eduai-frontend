@@ -396,8 +396,8 @@ const HomeScreen = ({ navigation }) => {
                     </View>
                     <View style={styles.statText}>
                       <Text style={[styles.statValue, { color: stat.color }]}>{stat.value}</Text>
-                      <Text style={styles.statTitle}>{stat.title}</Text>
-                      <Text style={styles.statSubtitle}>{stat.subtitle}</Text>
+                      <Text style={styles.statTitle} numberOfLines={2}>{stat.title}</Text>
+                      <Text style={styles.statSubtitle} numberOfLines={2}>{stat.subtitle}</Text>
                     </View>
                     <View style={styles.statTrend}>
                       <Text style={styles.trendIcon}>📈</Text>
@@ -734,14 +734,15 @@ const styles = StyleSheet.create({
   statGradient: {
     backgroundColor: 'white',
     borderRadius: 16,
-    padding: 20,
+    padding: 16,
+    minHeight: 150,
     ...theme.shadows.medium,
     borderWidth: 1,
     borderColor: '#f3f4f6',
   },
   statContent: {
     flexDirection: 'row',
-    alignItems: 'center',
+    alignItems: 'flex-start',
   },
   statIconContainer: {
     width: 48,
@@ -756,6 +757,7 @@ const styles = StyleSheet.create({
   },
   statText: {
     flex: 1,
+    minWidth: 0,
   },
   statValue: {
     fontSize: 24,
@@ -767,10 +769,14 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     fontWeight: '600',
     marginBottom: 2,
+    flexWrap: 'wrap',
+    numberOfLines: 2,
   },
   statSubtitle: {
     fontSize: theme.fonts.bodySmall.fontSize,
     color: theme.colors.textSecondary,
+    flexWrap: 'wrap',
+    numberOfLines: 2,
   },
   statTrend: {
     marginLeft: 8,
