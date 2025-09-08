@@ -9,8 +9,7 @@ import {
   Platform, 
   Dimensions,
   Animated,
-  StatusBar,
-  LinearGradient
+  StatusBar
 } from 'react-native';
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
