@@ -31,7 +31,7 @@ const HomeScreen = ({ navigation }) => {
   const { user } = useAuth();
 
   // Animation values
-  const fadeAnim = useState(new Animated.Value(0))[0];
+  const fadeAnim = useState(new Animated.Value(1))[0];
   const slideAnim = useState(new Animated.Value(30))[0];
   const scaleAnim = useState(new Animated.Value(0.95))[0];
 
