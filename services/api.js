@@ -166,6 +166,16 @@ class ApiClient {
     await AsyncStorage.setItem('refreshToken', refreshToken);
   }
 
+  async getToken() {
+    try {
+      const token = await AsyncStorage.getItem('accessToken');
+      return token;
+    } catch (error) {
+      console.log('API: Error getting token:', error);
+      return null;
+    }
+  }
+
   async clearTokens() {
     await AsyncStorage.removeItem('accessToken');
     await AsyncStorage.removeItem('refreshToken');
@@ -1547,6 +1557,179 @@ class ApiClient {
       const response = await this.api.post(`/ai/quick-action/${actionId}`);
       return response.data;
     } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  // Assignment APIs - Teacher
+  async createTeacherAssignment(assignmentData, files = []) {
+    try {
+      console.log('API: Creating teacher assignment...');
+      const formData = new FormData();
+      
+      // Add assignment data
+      formData.append('classId', assignmentData.classId);
+      formData.append('title', assignmentData.title);
+      formData.append('description', assignmentData.description);
+      formData.append('instructions', assignmentData.instructions);
+      formData.append('dueDate', assignmentData.dueDate);
+      formData.append('maxPoints', assignmentData.maxPoints);
+      formData.append('assignmentType', assignmentData.assignmentType);
+      
+      // Add files if any
+      if (files && files.length > 0) {
+        files.forEach(file => {
+          formData.append('attachments', file);
+        });
+      }
+      
+      const response = await this.api.post('/assignments/teacher/create', formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      console.log('API: Teacher assignment created successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Teacher assignment creation error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherAssignments() {
+    try {
+      console.log('API: Getting teacher assignments...');
+      const response = await this.api.get('/assignments/teacher/assignments');
+      console.log('API: Teacher assignments response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Teacher assignments error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getTeacherAssignment(assignmentId) {
+    try {
+      console.log('API: Getting teacher assignment details...');
+      const response = await this.api.get(`/assignments/teacher/assignments/${assignmentId}`);
+      console.log('API: Teacher assignment details response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Teacher assignment details error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async updateTeacherAssignment(assignmentId, assignmentData) {
+    try {
+      console.log('API: Updating teacher assignment...');
+      const response = await this.api.put(`/assignments/teacher/assignments/${assignmentId}`, assignmentData);
+      console.log('API: Teacher assignment updated successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Teacher assignment update error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteTeacherAssignment(assignmentId) {
+    try {
+      console.log('API: Deleting teacher assignment...');
+      const response = await this.api.delete(`/assignments/teacher/assignments/${assignmentId}`);
+      console.log('API: Teacher assignment deleted successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Teacher assignment deletion error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async gradeAssignmentSubmission(submissionId, grade, feedback) {
+    try {
+      console.log('API: Grading assignment submission...');
+      const response = await this.api.put(`/assignments/teacher/submissions/${submissionId}/grade`, {
+        grade,
+        feedback
+      });
+      console.log('API: Assignment submission graded successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Assignment submission grading error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  // Assignment APIs - Student
+  async getStudentAssignments() {
+    try {
+      console.log('API: Getting student assignments...');
+      const response = await this.api.get('/assignments/student/assignments');
+      console.log('API: Student assignments response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Student assignments error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getStudentAssignment(assignmentId) {
+    try {
+      console.log('API: Getting student assignment details...');
+      const response = await this.api.get(`/assignments/student/assignments/${assignmentId}`);
+      console.log('API: Student assignment details response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Student assignment details error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async submitStudentAssignment(assignmentId, submissionText, files = []) {
+    try {
+      console.log('API: Submitting student assignment...');
+      const formData = new FormData();
+      
+      // Add submission data
+      formData.append('submissionText', submissionText);
+      
+      // Add files if any
+      if (files && files.length > 0) {
+        files.forEach(file => {
+          formData.append('attachments', file);
+        });
+      }
+      
+      const response = await this.api.post(`/assignments/student/assignments/${assignmentId}/submit`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      console.log('API: Student assignment submitted successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Student assignment submission error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async downloadStudentSubmissionFile(submissionId, attachmentId) {
+    try {
+      console.log('API: Downloading student submission file...');
+      const response = await this.api.get(`/assignments/teacher/submissions/${submissionId}/attachments/${attachmentId}/download`, {
+        responseType: 'blob'
+      });
+      console.log('API: Student submission file downloaded successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Student submission file download error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getStudentSubmissionFileUrl(submissionId, attachmentId) {
+    try {
+      console.log('API: Getting student submission file URL...');
+      const response = await this.api.get(`/assignments/teacher/submissions/${submissionId}/attachments/${attachmentId}/url`);
+      console.log('API: Student submission file URL retrieved successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Student submission file URL error:', error);
       throw this.handleError(error);
     }
   }

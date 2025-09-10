@@ -28,6 +28,8 @@ import SimpleResultsPortalScreen from '../screens/SimpleResultsPortalScreen';
 import StudentAttendanceScreen from '../screens/StudentAttendanceScreen';
 import StudentAnnouncementsListScreen from '../screens/StudentAnnouncementsListScreen';
 import StudentAnnouncementDetailScreen from '../screens/StudentAnnouncementDetailScreen';
+import StudentAssignmentsScreen from '../screens/StudentAssignmentsScreen';
+import StudentAssignmentDetailScreen from '../screens/StudentAssignmentDetailScreen';
 
 // Import Admin Screens
 import AdminLoginScreen from '../screens/AdminLoginScreen';
@@ -45,6 +47,9 @@ import TeacherLoginScreen from '../screens/TeacherLoginScreen';
 
 // Teacher Screens
 import TeacherClassesScreen from '../screens/TeacherClassesScreen';
+import TeacherClassStudentsScreen from '../screens/TeacherClassStudentsScreen';
+import TeacherAssignmentsScreen from '../screens/TeacherAssignmentsScreen';
+import TeacherAssignmentDetailScreen from '../screens/TeacherAssignmentDetailScreen';
 import MarkAttendanceScreen from '../screens/MarkAttendanceScreen';
 import TeacherDashboardScreen from '../screens/TeacherDashboardScreen';
 import TeacherLogoutScreen from '../screens/TeacherLogoutScreen';
@@ -152,6 +157,11 @@ export const mainAppScreens = (theme) => [
     options: createDrawerScreenOptions('My Attendance', '🗓️', theme),
   },
   {
+    name: 'My Assignments',
+    component: StudentAssignmentsScreen,
+    options: createDrawerScreenOptions('My Assignments', '📝', theme),
+  },
+  {
     name: 'Job Portal',
     component: SimpleJobPortalScreen,
     options: createDrawerScreenOptions('Career Portal', '💼', theme),
@@ -248,6 +258,11 @@ export const teacherScreens = (theme) => [
     name: 'TeacherClasses',
     component: TeacherClassesScreen,
     options: createDrawerScreenOptions('My Classes', '🏫', theme),
+  },
+  {
+    name: 'TeacherAssignments',
+    component: TeacherAssignmentsScreen,
+    options: createDrawerScreenOptions('Assignments', '📝', theme),
   },
   {
     name: 'TeacherMarkAttendance',
@@ -374,6 +389,30 @@ export const adminStackScreens = [
   },
 ];
 
+// Teacher Stack Screens (for nested navigation)
+export const teacherStackScreens = [
+  {
+    name: 'TeacherClassStudents',
+    component: TeacherClassStudentsScreen,
+  },
+  {
+    name: 'TeacherAssignmentDetail',
+    component: TeacherAssignmentDetailScreen,
+  },
+];
+
+// Student Stack Screens (for nested navigation)
+export const studentStackScreens = [
+  {
+    name: 'StudentAssignments',
+    component: StudentAssignmentsScreen,
+  },
+  {
+    name: 'StudentAssignmentDetail',
+    component: StudentAssignmentDetailScreen,
+  },
+];
+
 export default {
   drawerNavigatorOptions,
   mainAppScreens,
@@ -382,4 +421,6 @@ export default {
   parentScreens,
   authScreens,
   adminStackScreens,
+  teacherStackScreens,
+  studentStackScreens,
 };
