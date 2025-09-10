@@ -31,6 +31,8 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showFilePickerModal, setShowFilePickerModal] = useState(false);
   const [alreadySubmittedNotice, setAlreadySubmittedNotice] = useState(false);
+  const [isEditing, setIsEditing] = useState(false);
+  const [replaceAttachments, setReplaceAttachments] = useState(false);
 
   useBackButton(navigation);
 
@@ -48,6 +50,8 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
       
       if (response?.success && response?.data?.assignment) {
         setAssignment(response.data.assignment);
+        setIsEditing(false);
+        setReplaceAttachments(false);
         // Pre-fill submission text if already submitted
         if (response.data.assignment.submission?.submission_text) {
           setSubmissionText(response.data.assignment.submission.submission_text);
@@ -198,12 +202,19 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
         type: file.type,
       }));
       
-      const response = await apiClient.submitStudentAssignment(assignmentId, submissionText.trim(), files);
+      let response;
+      if (isSubmitted) {
+        response = await apiClient.updateStudentSubmission(assignmentId, submissionText.trim(), files, { replaceAttachments });
+      } else {
+        response = await apiClient.submitStudentAssignment(assignmentId, submissionText.trim(), files);
+      }
       console.log('StudentAssignmentDetail: Submit assignment response:', response);
       
       if (response?.success) {
         Alert.alert('Success', 'Assignment submitted successfully!');
         setAttachedFiles([]); // Clear attached files
+        setIsEditing(false);
+        setReplaceAttachments(false);
         fetchAssignmentDetails(); // Refresh to show updated submission status
       } else {
         Alert.alert('Error', response?.message || 'Failed to submit assignment');
@@ -459,7 +470,7 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
         <View style={styles.submissionCard}>
           <Text style={styles.sectionTitle}>Your Submission</Text>
           
-          {isSubmitted ? (
+          {isSubmitted && !isEditing ? (
             <View style={styles.submittedContainer}>
               <View style={styles.submissionInfo}>
                 <Text style={styles.submissionDate}>
@@ -523,6 +534,13 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
                   </View>
                 )}
               </View>
+              <View style={{ marginTop: 12 }}>
+                {!isOverdue && (
+                  <TouchableOpacity style={[styles.addFileButton, { backgroundColor: '#1a237e' }]} onPress={() => setIsEditing(true)}>
+                    <Text style={styles.addFileButtonText}>Edit Submission</Text>
+                  </TouchableOpacity>
+                )}
+              </View>
             </View>
           ) : (
             <View style={styles.submitContainer}>
@@ -530,6 +548,18 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
                 <Text style={styles.alreadySubmittedBanner}>
                   This assignment was already submitted. If you need to update it, contact your teacher.
                 </Text>
+              )}
+              {isSubmitted && (
+                <View style={[styles.attachedFilesContainer, { marginBottom: 8 }]}> 
+                  <Text style={styles.fileUploadLabel}>Edit Mode</Text>
+                  <View style={{ flexDirection: 'row', alignItems: 'center', marginBottom: 8 }}>
+                    <TouchableOpacity onPress={() => setReplaceAttachments(v => !v)} style={[styles.chip, replaceAttachments && styles.chipActive]}> 
+                      <Text style={[styles.chipText, replaceAttachments && styles.chipTextActive]}>
+                        {replaceAttachments ? 'Replace all files' : 'Append files'}
+                      </Text>
+                    </TouchableOpacity>
+                  </View>
+                </View>
               )}
               <Text style={styles.submitLabel}>Submission Text:</Text>
               <TextInput
@@ -968,6 +998,10 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 8,
   },
+  chip: { paddingHorizontal: 12, paddingVertical: 6, borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 16, marginRight: 8 },
+  chipActive: { backgroundColor: '#e8eaf6', borderColor: '#1a237e' },
+  chipText: { color: '#374151' },
+  chipTextActive: { color: '#1a237e', fontWeight: '700' },
   addFileButtonDisabled: {
     backgroundColor: '#9ca3af',
   },

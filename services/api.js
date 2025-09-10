@@ -1708,6 +1708,47 @@ class ApiClient {
     }
   }
 
+  async updateStudentSubmission(assignmentId, submissionText, files = [], options = {}) {
+    try {
+      console.log('API: Updating student submission...');
+      const formData = new FormData();
+
+      if (submissionText !== undefined && submissionText !== null) {
+        formData.append('submissionText', submissionText);
+      }
+
+      const replace = options.replaceAttachments ? 'true' : 'false';
+      formData.append('replaceAttachments', replace);
+
+      if (files && files.length > 0) {
+        files.forEach(file => {
+          formData.append('attachments', file);
+        });
+      }
+
+      const response = await this.api.put(`/assignments/student/assignments/${assignmentId}/submission`, formData, {
+        headers: { 'Content-Type': 'multipart/form-data' }
+      });
+      console.log('API: Student submission updated successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Student submission update error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteStudentSubmissionAttachment(submissionId, attachmentId) {
+    try {
+      console.log('API: Deleting student submission attachment...');
+      const response = await this.api.delete(`/assignments/student/submissions/${encodeURIComponent(submissionId)}/attachments/${encodeURIComponent(attachmentId)}`);
+      console.log('API: Student submission attachment deleted');
+      return response.data;
+    } catch (error) {
+      console.log('API: Delete submission attachment error:', error);
+      throw this.handleError(error);
+    }
+  }
+
   async downloadStudentSubmissionFile(submissionId, attachmentId) {
     try {
       console.log('API: Downloading student submission file...');
