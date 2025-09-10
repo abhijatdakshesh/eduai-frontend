@@ -30,6 +30,7 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
   const [submissionText, setSubmissionText] = useState('');
   const [attachedFiles, setAttachedFiles] = useState([]);
   const [showFilePickerModal, setShowFilePickerModal] = useState(false);
+  const [alreadySubmittedNotice, setAlreadySubmittedNotice] = useState(false);
 
   useBackButton(navigation);
 
@@ -209,7 +210,15 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
       }
     } catch (error) {
       console.log('StudentAssignmentDetail: Error submitting assignment:', error.message);
-      Alert.alert('Error', 'Failed to submit assignment. Please try again.');
+      const msg = String(error?.message || '').toLowerCase();
+      if (msg.includes('already submitted')) {
+        setAlreadySubmittedNotice(true);
+        Alert.alert('Already submitted', 'Your assignment appears to be already submitted. Showing latest status.');
+        // Re-fetch to sync UI with backend authoritative state
+        fetchAssignmentDetails();
+      } else {
+        Alert.alert('Error', 'Failed to submit assignment. Please try again.');
+      }
     } finally {
       setSubmitting(false);
     }
@@ -517,6 +526,11 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
             </View>
           ) : (
             <View style={styles.submitContainer}>
+              {alreadySubmittedNotice && (
+                <Text style={styles.alreadySubmittedBanner}>
+                  This assignment was already submitted. If you need to update it, contact your teacher.
+                </Text>
+              )}
               <Text style={styles.submitLabel}>Submission Text:</Text>
               <TextInput
                 style={styles.submissionInput}
@@ -871,6 +885,17 @@ const styles = StyleSheet.create({
     padding: 8,
     backgroundColor: '#fef2f2',
     borderRadius: 6,
+  },
+  alreadySubmittedBanner: {
+    color: '#92400e',
+    backgroundColor: '#fef3c7',
+    borderColor: '#fde68a',
+    borderWidth: 1,
+    padding: 10,
+    borderRadius: 8,
+    marginBottom: 12,
+    textAlign: 'center',
+    fontWeight: '600',
   },
   submitButton: {
     backgroundColor: '#1a237e',
