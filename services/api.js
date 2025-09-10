@@ -1775,6 +1775,59 @@ class ApiClient {
     }
   }
 
+  // New submission versioning and history methods
+  async getSubmissionHistory(submissionId) {
+    try {
+      console.log('API: Getting submission history...');
+      const response = await this.api.get(`/assignments/student/submissions/${submissionId}/history`);
+      console.log('API: Submission history retrieved successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Submission history error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async resubmitAssignment(assignmentId, submissionText, files = [], options = {}) {
+    try {
+      console.log('API: Resubmitting assignment with versioning...');
+      const formData = new FormData();
+      
+      // Add submission data
+      if (submissionText !== undefined && submissionText !== null) {
+        formData.append('submissionText', submissionText);
+      }
+      
+      // Add files
+      files.forEach((file, index) => {
+        formData.append('files', {
+          uri: file.uri,
+          type: file.type || 'application/octet-stream',
+          name: file.name || `file_${index}`,
+        });
+      });
+      
+      // Add options
+      if (options.replaceAttachments) {
+        formData.append('replaceAttachments', 'true');
+      }
+      if (options.reason) {
+        formData.append('reason', options.reason);
+      }
+      
+      const response = await this.api.put(`/assignments/student/assignments/${assignmentId}/submission`, formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('API: Assignment resubmitted successfully with versioning');
+      return response.data;
+    } catch (error) {
+      console.log('API: Assignment resubmission error:', error);
+      throw this.handleError(error);
+    }
+  }
+
   // Staff Directory APIs
   async getStaffMembers(filters = {}) {
     try {

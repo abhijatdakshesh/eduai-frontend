@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Platform, Linking } from 'react-native';
+import { View, Text, StyleSheet, FlatList, TouchableOpacity, TextInput, Alert, Platform, Linking, Animated, Dimensions } from 'react-native';
+import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../services/api';
 import { useBackButton } from '../utils/backButtonHandler';
+import { theme } from '../config/theme';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -193,6 +195,7 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   };
 
   const exportCsvWeb = async () => {
+    if (Platform.OS === 'web') {
     try {
       const resp = await apiClient.exportTeacherAttendanceCsv(classId, date);
       const blob = resp?.data instanceof Blob ? resp.data : new Blob([resp?.data], { type: 'text/csv;charset=utf-8;' });
@@ -204,10 +207,88 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
       URL.revokeObjectURL(url);
     } catch (e) {
       try { Alert.alert('Error', 'Failed to export CSV'); } catch (_) {}
+      }
+    } else {
+      // For mobile platforms, show instructions
+      Alert.alert(
+        'Export on Mobile',
+        'To export attendance data on mobile:\n\n1. Use the web version of the app\n2. Or take a screenshot of the attendance summary\n3. Use the "All Present" or "All Absent" buttons for bulk actions',
+        [{ text: 'OK' }]
+      );
+    }
+  };
+
+  const showImportFormat = () => {
+    const formatInfo = `CSV Import Format Guide:
+
+Required Columns:
+• student_id: Student's unique identifier
+• status: Attendance status (present/absent/late)
+• notes: Optional reason or notes
+
+Example CSV:
+student_id,status,notes
+STU001,present,
+STU002,absent,Sick
+STU003,late,Traffic jam
+STU004,present,
+
+Notes:
+• Use comma (,) as separator
+• First row should contain headers
+• Status must be: present, absent, or late
+• Leave notes empty if not needed
+• Save file as .csv format`;
+
+    Alert.alert(
+      'CSV Import Format',
+      formatInfo,
+      [
+        { text: 'Import File', onPress: importCsvWeb },
+        { text: 'Cancel', style: 'cancel' }
+      ]
+    );
+  };
+
+  const downloadTemplate = () => {
+    if (Platform.OS === 'web') {
+      try {
+        const templateData = `student_id,status,notes
+STU001,present,
+STU002,absent,Sick
+STU003,late,Traffic jam
+STU004,present,
+STU005,absent,Personal reason`;
+
+        const blob = new Blob([templateData], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `attendance_template_${classId}_${date}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+      } catch (e) {
+        Alert.alert('Error', 'Failed to download template');
+      }
+    } else {
+      // For mobile platforms, show the template content
+      const templateData = `student_id,status,notes
+STU001,present,
+STU002,absent,Sick
+STU003,late,Traffic jam
+STU004,present,
+STU005,absent,Personal reason`;
+
+      Alert.alert(
+        'CSV Template',
+        `Copy this template and save as .csv file:\n\n${templateData}\n\nNote: Use the web version for automatic template download.`,
+        [{ text: 'OK' }]
+      );
     }
   };
 
   const importCsvWeb = () => {
+    if (Platform.OS === 'web') {
     try {
       const input = document.createElement('input');
       input.type = 'file';
@@ -215,10 +296,17 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
       input.onchange = async (ev) => {
         const file = ev.target.files && ev.target.files[0];
         if (!file) return;
+          
+          // Validate file type
+          if (!file.name.toLowerCase().endsWith('.csv')) {
+            Alert.alert('Error', 'Please select a CSV file');
+            return;
+          }
+
         try {
           const resp = await apiClient.importTeacherAttendanceCsv(classId, file, date);
           if (resp?.success) {
-            Alert.alert('Import', 'CSV imported successfully.');
+              Alert.alert('Success', 'CSV imported successfully!');
             // reload attendance after import
             const existing = await apiClient.getTeacherClassAttendance(classId, date);
             const map = {};
@@ -229,15 +317,23 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
             setMarks(map);
             setDirty(false);
           } else {
-            Alert.alert('Import', resp?.message || 'Import failed.');
+              Alert.alert('Import Failed', resp?.message || 'Import failed. Please check your CSV format.');
           }
         } catch (err) {
-          Alert.alert('Import', err?.message || 'Import failed.');
+            Alert.alert('Import Error', err?.message || 'Import failed. Please check your CSV format and try again.');
         }
       };
       input.click();
     } catch (e) {
       try { Alert.alert('Error', 'Failed to import CSV'); } catch (_) {}
+      }
+    } else {
+      // For mobile platforms, show instructions
+      Alert.alert(
+        'Import on Mobile',
+        'To import attendance data on mobile:\n\n1. Use the web version of the app\n2. Or manually enter attendance data\n3. Use the "All Present" or "All Absent" buttons for bulk actions',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -375,121 +471,216 @@ Teacher`;
     const studentId = item.student_id || item.roll_number || item.id;
     
     return (
-      <View style={styles.row}>
-        <View style={styles.studentCol}>
+      <View style={styles.studentCard}>
+        {/* Student Info Header */}
+        <View style={styles.studentHeader}>
+          <View style={styles.studentInfo}>
           <Text style={styles.studentName}>{fullName}</Text>
-          <Text style={styles.studentMeta}>ID: {studentId}</Text>
+            <Text style={styles.studentId}>ID: {studentId}</Text>
         </View>
-        <View style={styles.statusCol}>
+          <View style={[styles.statusIndicator, styles[`statusIndicator_${current.status}`]]}>
+            <Text style={styles.statusIndicatorText}>
+              {current.status === 'present' ? '✓' : current.status === 'absent' ? '✗' : '⏰'}
+            </Text>
+          </View>
+        </View>
+
+        {/* Status Selection */}
+        <View style={styles.statusSection}>
+          <Text style={styles.statusSectionLabel}>Attendance Status</Text>
+          <View style={styles.statusButtons}>
           {statusOptions.map((s) => (
             <TouchableOpacity
               key={s}
               onPress={() => updateStatus(key, s)}
-              style={[styles.statusPill, styles[`status_${s}`], current.status === s && styles.statusSelected]}
-            >
-              <Text style={styles.statusText}>{s[0].toUpperCase()}</Text>
+                style={[
+                  styles.statusButton, 
+                  styles[`statusButton_${s}`], 
+                  current.status === s && styles.statusButtonSelected
+                ]}
+              >
+                <Text style={[
+                  styles.statusButtonText,
+                  current.status === s && styles.statusButtonTextSelected
+                ]}>
+                  {s === 'present' ? '✓ Present' : s === 'absent' ? '✗ Absent' : '⏰ Late'}
+                </Text>
             </TouchableOpacity>
           ))}
         </View>
-        <View style={styles.notesCol}>
+        </View>
+
+        {/* Notes and Communication Section */}
           {current.status !== 'present' && (
-            <>
-              <View style={styles.reasonChipsRow}>
+          <View style={styles.notesSection}>
+            <Text style={styles.notesSectionLabel}>Reason & Notes</Text>
+            
+            {/* Quick Reason Chips */}
+            <View style={styles.reasonChips}>
                 {(reasons.length ? reasons : ['Sick','Personal','Travel','Late Transport']).map((r) => (
-                  <TouchableOpacity key={r} style={styles.reasonChip} onPress={() => updateNotes(key, r)}>
-                    <Text style={styles.reasonChipText}>{r}</Text>
+                <TouchableOpacity 
+                  key={r} 
+                  style={[
+                    styles.reasonChip, 
+                    current.notes === r && styles.reasonChipSelected
+                  ]} 
+                  onPress={() => updateNotes(key, r)}
+                >
+                  <Text style={[
+                    styles.reasonChipText,
+                    current.notes === r && styles.reasonChipTextSelected
+                  ]}>
+                    {r}
+                  </Text>
                   </TouchableOpacity>
                 ))}
               </View>
+            
+            {/* Custom Notes Input */}
               <TextInput
                 value={current.notes}
                 onChangeText={(t) => updateNotes(key, t)}
-                placeholder="Reason / Notes"
+              placeholder="Add custom reason or notes..."
+              placeholderTextColor={theme.colors.placeholder}
                 style={styles.notesInput}
+              multiline
               />
-              {/* Communication buttons for absent/late students */}
+            
+            {/* Communication Actions */}
               {(current.status === 'absent' || current.status === 'late') && (
-                <View style={styles.communicationButtons}>
+              <View style={styles.communicationActions}>
                   <TouchableOpacity 
-                    style={styles.individualWhatsappBtn} 
+                  style={[styles.commActionBtn, styles.whatsappActionBtn]} 
                     onPress={() => sendWhatsAppToParents(key)}
                   >
-                    <Text style={styles.individualWhatsappText}>📱 WhatsApp</Text>
+                  <Text style={styles.commActionBtnText}>📱 Notify Parent</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
-                    style={styles.individualAiCallBtn} 
+                  style={[styles.commActionBtn, styles.aiCallActionBtn]} 
                     onPress={() => initiateAICall(key)}
                   >
-                    <Text style={styles.individualAiCallText}>🤖 AI Call</Text>
+                  <Text style={styles.commActionBtnText}>🤖 AI Call</Text>
                   </TouchableOpacity>
                 </View>
               )}
-            </>
+          </View>
           )}
-        </View>
       </View>
     );
   };
 
   return (
     <View style={styles.container}>
-      <View style={styles.header}>
+      {/* Modern Header with Gradient */}
+      <LinearGradient
+        colors={['#1a237e', '#3949ab', '#5c6bc0']}
+        style={styles.header}
+        start={{ x: 0, y: 0 }}
+        end={{ x: 1, y: 1 }}
+      >
+        <View style={styles.headerContent}>
         <Text style={styles.headerTitle}>{className || 'Mark Attendance'}</Text>
-        <Text style={styles.headerSubtitle}>Mark attendance for {date}</Text>
+          <Text style={styles.headerSubtitle}>📅 {new Date(date).toLocaleDateString('en-US', { 
+            weekday: 'long', 
+            year: 'numeric', 
+            month: 'long', 
+            day: 'numeric' 
+          })}</Text>
       </View>
+      </LinearGradient>
+
+      {/* Success Banner */}
       {showSaved && (
-        <View style={styles.savedBanner}>
-          <Text style={styles.savedBannerText}>Attendance saved</Text>
-        </View>
+        <Animated.View style={styles.savedBanner}>
+          <Text style={styles.savedBannerText}>✅ Attendance saved successfully</Text>
+        </Animated.View>
       )}
+
+      {/* Modern Toolbar */}
       <View style={styles.toolbar}>
-        <View style={styles.dateBox}>
-          <Text style={styles.label}>Date</Text>
-          <TextInput value={date} onChangeText={setDate} style={styles.dateInput} placeholder="YYYY-MM-DD" />
+        <View style={styles.dateSection}>
+          <Text style={styles.sectionLabel}>📅 Date</Text>
+          <TextInput 
+            value={date} 
+            onChangeText={setDate} 
+            style={styles.dateInput} 
+            placeholder="YYYY-MM-DD"
+            placeholderTextColor={theme.colors.placeholder}
+          />
         </View>
-        <View style={styles.actions}>
-          <TouchableOpacity style={[styles.actionBtn, styles.present]} onPress={() => markAll('present')}>
-            <Text style={styles.actionText}>All Present</Text>
+        
+        <View style={styles.actionButtons}>
+          <TouchableOpacity style={[styles.actionBtn, styles.presentBtn]} onPress={() => markAll('present')}>
+            <Text style={styles.actionBtnText}>✓ All Present</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={[styles.actionBtn, styles.absent]} onPress={() => markAll('absent')}>
-            <Text style={styles.actionText}>All Absent</Text>
-          </TouchableOpacity>
-          {Platform.OS === 'web' && (
-            <>
-              <TouchableOpacity style={[styles.exportBtn]} onPress={exportCsvWeb}>
-                <Text style={styles.exportText}>Export CSV</Text>
-              </TouchableOpacity>
-              <TouchableOpacity style={[styles.importBtn]} onPress={importCsvWeb}>
-                <Text style={styles.exportText}>Import CSV</Text>
-              </TouchableOpacity>
-            </>
-          )}
-          <TouchableOpacity style={[styles.whatsappBtn]} onPress={() => sendWhatsAppToParents()}>
-            <Text style={styles.whatsappText}>📱 WhatsApp</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={[styles.aiCallBtn]} onPress={() => initiateAICall()}>
-            <Text style={styles.aiCallText}>🤖 AI Call</Text>
-          </TouchableOpacity>
-          <TouchableOpacity style={styles.saveBtn} disabled={saving || !dirty} onPress={save}>
-            <Text style={styles.saveText}>{saving ? 'Saving...' : dirty ? 'Save' : 'Saved'}</Text>
+          <TouchableOpacity style={[styles.actionBtn, styles.absentBtn]} onPress={() => markAll('absent')}>
+            <Text style={styles.actionBtnText}>✗ All Absent</Text>
           </TouchableOpacity>
         </View>
       </View>
 
-      <View style={styles.summaryBar}>
-        <View style={[styles.sumPill, styles.sumPresent]}><Text style={styles.sumText}>P: {summary.present}</Text></View>
-        <View style={[styles.sumPill, styles.sumAbsent]}><Text style={styles.sumText}>A: {summary.absent}</Text></View>
-        <View style={[styles.sumPill, styles.sumLate]}><Text style={styles.sumText}>L: {summary.late}</Text></View>
+      {/* Communication & Export Section */}
+      <View style={styles.communicationSection}>
+        <View style={styles.communicationButtons}>
+          <TouchableOpacity style={[styles.commBtn, styles.whatsappBtn]} onPress={() => sendWhatsAppToParents()}>
+            <Text style={styles.commBtnText}>📱 Notify Parents</Text>
+              </TouchableOpacity>
+          <TouchableOpacity style={[styles.commBtn, styles.aiCallBtn]} onPress={() => initiateAICall()}>
+            <Text style={styles.commBtnText}>🤖 AI Calls</Text>
+              </TouchableOpacity>
+        </View>
+        
+        <View style={styles.exportButtons}>
+          <TouchableOpacity style={styles.exportBtn} onPress={exportCsvWeb}>
+            <Text style={styles.exportBtnText}>📊 Export</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.templateBtn} onPress={downloadTemplate}>
+            <Text style={styles.templateBtnText}>📋 Template</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.importBtn} onPress={showImportFormat}>
+            <Text style={styles.importBtnText}>📥 Import</Text>
+          </TouchableOpacity>
+        </View>
+        
+        <TouchableOpacity 
+          style={[styles.saveBtn, (!dirty || saving) && styles.saveBtnDisabled]} 
+          disabled={saving || !dirty} 
+          onPress={save}
+        >
+          <Text style={styles.saveBtnText}>
+            {saving ? '⏳ Saving...' : dirty ? '💾 Save Changes' : '✅ Saved'}
+          </Text>
+        </TouchableOpacity>
       </View>
 
+      {/* Modern Summary Cards */}
+      <View style={styles.summaryContainer}>
+        <View style={[styles.summaryCard, styles.presentCard]}>
+          <Text style={styles.summaryNumber}>{summary.present}</Text>
+          <Text style={styles.summaryLabel}>Present</Text>
+        </View>
+        <View style={[styles.summaryCard, styles.absentCard]}>
+          <Text style={styles.summaryNumber}>{summary.absent}</Text>
+          <Text style={styles.summaryLabel}>Absent</Text>
+        </View>
+        <View style={[styles.summaryCard, styles.lateCard]}>
+          <Text style={styles.summaryNumber}>{summary.late}</Text>
+          <Text style={styles.summaryLabel}>Late</Text>
+        </View>
+      </View>
+
+      {/* Student List */}
       {loading ? (
-        <View style={styles.loadingContainer}><Text style={styles.loadingText}>Loading roster...</Text></View>
+        <View style={styles.loadingContainer}>
+          <Text style={styles.loadingText}>📚 Loading student roster...</Text>
+        </View>
       ) : (
         <FlatList
           data={students}
           keyExtractor={(i) => String(i.id)}
           renderItem={renderRow}
-          contentContainerStyle={{ paddingHorizontal: isIOS ? 20 : 16, paddingBottom: 24 }}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
         />
       )}
     </View>
@@ -497,59 +688,473 @@ Teacher`;
 };
 
 const styles = StyleSheet.create({
-  container: { flex: 1, backgroundColor: '#f8fafc' },
-  header: { backgroundColor: '#1a237e', paddingTop: isIOS ? 60 : 40, paddingBottom: 20, paddingHorizontal: 20 },
-  headerTitle: { color: 'white', fontWeight: 'bold', fontSize: isIOS ? 28 : 24, marginBottom: 4 },
-  headerSubtitle: { color: '#e3f2fd', fontSize: isIOS ? 16 : 14 },
-  toolbar: { flexDirection: 'row', alignItems: 'flex-end', justifyContent: 'space-between', backgroundColor: 'white', padding: 16, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  dateBox: { flex: 1, marginRight: 12 },
-  label: { color: '#374151', fontWeight: '600', marginBottom: 6, fontSize: 12 },
-  dateInput: { borderWidth: 1, borderColor: '#d1d5db', borderRadius: 10, paddingHorizontal: 12, paddingVertical: 10, backgroundColor: '#f9fafb' },
-  actions: { flexDirection: 'row', alignItems: 'center' },
-  actionBtn: { paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
-  actionText: { color: 'white', fontWeight: '700' },
-  present: { backgroundColor: '#10b981' },
-  absent: { backgroundColor: '#ef4444' },
-  exportBtn: { backgroundColor: '#0ea5e9', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
-  importBtn: { backgroundColor: '#0369a1', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
-  exportText: { color: 'white', fontWeight: '700' },
-  whatsappBtn: { backgroundColor: '#25D366', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
-  whatsappText: { color: 'white', fontWeight: '700' },
-  aiCallBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 12, paddingVertical: 10, borderRadius: 10, marginRight: 8 },
-  aiCallText: { color: 'white', fontWeight: '700' },
-  saveBtn: { backgroundColor: '#1a237e', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 10 },
-  saveText: { color: 'white', fontWeight: '700' },
-  loadingContainer: { padding: 16 },
-  loadingText: { color: '#1a237e' },
-  savedBanner: { backgroundColor: '#10b981', paddingVertical: 8, paddingHorizontal: 16 },
-  savedBannerText: { color: 'white', fontWeight: '700', textAlign: 'center' },
-  row: { backgroundColor: 'white', borderRadius: 12, padding: 12, marginTop: 10, flexDirection: 'row', alignItems: 'center', shadowColor: '#000', shadowOpacity: 0.05, shadowRadius: 6, shadowOffset: { width: 0, height: 2 }, elevation: 2 },
-  studentCol: { flex: 1 },
-  studentName: { color: '#1a237e', fontWeight: '700', fontSize: 16, marginBottom: 2 },
-  studentMeta: { color: '#9ca3af', fontSize: 11, fontWeight: '500' },
-  statusCol: { flexDirection: 'row', marginHorizontal: 10 },
-  statusPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8, marginHorizontal: 3 },
-  status_present: { backgroundColor: '#10b981' },
-  status_absent: { backgroundColor: '#ef4444' },
-  status_late: { backgroundColor: '#f59e0b' },
-  statusSelected: { borderWidth: 2, borderColor: 'rgba(0,0,0,0.1)' },
-  statusText: { color: 'white', fontWeight: '800' },
-  notesCol: { flex: 1 },
-  notesInput: { borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, paddingHorizontal: 10, paddingVertical: 8, backgroundColor: '#fafafa' },
-  reasonChipsRow: { flexDirection: 'row', flexWrap: 'wrap', marginBottom: 6 },
-  reasonChip: { backgroundColor: '#e0f2fe', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 8, marginRight: 6, marginBottom: 6 },
-  reasonChipText: { color: '#0369a1', fontWeight: '700', fontSize: 12 },
-  communicationButtons: { flexDirection: 'row', marginTop: 8, gap: 8 },
-  individualWhatsappBtn: { backgroundColor: '#25D366', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, flex: 1 },
-  individualWhatsappText: { color: 'white', fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  individualAiCallBtn: { backgroundColor: '#8B5CF6', paddingHorizontal: 8, paddingVertical: 6, borderRadius: 6, flex: 1 },
-  individualAiCallText: { color: 'white', fontSize: 11, fontWeight: '600', textAlign: 'center' },
-  summaryBar: { flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', backgroundColor: 'white', paddingHorizontal: 16, paddingVertical: 8, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' },
-  sumPill: { paddingHorizontal: 10, paddingVertical: 6, borderRadius: 8 },
-  sumPresent: { backgroundColor: '#10b981' },
-  sumAbsent: { backgroundColor: '#ef4444' },
-  sumLate: { backgroundColor: '#f59e0b' },
-  sumText: { color: 'white', fontWeight: '800' },
+  // Main Container
+  container: {
+    flex: 1,
+    backgroundColor: theme.colors.background,
+  },
+
+  // Header Styles
+  header: {
+    paddingTop: isIOS ? 60 : 40,
+    paddingBottom: 24,
+    paddingHorizontal: 20,
+  },
+  headerContent: {
+    alignItems: 'center',
+  },
+  headerTitle: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: isIOS ? 28 : 24,
+    marginBottom: 8,
+    textAlign: 'center',
+  },
+  headerSubtitle: {
+    color: 'rgba(255, 255, 255, 0.9)',
+    fontSize: isIOS ? 16 : 14,
+    textAlign: 'center',
+    fontWeight: '500',
+  },
+
+  // Success Banner
+  savedBanner: {
+    backgroundColor: theme.colors.success,
+    paddingVertical: 12,
+    paddingHorizontal: 20,
+    alignItems: 'center',
+  },
+  savedBannerText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 14,
+  },
+
+  // Toolbar Styles
+  toolbar: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divider,
+    ...theme.shadows.small,
+  },
+  dateSection: {
+    flex: 1,
+    marginRight: 16,
+  },
+  sectionLabel: {
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 12,
+    marginBottom: 8,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  dateInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.inputBackground,
+    fontSize: 14,
+    color: theme.colors.text,
+  },
+  actionButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  actionBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 10,
+    borderRadius: 12,
+    ...theme.shadows.small,
+  },
+  presentBtn: {
+    backgroundColor: theme.colors.success,
+  },
+  absentBtn: {
+    backgroundColor: theme.colors.error,
+  },
+  actionBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+
+  // Communication Section
+  communicationSection: {
+    backgroundColor: 'white',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    borderBottomWidth: 1,
+    borderBottomColor: theme.colors.divider,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    flexWrap: 'wrap',
+    gap: 12,
+  },
+  communicationButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  commBtn: {
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    borderRadius: 12,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'center',
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  whatsappBtn: {
+    backgroundColor: '#25D366',
+    borderColor: 'rgba(37, 211, 102, 0.3)',
+    shadowColor: '#25D366',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  aiCallBtn: {
+    backgroundColor: '#8B5CF6',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    shadowOffset: { width: 0, height: 4 },
+    elevation: 6,
+  },
+  commBtnText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 13,
+    marginLeft: 6,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+  exportButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  exportBtn: {
+    backgroundColor: theme.colors.info,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    ...theme.shadows.small,
+  },
+  exportBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  templateBtn: {
+    backgroundColor: '#10b981',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    ...theme.shadows.small,
+    borderWidth: 1,
+    borderColor: 'rgba(16, 185, 129, 0.3)',
+  },
+  templateBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  importBtn: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    ...theme.shadows.small,
+    borderWidth: 1,
+    borderColor: 'rgba(26, 35, 126, 0.3)',
+  },
+  importBtnText: {
+    color: 'white',
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  saveBtn: {
+    backgroundColor: theme.colors.primary,
+    paddingHorizontal: 20,
+    paddingVertical: 12,
+    borderRadius: 12,
+    ...theme.shadows.medium,
+  },
+  saveBtnDisabled: {
+    backgroundColor: theme.colors.textSecondary,
+    opacity: 0.6,
+  },
+  saveBtnText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 14,
+  },
+
+  // Summary Cards
+  summaryContainer: {
+    flexDirection: 'row',
+    paddingHorizontal: 20,
+    paddingVertical: 16,
+    gap: 12,
+  },
+  summaryCard: {
+    flex: 1,
+    backgroundColor: 'white',
+    borderRadius: 16,
+    padding: 16,
+    alignItems: 'center',
+    ...theme.shadows.medium,
+  },
+  presentCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.success,
+  },
+  absentCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.error,
+  },
+  lateCard: {
+    borderLeftWidth: 4,
+    borderLeftColor: theme.colors.warning,
+  },
+  summaryNumber: {
+    fontSize: 24,
+    fontWeight: '700',
+    color: theme.colors.text,
+    marginBottom: 4,
+  },
+  summaryLabel: {
+    fontSize: 12,
+    fontWeight: '600',
+    color: theme.colors.textSecondary,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+
+  // Student Cards
+  listContainer: {
+    paddingHorizontal: 20,
+    paddingBottom: 24,
+  },
+  studentCard: {
+    backgroundColor: 'white',
+    borderRadius: 16,
+    marginBottom: 16,
+    padding: 20,
+    ...theme.shadows.medium,
+  },
+  studentHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    marginBottom: 16,
+  },
+  studentInfo: {
+    flex: 1,
+  },
+  studentName: {
+    color: theme.colors.text,
+    fontWeight: '700',
+    fontSize: 18,
+    marginBottom: 4,
+  },
+  studentId: {
+    color: theme.colors.textSecondary,
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  statusIndicator: {
+    width: 40,
+    height: 40,
+    borderRadius: 20,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  statusIndicator_present: {
+    backgroundColor: theme.colors.success,
+  },
+  statusIndicator_absent: {
+    backgroundColor: theme.colors.error,
+  },
+  statusIndicator_late: {
+    backgroundColor: theme.colors.warning,
+  },
+  statusIndicatorText: {
+    color: 'white',
+    fontSize: 18,
+    fontWeight: '700',
+  },
+
+  // Status Section
+  statusSection: {
+    marginBottom: 16,
+  },
+  statusSectionLabel: {
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 12,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  statusButtons: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  statusButton: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    borderWidth: 2,
+    borderColor: 'transparent',
+    alignItems: 'center',
+  },
+  statusButton_present: {
+    backgroundColor: 'rgba(16, 185, 129, 0.1)',
+    borderColor: theme.colors.success,
+  },
+  statusButton_absent: {
+    backgroundColor: 'rgba(239, 68, 68, 0.1)',
+    borderColor: theme.colors.error,
+  },
+  statusButton_late: {
+    backgroundColor: 'rgba(245, 158, 11, 0.1)',
+    borderColor: theme.colors.warning,
+  },
+  statusButtonSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  statusButtonText: {
+    fontWeight: '600',
+    fontSize: 14,
+  },
+  statusButtonTextSelected: {
+    color: 'white',
+  },
+
+  // Notes Section
+  notesSection: {
+    borderTopWidth: 1,
+    borderTopColor: theme.colors.divider,
+    paddingTop: 16,
+  },
+  notesSectionLabel: {
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 12,
+    marginBottom: 12,
+    textTransform: 'uppercase',
+    letterSpacing: 0.5,
+  },
+  reasonChips: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    marginBottom: 12,
+    gap: 8,
+  },
+  reasonChip: {
+    backgroundColor: theme.colors.inputBackground,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 20,
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder,
+  },
+  reasonChipSelected: {
+    backgroundColor: theme.colors.primary,
+    borderColor: theme.colors.primary,
+  },
+  reasonChipText: {
+    color: theme.colors.textSecondary,
+    fontWeight: '600',
+    fontSize: 12,
+  },
+  reasonChipTextSelected: {
+    color: 'white',
+  },
+  notesInput: {
+    borderWidth: 1,
+    borderColor: theme.colors.inputBorder,
+    borderRadius: 12,
+    paddingHorizontal: 16,
+    paddingVertical: 12,
+    backgroundColor: theme.colors.inputBackground,
+    fontSize: 14,
+    color: theme.colors.text,
+    minHeight: 80,
+    textAlignVertical: 'top',
+    marginBottom: 12,
+  },
+  communicationActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  commActionBtn: {
+    flex: 1,
+    paddingVertical: 12,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    ...theme.shadows.medium,
+    borderWidth: 1,
+    borderColor: 'rgba(255, 255, 255, 0.2)',
+  },
+  whatsappActionBtn: {
+    backgroundColor: '#25D366',
+    borderColor: 'rgba(37, 211, 102, 0.3)',
+    shadowColor: '#25D366',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  aiCallActionBtn: {
+    backgroundColor: '#8B5CF6',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  commActionBtnText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 12,
+    marginLeft: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.2)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
+  },
+
+  // Loading
+  loadingContainer: {
+    flex: 1,
+    justifyContent: 'center',
+    alignItems: 'center',
+    padding: 40,
+  },
+  loadingText: {
+    color: theme.colors.textSecondary,
+    fontSize: 16,
+    fontWeight: '500',
+  },
 });
 
 export default MarkAttendanceScreen;

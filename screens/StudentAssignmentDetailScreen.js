@@ -19,6 +19,8 @@ import * as FileSystem from 'expo-file-system';
 import * as Sharing from 'expo-sharing';
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
+import SubmissionHistoryModal from '../components/SubmissionHistoryModal';
+import ResubmissionModal from '../components/ResubmissionModal';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -38,12 +40,39 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
   const [previewFileName, setPreviewFileName] = useState('');
   const [previewFileType, setPreviewFileType] = useState('');
   const [previewBlobUrl, setPreviewBlobUrl] = useState('');
+  const [showHistoryModal, setShowHistoryModal] = useState(false);
+  const [showResubmissionModal, setShowResubmissionModal] = useState(false);
 
   useBackButton(navigation);
 
   useEffect(() => {
     fetchAssignmentDetails();
   }, [assignmentId]);
+
+  const handleResubmission = async (resubmissionData) => {
+    try {
+      setSubmitting(true);
+      const response = await apiClient.resubmitAssignment(
+        assignmentId,
+        resubmissionData.submissionText,
+        resubmissionData.files,
+        resubmissionData.options
+      );
+      
+      if (response?.success) {
+        Alert.alert('Success', 'Assignment resubmitted successfully!');
+        setShowResubmissionModal(false);
+        fetchAssignmentDetails(); // Refresh the assignment data
+      } else {
+        Alert.alert('Error', response?.message || 'Failed to resubmit assignment');
+      }
+    } catch (error) {
+      console.log('Resubmission error:', error);
+      Alert.alert('Error', 'Failed to resubmit assignment');
+    } finally {
+      setSubmitting(false);
+    }
+  };
 
   const fetchAssignmentDetails = async () => {
     try {
@@ -760,11 +789,31 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
                   </View>
                 )}
               </View>
-              <View style={{ marginTop: 12 }}>
+              <View style={{ marginTop: 12, flexDirection: 'row', gap: 8 }}>
                 {!isOverdue && (
-                  <TouchableOpacity style={[styles.addFileButton, { backgroundColor: '#1a237e' }]} onPress={() => setIsEditing(true)}>
+                  <TouchableOpacity style={[styles.addFileButton, { backgroundColor: '#1a237e', flex: 1 }]} onPress={() => setIsEditing(true)}>
                     <Text style={styles.addFileButtonText}>Edit Submission</Text>
                   </TouchableOpacity>
+                )}
+                
+                {assignment.submission?.id && (
+                  <>
+                    <TouchableOpacity 
+                      style={[styles.addFileButton, { backgroundColor: '#8B5CF6', flex: 1 }]} 
+                      onPress={() => setShowHistoryModal(true)}
+                    >
+                      <Text style={styles.addFileButtonText}>📋 History</Text>
+                    </TouchableOpacity>
+                    
+                    {!isOverdue && (
+                      <TouchableOpacity 
+                        style={[styles.addFileButton, { backgroundColor: '#10b981', flex: 1 }]} 
+                        onPress={() => setShowResubmissionModal(true)}
+                      >
+                        <Text style={styles.addFileButtonText}>🔄 Resubmit</Text>
+                      </TouchableOpacity>
+                    )}
+                  </>
                 )}
               </View>
             </View>
@@ -963,6 +1012,23 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
           </View>
         </View>
       </Modal>
+
+      {/* Submission History Modal */}
+      <SubmissionHistoryModal
+        visible={showHistoryModal}
+        onClose={() => setShowHistoryModal(false)}
+        submissionId={assignment?.submission?.id}
+        isTeacher={false}
+      />
+
+      {/* Resubmission Modal */}
+      <ResubmissionModal
+        visible={showResubmissionModal}
+        onClose={() => setShowResubmissionModal(false)}
+        onSubmit={handleResubmission}
+        currentSubmission={assignment?.submission}
+        loading={submitting}
+      />
     </View>
   );
 };
