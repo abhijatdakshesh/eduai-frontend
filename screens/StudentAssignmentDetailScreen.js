@@ -33,6 +33,11 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
   const [alreadySubmittedNotice, setAlreadySubmittedNotice] = useState(false);
   const [isEditing, setIsEditing] = useState(false);
   const [replaceAttachments, setReplaceAttachments] = useState(false);
+  const [previewModalVisible, setPreviewModalVisible] = useState(false);
+  const [previewContent, setPreviewContent] = useState('');
+  const [previewFileName, setPreviewFileName] = useState('');
+  const [previewFileType, setPreviewFileType] = useState('');
+  const [previewBlobUrl, setPreviewBlobUrl] = useState('');
 
   useBackButton(navigation);
 
@@ -327,6 +332,180 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
     }
   };
 
+  const viewAssignmentFile = async (attachment) => {
+    try {
+      console.log('StudentAssignmentDetail: Viewing assignment file...');
+      
+      const fileUrl = attachment.url;
+      console.log('StudentAssignmentDetail: File URL:', fileUrl);
+      
+      if (fileUrl) {
+        // Check if it's an image
+        const imageExtensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp', '.webp'];
+        const isImage = imageExtensions.some(ext => 
+          (attachment.filename || '').toLowerCase().endsWith(ext)
+        );
+        
+        if (Platform.OS === 'web') {
+          console.log('StudentAssignmentDetail: Opening assignment file in new tab for web platform');
+          // For web, use fetch with authentication header and create blob URL
+          const token = await apiClient.getToken();
+          console.log('StudentAssignmentDetail: Retrieved token:', token ? token.substring(0, 20) + '...' : 'null');
+          
+          try {
+            const response = await fetch(fileUrl, {
+              headers: {
+                'Authorization': `Bearer ${token}`
+              }
+            });
+            
+            if (response.ok) {
+              const blob = await response.blob();
+              console.log('StudentAssignmentDetail: File loaded successfully, size:', blob.size);
+              
+              // Check if it's a text file that can be previewed
+              const textExtensions = ['.txt', '.md', '.json', '.xml', '.csv', '.log', '.js', '.html', '.css'];
+              const isTextFile = textExtensions.some(ext => 
+                (attachment.filename || '').toLowerCase().endsWith(ext)
+              );
+              
+              if (isTextFile) {
+                // For text files, show preview in modal
+                const text = await blob.text();
+                setPreviewContent(text);
+                setPreviewFileName(attachment.filename);
+                setPreviewFileType('text');
+                setPreviewModalVisible(true);
+              } else if (isImage) {
+                // For images, show in modal
+                const blobUrl = URL.createObjectURL(blob);
+                setPreviewBlobUrl(blobUrl);
+                setPreviewFileName(attachment.filename);
+                setPreviewFileType('image');
+                setPreviewModalVisible(true);
+              } else {
+                // For other files, open in new tab
+                const blobUrl = URL.createObjectURL(blob);
+                window.open(blobUrl, '_blank');
+                setTimeout(() => URL.revokeObjectURL(blobUrl), 5000);
+              }
+            } else {
+              console.log('StudentAssignmentDetail: Fetch failed:', response.status, response.statusText);
+              Alert.alert('Error', `Failed to load file: ${response.status} ${response.statusText}`);
+            }
+          } catch (error) {
+            console.log('StudentAssignmentDetail: Fetch error:', error);
+            Alert.alert('Error', 'Failed to load file. Please try downloading it instead.');
+          }
+        } else {
+          if (isImage) {
+            // For images, we can show them in a modal or open in browser
+            Alert.alert(
+              'View Image',
+              'Would you like to view this image?',
+              [
+                { text: 'Cancel', style: 'cancel' },
+                { text: 'View', onPress: () => Linking.openURL(fileUrl) }
+              ]
+            );
+          } else {
+            // For other files, try to open with system default app
+            const canOpen = await Linking.canOpenURL(fileUrl);
+            if (canOpen) {
+              await Linking.openURL(fileUrl);
+            } else {
+              // Fallback to download
+              downloadAssignmentFile(attachment);
+            }
+          }
+        }
+      } else {
+        throw new Error('File URL not available');
+      }
+    } catch (error) {
+      console.log('StudentAssignmentDetail: Error viewing assignment file:', error.message);
+      Alert.alert('Error', 'Failed to view file. Please try downloading it instead.');
+    }
+  };
+
+  const downloadAssignmentFile = async (attachment) => {
+    try {
+      console.log('StudentAssignmentDetail: Downloading assignment file...');
+      
+      const fileUrl = attachment.url;
+      const fileName = attachment.filename || attachment.originalName || 'assignment_file';
+      
+      if (Platform.OS === 'web') {
+        console.log('StudentAssignmentDetail: Creating download link for web platform');
+        console.log('StudentAssignmentDetail: File name:', fileName);
+        
+        const token = await apiClient.getToken();
+        try {
+          const response = await fetch(fileUrl, {
+            headers: {
+              'Authorization': `Bearer ${token}`
+            }
+          });
+          
+          if (response.ok) {
+            const blob = await response.blob();
+            const blobUrl = URL.createObjectURL(blob);
+            console.log('StudentAssignmentDetail: Created blob URL for download:', blobUrl);
+            
+            // Create a temporary link and trigger download
+            const link = document.createElement('a');
+            link.href = blobUrl;
+            link.download = fileName;
+            link.style.display = 'none';
+            document.body.appendChild(link);
+            link.click();
+            document.body.removeChild(link);
+            
+            // Clean up the blob URL after a delay
+            setTimeout(() => URL.revokeObjectURL(blobUrl), 1000);
+            
+            Alert.alert('Success', `File "${fileName}" download started!`);
+          } else {
+            console.log('StudentAssignmentDetail: Fetch failed:', response.status, response.statusText);
+            Alert.alert('Error', `Failed to download file: ${response.status} ${response.statusText}`);
+          }
+        } catch (error) {
+          console.log('StudentAssignmentDetail: Fetch error:', error);
+          Alert.alert('Error', 'Failed to download file. Please try again.');
+        }
+      } else {
+        // For mobile, download using FileSystem
+        const downloadResult = await FileSystem.downloadAsync(
+          fileUrl,
+          FileSystem.documentDirectory + fileName
+        );
+        
+        if (downloadResult.status === 200) {
+          // Check if sharing is available
+          const isAvailable = await Sharing.isAvailableAsync();
+          
+          if (isAvailable) {
+            // Share the file
+            await Sharing.shareAsync(downloadResult.uri, {
+              mimeType: attachment.mimetype || 'application/octet-stream',
+              dialogTitle: `Download ${fileName}`,
+            });
+          } else {
+            // Fallback: open with system default app
+            await Linking.openURL(downloadResult.uri);
+          }
+          
+          Alert.alert('Success', `File "${fileName}" downloaded successfully!`);
+        } else {
+          throw new Error('Download failed');
+        }
+      }
+    } catch (error) {
+      console.log('StudentAssignmentDetail: Error downloading assignment file:', error.message);
+      Alert.alert('Error', 'Failed to download file. Please try again.');
+    }
+  };
+
   const getDaysUntilDue = (dueDate) => {
     const now = new Date();
     const due = new Date(dueDate);
@@ -440,6 +619,53 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
               <Text style={styles.detailValue}>{assignment.instructions}</Text>
             </View>
           )}
+
+          {/* Assignment Files */}
+          <View style={{ marginTop: 16 }}>
+            <Text style={styles.detailLabel}>Assignment Files:</Text>
+            {assignment.attachments && assignment.attachments.length > 0 ? (
+              <View style={styles.attachmentsContainer}>
+                {assignment.attachments.map((attachment, index) => (
+                  <View key={`assign-attach-${index}`} style={styles.attachmentItem}>
+                    <View style={styles.attachmentInfo}>
+                      <Text style={styles.attachmentText}>
+                        📄 {attachment.filename || attachment.originalName || 'file'}
+                      </Text>
+                      {attachment.size && (
+                        <Text style={styles.attachmentSize}>
+                          ({(attachment.size / 1024 / 1024).toFixed(2)} MB)
+                        </Text>
+                      )}
+                    </View>
+                    <View style={styles.attachmentActions}>
+                      <TouchableOpacity
+                        style={styles.viewFileButton}
+                        onPress={() => {
+                          console.log('StudentAssignmentDetail: View assignment file');
+                          console.log('StudentAssignmentDetail: Attachment:', attachment);
+                          viewAssignmentFile(attachment);
+                        }}
+                      >
+                        <Text style={styles.viewFileButtonText}>View</Text>
+                      </TouchableOpacity>
+                      <TouchableOpacity
+                        style={styles.downloadFileButton}
+                        onPress={() => {
+                          console.log('StudentAssignmentDetail: Download assignment file');
+                          console.log('StudentAssignmentDetail: Attachment:', attachment);
+                          downloadAssignmentFile(attachment);
+                        }}
+                      >
+                        <Text style={styles.downloadFileButtonText}>Download</Text>
+                      </TouchableOpacity>
+                    </View>
+                  </View>
+                ))}
+              </View>
+            ) : (
+              <Text style={styles.noSubmissionsSubtext}>No files attached</Text>
+            )}
+          </View>
           
           <View style={styles.detailRow}>
             <Text style={styles.detailLabel}>Due Date:</Text>
@@ -684,6 +910,56 @@ const StudentAssignmentDetailScreen = ({ navigation, route }) => {
             >
               <Text style={styles.cancelButtonText}>Cancel</Text>
             </TouchableOpacity>
+          </View>
+        </View>
+      </Modal>
+
+      {/* File Preview Modal */}
+      <Modal
+        visible={previewModalVisible}
+        animationType="slide"
+        presentationStyle="pageSheet"
+        onRequestClose={() => {
+          setPreviewModalVisible(false);
+          if (previewBlobUrl) {
+            URL.revokeObjectURL(previewBlobUrl);
+            setPreviewBlobUrl('');
+          }
+        }}
+      >
+        <View style={styles.previewModalContainer}>
+          <View style={styles.previewModalHeader}>
+            <Text style={styles.previewModalTitle}>File Preview</Text>
+            <TouchableOpacity
+              style={styles.closeButton}
+              onPress={() => {
+                setPreviewModalVisible(false);
+                if (previewBlobUrl) {
+                  URL.revokeObjectURL(previewBlobUrl);
+                  setPreviewBlobUrl('');
+                }
+              }}
+            >
+              <Text style={styles.closeButtonText}>Close</Text>
+            </TouchableOpacity>
+          </View>
+
+          <View style={styles.previewModalContent}>
+            <Text style={styles.previewFileName}>{previewFileName}</Text>
+            {previewFileType === 'image' && previewBlobUrl ? (
+              <ScrollView contentContainerStyle={{alignItems:'center'}}>
+                <Image source={{ uri: previewBlobUrl }} style={{ width: '100%', height: 400, resizeMode: 'contain', backgroundColor:'#00000010' }} />
+              </ScrollView>
+            ) : (
+              <ScrollView style={styles.previewScrollView} showsVerticalScrollIndicator={true}>
+                <Text style={[
+                  styles.previewContent,
+                  previewFileType === 'text' ? styles.previewTextContent : styles.previewInfoContent
+                ]}>
+                  {previewContent}
+                </Text>
+              </ScrollView>
+            )}
           </View>
         </View>
       </Modal>
@@ -1151,6 +1427,129 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '600',
     color: '#374151',
+  },
+  // Attachment styles
+  attachmentsContainer: {
+    marginTop: 8,
+  },
+  attachmentItem: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    backgroundColor: '#f3f4f6',
+    borderRadius: 8,
+    padding: 12,
+    marginBottom: 8,
+    borderWidth: 1,
+    borderColor: '#e5e7eb',
+  },
+  attachmentInfo: {
+    flex: 1,
+  },
+  attachmentText: {
+    color: '#1f2937',
+    fontSize: 14,
+    fontWeight: '600',
+    marginBottom: 2,
+  },
+  attachmentSize: {
+    color: '#6b7280',
+    fontSize: 12,
+  },
+  attachmentActions: {
+    flexDirection: 'row',
+    gap: 8,
+  },
+  viewFileButton: {
+    backgroundColor: '#3b82f6',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  viewFileButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  downloadFileButton: {
+    backgroundColor: '#10b981',
+    paddingVertical: 6,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+  },
+  downloadFileButtonText: {
+    color: 'white',
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  noSubmissionsSubtext: {
+    color: '#6b7280',
+    fontSize: 14,
+    fontStyle: 'italic',
+    textAlign: 'center',
+    marginTop: 8,
+  },
+  // Preview Modal Styles
+  previewModalContainer: {
+    flex: 1,
+    backgroundColor: 'white',
+  },
+  previewModalHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    padding: 20,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+    backgroundColor: '#f8fafc',
+  },
+  previewModalTitle: {
+    fontSize: 18,
+    fontWeight: '700',
+    color: '#1f2937',
+  },
+  previewModalContent: {
+    flex: 1,
+    padding: 20,
+  },
+  previewFileName: {
+    fontSize: 16,
+    fontWeight: '600',
+    color: '#1a237e',
+    marginBottom: 15,
+    paddingBottom: 10,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  previewScrollView: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+    borderRadius: 8,
+    padding: 15,
+  },
+  previewContent: {
+    fontSize: 14,
+    lineHeight: 20,
+  },
+  previewTextContent: {
+    fontFamily: Platform.OS === 'ios' ? 'Courier' : 'monospace',
+    color: '#1f2937',
+    whiteSpace: 'pre-wrap',
+  },
+  previewInfoContent: {
+    color: '#6b7280',
+    textAlign: 'center',
+    marginTop: 20,
+  },
+  closeButton: {
+    backgroundColor: '#ef4444',
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 6,
+  },
+  closeButtonText: {
+    color: 'white',
+    fontWeight: '600',
   },
 });
 
