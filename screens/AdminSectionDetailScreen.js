@@ -23,16 +23,36 @@ const AdminSectionDetailScreen = ({ navigation, route }) => {
   const fetchAll = async () => {
     try {
       setLoading(true);
-      const [secResp, stuResp, tchResp] = await Promise.all([
-        apiClient.getSection(sectionId),
-        apiClient.getSectionStudents(sectionId),
-        apiClient.getSectionTeachers(sectionId),
-      ]);
-      if (secResp?.success) setSection(secResp.data.section || secResp.data || null);
-      if (stuResp?.success) setStudents(stuResp.data.students || stuResp.data || []);
-      else setStudents([]);
-      if (tchResp?.success) setTeachers(tchResp.data.teachers || tchResp.data || []);
-      else setTeachers([]);
+      // Always fetch section details first to have a fallback
+      const secResp = await apiClient.getSection(sectionId);
+      const secData = secResp?.success ? (secResp.data.section || secResp.data || {}) : {};
+      setSection(secData || null);
+
+      // Initialize from section details if present
+      const initialStudents = Array.isArray(secData.students) ? secData.students : [];
+      const initialTeachers = Array.isArray(secData.teachers) ? secData.teachers : [];
+      setStudents(initialStudents);
+      setTeachers(initialTeachers);
+
+      // Try specific list endpoints; if they 404, keep initial lists silently
+      try {
+        const stuResp = await apiClient.getSectionStudents(sectionId);
+        if (stuResp?.success) {
+          setStudents(stuResp.data.students || stuResp.data || []);
+        }
+      } catch (err) {
+        // Ignore 404 or auth errors here, rely on section details fallback
+        console.log('Section students endpoint not available, using fallback.');
+      }
+
+      try {
+        const tchResp = await apiClient.getSectionTeachers(sectionId);
+        if (tchResp?.success) {
+          setTeachers(tchResp.data.teachers || tchResp.data || []);
+        }
+      } catch (err) {
+        console.log('Section teachers endpoint not available, using fallback.');
+      }
     } catch (e) {
       console.error('Section detail load error:', e);
       Alert.alert('Error', e?.message || 'Failed to load section details');
