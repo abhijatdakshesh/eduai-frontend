@@ -34,6 +34,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
   const [showTeacherModal, setShowTeacherModal] = useState(false);
   const [selectedSection, setSelectedSection] = useState(null);
   const [availableStudents, setAvailableStudents] = useState([]);
+  const [assignedStudents, setAssignedStudents] = useState([]);
   const [availableTeachers, setAvailableTeachers] = useState([]);
   const [assignedTeachers, setAssignedTeachers] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
@@ -279,16 +280,24 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     setSelectedSection(section);
     try {
       setLoading(true);
-      const response = await apiClient.getAvailableStudentsForSection(section.id);
-      if (response.success) {
-        setAvailableStudents(response.data.students || []);
-        setShowStudentModal(true);
+      const [availResp, assignedResp] = await Promise.all([
+        apiClient.getAvailableStudentsForSection(section.id),
+        apiClient.getSectionStudents(section.id).catch(() => ({ success: false, data: [] })),
+      ]);
+      if (availResp?.success) {
+        setAvailableStudents(availResp.data.students || availResp.data || []);
       } else {
-        Alert.alert('Error', 'Failed to load available students');
+        setAvailableStudents([]);
       }
+      if (assignedResp?.success) {
+        setAssignedStudents(assignedResp.data.students || assignedResp.data || []);
+      } else {
+        setAssignedStudents([]);
+      }
+      setShowStudentModal(true);
     } catch (error) {
-      console.error('Error fetching available students:', error);
-      Alert.alert('Error', 'Failed to load available students');
+      console.error('Error fetching students:', error);
+      Alert.alert('Error', 'Failed to load students for this section');
     } finally {
       setLoading(false);
     }
@@ -717,12 +726,24 @@ const AdminSectionManagementScreen = ({ navigation }) => {
               Select students to add to this section
             </Text>
 
+            <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Assigned Students</Text>
+            <FlatList
+              data={assignedStudents}
+              renderItem={renderStudentItem}
+              keyExtractor={(item) => item.id}
+              style={styles.studentList}
+              showsVerticalScrollIndicator={false}
+              ListEmptyComponent={<Text style={styles.emptyStateText}>None</Text>}
+            />
+
+            <Text style={[styles.sectionTitle, { marginTop: 12 }]}>Available Students</Text>
             <FlatList
               data={availableStudents}
               renderItem={renderStudentItem}
               keyExtractor={(item) => item.id}
               style={styles.studentList}
               showsVerticalScrollIndicator={false}
+              ListEmptyComponent={<Text style={styles.emptyStateText}>No available students</Text>}
             />
 
             <View style={styles.modalActions}>
