@@ -365,7 +365,17 @@ const AdminSectionManagementScreen = ({ navigation }) => {
 
 
   const renderSectionCard = ({ item }) => (
-    <TouchableOpacity style={styles.sectionCard} onPress={() => navigation.navigate('AdminSectionDetail', { sectionId: item.id, sectionName: item.name })}>
+    <TouchableOpacity
+      style={styles.sectionCard}
+      onPress={() => {
+        if (!item?.id) {
+          console.log('AdminSectionManagement: Missing section id on item:', item);
+          Alert.alert('Error', 'Section id is missing.');
+          return;
+        }
+        navigation.navigate('AdminSectionDetail', { sectionId: item.id, sectionName: item.name });
+      }}
+    >
       <View style={styles.sectionHeader}>
         <View style={styles.sectionInfo}>
           <Text style={styles.sectionName}>{item.name}</Text>

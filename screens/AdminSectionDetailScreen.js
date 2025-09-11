@@ -8,7 +8,8 @@ const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
 
 const AdminSectionDetailScreen = ({ navigation, route }) => {
-  const { sectionId, sectionName } = route.params || {};
+  const { sectionId: sectionIdParam, sectionName } = route.params || {};
+  const sectionId = sectionIdParam;
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
   const [section, setSection] = useState(null);
@@ -18,13 +19,20 @@ const AdminSectionDetailScreen = ({ navigation, route }) => {
   useBackButton(navigation);
 
   useEffect(() => {
+    if (!sectionId) {
+      console.log('AdminSectionDetail: Missing sectionId in route params:', route?.params);
+      Alert.alert('Section Not Found', 'Missing section identifier. Returning back.', [
+        { text: 'OK', onPress: () => navigation.goBack() }
+      ]);
+      return;
+    }
     fetchAll();
   }, [sectionId]);
 
   // Refetch whenever screen gains focus
   useFocusEffect(
     useCallback(() => {
-      fetchAll();
+      if (sectionId) fetchAll();
     }, [sectionId])
   );
 
