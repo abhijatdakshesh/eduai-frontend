@@ -1,5 +1,6 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { View, Text, StyleSheet, FlatList, ScrollView, TouchableOpacity, Alert, Platform, Dimensions, RefreshControl } from 'react-native';
+import { useFocusEffect } from '@react-navigation/native';
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 
@@ -19,6 +20,13 @@ const AdminSectionDetailScreen = ({ navigation, route }) => {
   useEffect(() => {
     fetchAll();
   }, [sectionId]);
+
+  // Refetch whenever screen gains focus
+  useFocusEffect(
+    useCallback(() => {
+      fetchAll();
+    }, [sectionId])
+  );
 
   const fetchAll = async () => {
     try {
