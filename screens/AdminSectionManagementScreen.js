@@ -35,6 +35,8 @@ const AdminSectionManagementScreen = ({ navigation }) => {
   const [availableTeachers, setAvailableTeachers] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
+  const [creatingTeacher, setCreatingTeacher] = useState(false);
+  const [newTeacher, setNewTeacher] = useState({ first_name: '', last_name: '', email: '' });
   const [newSection, setNewSection] = useState({
     name: '',
     academic_year: '2024-2025',
@@ -291,6 +293,49 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     } catch (error) {
       console.error('Error assigning teacher:', error);
       Alert.alert('Error', 'Failed to assign teacher');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleCreateAndAssignTeacher = async () => {
+    if (!newTeacher.first_name.trim() || !newTeacher.last_name.trim() || !newTeacher.email.trim()) {
+      Alert.alert('Error', 'Please enter first name, last name, and email');
+      return;
+    }
+    try {
+      setLoading(true);
+      console.log('AdminSectionManagement: Creating teacher:', newTeacher);
+      // Create teacher in admin
+      const createResp = await apiClient.createAdminTeacher({
+        first_name: newTeacher.first_name.trim(),
+        last_name: newTeacher.last_name.trim(),
+        email: newTeacher.email.trim(),
+        role: 'teacher',
+        department_id: selectedDepartmentId,
+        password: 'password123',
+      });
+      console.log('AdminSectionManagement: Teacher created response:', createResp);
+      const teacherId = createResp?.data?.id || createResp?.data?.teacher?.id || createResp?.id;
+      if (!teacherId) {
+        Alert.alert('Error', 'Failed to create teacher (no ID returned)');
+        return;
+      }
+      // Assign to section
+      console.log('AdminSectionManagement: Assigning newly created teacher to section', selectedSection?.id);
+      const assignResp = await apiClient.assignTeacherToSection(selectedSection.id, teacherId);
+      if (assignResp?.success) {
+        Alert.alert('Success', 'Teacher created and assigned successfully!');
+        setCreatingTeacher(false);
+        setNewTeacher({ first_name: '', last_name: '', email: '' });
+        setShowTeacherModal(false);
+        fetchSections();
+      } else {
+        Alert.alert('Error', assignResp?.message || 'Failed to assign the new teacher');
+      }
+    } catch (error) {
+      console.error('Error creating/assigning teacher:', error);
+      Alert.alert('Error', error?.message || 'Failed to create and assign teacher');
     } finally {
       setLoading(false);
     }
@@ -598,24 +643,61 @@ const AdminSectionManagementScreen = ({ navigation }) => {
               Assign Teacher - {selectedSection?.name}
             </Text>
             <Text style={styles.modalSubtitle}>
-              Select a teacher to assign to this section
+              {creatingTeacher ? 'Create a new teacher and assign to this section' : 'Select a teacher to assign to this section'}
             </Text>
 
-            <FlatList
-              data={availableTeachers}
-              renderItem={renderTeacherItem}
-              keyExtractor={(item) => item.id}
-              style={styles.teacherList}
-              showsVerticalScrollIndicator={false}
-              ListEmptyComponent={
-                <View style={styles.emptyState}>
-                  <Text style={styles.emptyStateText}>No available teachers found</Text>
-                  <Text style={styles.emptyStateSubtext}>
-                    All teachers may already be assigned to sections
-                  </Text>
-                </View>
-              }
-            />
+            {/* Toggle create/select */}
+            <View style={{ flexDirection: 'row', justifyContent: 'space-between', marginBottom: 12 }}>
+              <TouchableOpacity
+                style={[styles.createButton, { flex: 1, marginRight: 6, backgroundColor: creatingTeacher ? '#1a237e' : '#10b981' }]}
+                onPress={() => setCreatingTeacher(!creatingTeacher)}
+              >
+                <Text style={styles.createButtonText}>
+                  {creatingTeacher ? 'Use Existing' : 'Create New Teacher'}
+                </Text>
+              </TouchableOpacity>
+            </View>
+
+            {creatingTeacher ? (
+              <View>
+                <TextInput
+                  style={styles.input}
+                  placeholder="First Name"
+                  value={newTeacher.first_name}
+                  onChangeText={(t) => setNewTeacher({ ...newTeacher, first_name: t })}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Last Name"
+                  value={newTeacher.last_name}
+                  onChangeText={(t) => setNewTeacher({ ...newTeacher, last_name: t })}
+                />
+                <TextInput
+                  style={styles.input}
+                  placeholder="Email"
+                  autoCapitalize="none"
+                  keyboardType="email-address"
+                  value={newTeacher.email}
+                  onChangeText={(t) => setNewTeacher({ ...newTeacher, email: t })}
+                />
+              </View>
+            ) : (
+              <FlatList
+                data={availableTeachers}
+                renderItem={renderTeacherItem}
+                keyExtractor={(item) => item.id}
+                style={styles.teacherList}
+                showsVerticalScrollIndicator={false}
+                ListEmptyComponent={
+                  <View style={styles.emptyState}>
+                    <Text style={styles.emptyStateText}>No available teachers found</Text>
+                    <Text style={styles.emptyStateSubtext}>
+                      All teachers may already be assigned to sections
+                    </Text>
+                  </View>
+                }
+              />
+            )}
 
             <View style={styles.modalActions}>
               <TouchableOpacity
@@ -623,17 +705,19 @@ const AdminSectionManagementScreen = ({ navigation }) => {
                 onPress={() => {
                   setShowTeacherModal(false);
                   setSelectedTeacher(null);
+                  setCreatingTeacher(false);
+                  setNewTeacher({ first_name: '', last_name: '', email: '' });
                 }}
               >
                 <Text style={styles.cancelButtonText}>Cancel</Text>
               </TouchableOpacity>
               <TouchableOpacity
                 style={[styles.modalButton, styles.createButton]}
-                onPress={handleAssignTeacher}
-                disabled={loading || !selectedTeacher}
+                onPress={creatingTeacher ? handleCreateAndAssignTeacher : handleAssignTeacher}
+                disabled={loading || (!creatingTeacher && !selectedTeacher) || (creatingTeacher && (!newTeacher.first_name || !newTeacher.last_name || !newTeacher.email))}
               >
                 <Text style={styles.createButtonText}>
-                  {loading ? 'Assigning...' : 'Assign Teacher'}
+                  {loading ? (creatingTeacher ? 'Creating...' : 'Assigning...') : (creatingTeacher ? 'Create & Assign' : 'Assign Teacher')}
                 </Text>
               </TouchableOpacity>
             </View>
