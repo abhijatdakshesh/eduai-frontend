@@ -452,8 +452,12 @@ const AdminSectionManagementScreen = ({ navigation }) => {
           </Text>
         </View>
         <View style={styles.sectionActions}>
-          {/* Students button removed as per request */}
-          {/* Teachers button kept */}
+          <TouchableOpacity
+            style={[styles.actionButton, styles.manageButton]}
+            onPress={() => handleManageStudents(item)}
+          >
+            <Text style={styles.actionButtonText}>👥 Students</Text>
+          </TouchableOpacity>
           <TouchableOpacity
             style={[styles.actionButton, styles.manageButton]}
             onPress={() => handleManageTeachers(item)}
