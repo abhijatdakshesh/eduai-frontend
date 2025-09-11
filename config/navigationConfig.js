@@ -207,9 +207,6 @@ export const adminScreens = (theme) => [
     options: createDrawerScreenOptions('Dashboard', '📊', theme),
   },
   {
-    // User Management removed from drawer
-  },
-  {
     name: 'AdminClassManagement',
     component: AdminClassManagementScreen,
     options: createDrawerScreenOptions('Class Management', '🏫', theme),
