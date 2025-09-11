@@ -13,6 +13,7 @@ import {
   Modal,
   RefreshControl,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import { useBackButton } from '../utils/backButtonHandler';
 import { apiClient } from '../services/api';
 
@@ -222,12 +223,15 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     setSelectedSection(section);
     try {
       setLoading(true);
+      console.log('AdminSectionManagement: Fetching available teachers for section:', section.id);
       const response = await apiClient.getAvailableTeachersForSection(section.id);
+      console.log('AdminSectionManagement: Available teachers response:', response);
       if (response.success) {
         setAvailableTeachers(response.data.teachers || []);
         setShowTeacherModal(true);
       } else {
-        Alert.alert('Error', 'Failed to load available teachers');
+        console.log('AdminSectionManagement: Failed to load teachers:', response.message);
+        Alert.alert('Error', response.message || 'Failed to load available teachers');
       }
     } catch (error) {
       console.error('Error fetching available teachers:', error);
@@ -270,7 +274,9 @@ const AdminSectionManagementScreen = ({ navigation }) => {
 
     try {
       setLoading(true);
+      console.log('AdminSectionManagement: Assigning teacher:', selectedTeacher, 'to section:', selectedSection.id);
       const response = await apiClient.assignTeacherToSection(selectedSection.id, selectedTeacher);
+      console.log('AdminSectionManagement: Teacher assignment response:', response);
       if (response.success) {
         Alert.alert('Success', 'Teacher assigned successfully!');
         setShowTeacherModal(false);
@@ -295,28 +301,6 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     }
   };
 
-  const renderDepartmentCard = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.departmentCard,
-        selectedDepartmentId === item.id && styles.departmentCardSelected,
-      ]}
-      onPress={() => {
-        setSelectedDepartment(item.name);
-        setSelectedDepartmentId(item.id);
-      }}
-    >
-      <Text style={[
-        styles.departmentName,
-        selectedDepartmentId === item.id && styles.departmentNameSelected,
-      ]}>
-        {item.name}
-      </Text>
-      {selectedDepartmentId === item.id && (
-        <Text style={styles.selectedIndicator}>✓</Text>
-      )}
-    </TouchableOpacity>
-  );
 
   const renderSectionCard = ({ item }) => (
     <View style={styles.sectionCard}>
@@ -431,14 +415,30 @@ const AdminSectionManagementScreen = ({ navigation }) => {
         {/* Department Selection */}
         <View style={styles.section}>
           <Text style={styles.sectionTitle}>Select Department</Text>
-          <FlatList
-            data={departments}
-            renderItem={renderDepartmentCard}
-            keyExtractor={(item, index) => `dept-${item.id || index}`}
-            horizontal
-            showsHorizontalScrollIndicator={false}
-            contentContainerStyle={styles.departmentList}
-          />
+          <View style={styles.dropdownContainer}>
+            <Picker
+              selectedValue={selectedDepartmentId}
+              onValueChange={(itemValue, itemIndex) => {
+                if (itemValue) {
+                  const selectedDept = departments.find(dept => dept.id === itemValue);
+                  if (selectedDept) {
+                    setSelectedDepartment(selectedDept.name);
+                    setSelectedDepartmentId(selectedDept.id);
+                  }
+                } else {
+                  setSelectedDepartment(null);
+                  setSelectedDepartmentId(null);
+                }
+              }}
+              style={styles.picker}
+              itemStyle={styles.pickerItem}
+            >
+              <Picker.Item label="Select a department..." value={null} />
+              {departments.map((dept) => (
+                <Picker.Item key={dept.id} label={dept.name} value={dept.id} />
+              ))}
+            </Picker>
+          </View>
         </View>
 
         {/* Section Management */}
@@ -694,15 +694,9 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     marginBottom: 16,
   },
-  departmentList: {
-    paddingRight: 20,
-  },
-  departmentCard: {
+  dropdownContainer: {
     backgroundColor: 'white',
-    paddingHorizontal: 20,
-    paddingVertical: 16,
     borderRadius: 16,
-    marginRight: 12,
     borderWidth: 2,
     borderColor: '#e2e8f0',
     shadowColor: '#000',
@@ -710,26 +704,15 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 8,
     elevation: 4,
-    flexDirection: 'row',
-    alignItems: 'center',
+    marginBottom: 8,
   },
-  departmentCardSelected: {
-    borderColor: '#1a237e',
-    backgroundColor: '#e3f2fd',
+  picker: {
+    height: 50,
+    color: '#1a237e',
   },
-  departmentName: {
+  pickerItem: {
     fontSize: isIOS ? 16 : 14,
-    fontWeight: '600',
-    color: '#64748b',
-  },
-  departmentNameSelected: {
     color: '#1a237e',
-  },
-  selectedIndicator: {
-    fontSize: 16,
-    color: '#1a237e',
-    marginLeft: 8,
-    fontWeight: 'bold',
   },
   sectionCard: {
     backgroundColor: 'white',
