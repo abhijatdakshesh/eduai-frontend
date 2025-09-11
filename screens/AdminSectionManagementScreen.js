@@ -226,8 +226,11 @@ const AdminSectionManagementScreen = ({ navigation }) => {
       console.log('AdminSectionManagement: Fetching available teachers for section:', section.id);
       const response = await apiClient.getAvailableTeachersForSection(section.id);
       console.log('AdminSectionManagement: Available teachers response:', response);
+      console.log('AdminSectionManagement: Response data structure:', response.data);
       if (response.success) {
-        setAvailableTeachers(response.data.teachers || []);
+        const teachers = response.data.teachers || response.data || [];
+        console.log('AdminSectionManagement: Teachers array:', teachers);
+        setAvailableTeachers(teachers);
         setShowTeacherModal(true);
       } else {
         console.log('AdminSectionManagement: Failed to load teachers:', response.message);
@@ -361,28 +364,34 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     </TouchableOpacity>
   );
 
-  const renderTeacherItem = ({ item }) => (
-    <TouchableOpacity
-      style={[
-        styles.teacherItem,
-        selectedTeacher === item.id && styles.teacherItemSelected,
-      ]}
-      onPress={() => setSelectedTeacher(item.id)}
-    >
-      <View style={styles.teacherInfo}>
-        <Text style={styles.teacherName}>
-          {item.first_name} {item.last_name}
-        </Text>
-        <Text style={styles.teacherDetails}>
-          {item.department} • {item.email}
-        </Text>
-      </View>
-      <View style={[
-        styles.radioButton,
-        selectedTeacher === item.id && styles.radioButtonSelected,
-      ]} />
-    </TouchableOpacity>
-  );
+  const renderTeacherItem = ({ item }) => {
+    console.log('AdminSectionManagement: Rendering teacher item:', item);
+    return (
+      <TouchableOpacity
+        style={[
+          styles.teacherItem,
+          selectedTeacher === item.id && styles.teacherItemSelected,
+        ]}
+        onPress={() => {
+          console.log('AdminSectionManagement: Teacher selected:', item.id);
+          setSelectedTeacher(item.id);
+        }}
+      >
+        <View style={styles.teacherInfo}>
+          <Text style={styles.teacherName}>
+            {item.first_name} {item.last_name}
+          </Text>
+          <Text style={styles.teacherDetails}>
+            {item.department} • {item.email}
+          </Text>
+        </View>
+        <View style={[
+          styles.radioButton,
+          selectedTeacher === item.id && styles.radioButtonSelected,
+        ]} />
+      </TouchableOpacity>
+    );
+  };
 
   if (loading && !selectedDepartment) {
     return (
@@ -417,9 +426,9 @@ const AdminSectionManagementScreen = ({ navigation }) => {
           <Text style={styles.sectionTitle}>Select Department</Text>
           <View style={styles.dropdownContainer}>
             <Picker
-              selectedValue={selectedDepartmentId}
+              selectedValue={selectedDepartmentId || ''}
               onValueChange={(itemValue, itemIndex) => {
-                if (itemValue) {
+                if (itemValue && itemValue !== '') {
                   const selectedDept = departments.find(dept => dept.id === itemValue);
                   if (selectedDept) {
                     setSelectedDepartment(selectedDept.name);
@@ -433,7 +442,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
               style={styles.picker}
               itemStyle={styles.pickerItem}
             >
-              <Picker.Item label="Select a department..." value={null} />
+              <Picker.Item label="Select a department..." value="" />
               {departments.map((dept) => (
                 <Picker.Item key={dept.id} label={dept.name} value={dept.id} />
               ))}
@@ -598,6 +607,14 @@ const AdminSectionManagementScreen = ({ navigation }) => {
               keyExtractor={(item) => item.id}
               style={styles.teacherList}
               showsVerticalScrollIndicator={false}
+              ListEmptyComponent={
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No available teachers found</Text>
+                  <Text style={styles.emptyStateSubtext}>
+                    All teachers may already be assigned to sections
+                  </Text>
+                </View>
+              }
             />
 
             <View style={styles.modalActions}>
