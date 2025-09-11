@@ -24,6 +24,8 @@ const AdminSectionManagementScreen = ({ navigation }) => {
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
   const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
+  const [selectedYear, setSelectedYear] = useState('');
+  const [selectedSemester, setSelectedSemester] = useState('');
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -116,7 +118,9 @@ const AdminSectionManagementScreen = ({ navigation }) => {
       setLoading(true);
       const response = await apiClient.getSections({ 
         department_id: selectedDepartmentId,
-        academic_year: '2024-2025'
+        academic_year: '2024-2025',
+        year: selectedYear || undefined,
+        semester: selectedSemester || undefined,
       });
       if (response.success) {
         setSections(response.data.sections || []);
@@ -154,6 +158,8 @@ const AdminSectionManagementScreen = ({ navigation }) => {
         name: newSection.name.toUpperCase(),
         department_id: selectedDepartmentId,
         academic_year: newSection.academic_year,
+        year: selectedYear || undefined,
+        semester: selectedSemester || undefined,
       });
 
       if (response.success) {
@@ -508,6 +514,47 @@ const AdminSectionManagementScreen = ({ navigation }) => {
         {/* Section Management */}
         {selectedDepartmentId && (
           <View style={styles.section}>
+            {/* Year & Semester Filters */}
+            <View style={{ flexDirection: 'row', gap: 12, marginBottom: 12 }}>
+              <View style={[styles.dropdownContainer, { flex: 1 }]}>
+                <Picker
+                  selectedValue={selectedYear}
+                  onValueChange={(val) => {
+                    setSelectedYear(val);
+                    setTimeout(fetchSections, 0);
+                  }}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select Year (1-4)" value="" />
+                  <Picker.Item label="1st Year" value="1" />
+                  <Picker.Item label="2nd Year" value="2" />
+                  <Picker.Item label="3rd Year" value="3" />
+                  <Picker.Item label="4th Year" value="4" />
+                </Picker>
+              </View>
+              <View style={[styles.dropdownContainer, { flex: 1 }]}>
+                <Picker
+                  selectedValue={selectedSemester}
+                  onValueChange={(val) => {
+                    setSelectedSemester(val);
+                    setTimeout(fetchSections, 0);
+                  }}
+                  style={styles.picker}
+                  itemStyle={styles.pickerItem}
+                >
+                  <Picker.Item label="Select Semester (1-8)" value="" />
+                  <Picker.Item label="Sem 1" value="1" />
+                  <Picker.Item label="Sem 2" value="2" />
+                  <Picker.Item label="Sem 3" value="3" />
+                  <Picker.Item label="Sem 4" value="4" />
+                  <Picker.Item label="Sem 5" value="5" />
+                  <Picker.Item label="Sem 6" value="6" />
+                  <Picker.Item label="Sem 7" value="7" />
+                  <Picker.Item label="Sem 8" value="8" />
+                </Picker>
+              </View>
+            </View>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
                 {selectedDepartment} Sections
