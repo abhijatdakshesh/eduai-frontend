@@ -101,6 +101,9 @@ const AdminSectionDetailScreen = ({ navigation, route }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <View style={styles.headerContent}>
+          <TouchableOpacity style={styles.backButton} onPress={() => navigation.goBack()}>
+            <Text style={styles.backButtonText}>← Back</Text>
+          </TouchableOpacity>
           <Text style={styles.headerTitle}>{section?.name || sectionName || 'Section'}</Text>
           <Text style={styles.headerSubtitle}>{section?.department || ''}{section?.academic_year ? ` • ${section.academic_year}` : ''}</Text>
         </View>
@@ -146,6 +149,15 @@ const styles = StyleSheet.create({
     borderBottomRightRadius: 24,
   },
   headerContent: { paddingHorizontal: 20 },
+  backButton: {
+    alignSelf: 'flex-start',
+    backgroundColor: 'rgba(255,255,255,0.15)',
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    borderRadius: 10,
+    marginBottom: 10,
+  },
+  backButtonText: { color: 'white', fontWeight: '600' },
   headerTitle: { color: 'white', fontSize: isIOS ? 28 : 24, fontWeight: 'bold' },
   headerSubtitle: { color: '#e3f2fd', marginTop: 6 },
   body: { paddingHorizontal: 20, paddingTop: 16 },
