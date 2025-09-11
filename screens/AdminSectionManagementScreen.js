@@ -193,13 +193,16 @@ const AdminSectionManagementScreen = ({ navigation }) => {
               const response = await apiClient.deleteSection(section.id);
               if (response.success) {
                 Alert.alert('Success', 'Section deleted successfully!');
+                // Optimistically update UI
+                setSections((prev) => (Array.isArray(prev) ? prev.filter((s) => s.id !== section.id) : prev));
+                // Then refetch to ensure server truth
                 fetchSections();
               } else {
                 Alert.alert('Error', response.message || 'Failed to delete section');
               }
             } catch (error) {
               console.error('Error deleting section:', error);
-              Alert.alert('Error', 'Failed to delete section');
+              Alert.alert('Error', error?.message || 'Failed to delete section');
             } finally {
               setLoading(false);
             }
