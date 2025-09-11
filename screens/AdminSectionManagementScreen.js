@@ -202,7 +202,18 @@ const AdminSectionManagementScreen = ({ navigation }) => {
               }
             } catch (error) {
               console.error('Error deleting section:', error);
-              Alert.alert('Error', error?.message || 'Failed to delete section');
+              Alert.alert(
+                'Delete Failed',
+                (error?.message || 'Failed to delete section') + '\n\nYou can try force deleting (removes all assigned students and teachers, then deletes the section).',
+                [
+                  { text: 'Cancel', style: 'cancel' },
+                  {
+                    text: 'Force Delete',
+                    style: 'destructive',
+                    onPress: () => forceDeleteSection(section),
+                  },
+                ]
+              );
             } finally {
               setLoading(false);
             }
@@ -210,6 +221,58 @@ const AdminSectionManagementScreen = ({ navigation }) => {
         },
       ]
     );
+  };
+
+  const forceDeleteSection = async (section) => {
+    try {
+      setLoading(true);
+      console.log('Force deleting section:', section?.id);
+      // 1) Fetch assigned users
+      let students = [];
+      let teachers = [];
+      try {
+        const stuResp = await apiClient.getSectionStudents(section.id);
+        students = (stuResp?.success && (stuResp.data.students || stuResp.data)) || [];
+      } catch (e) {
+        console.log('Force delete: getSectionStudents failed, continuing...', e?.message);
+      }
+      try {
+        const tchResp = await apiClient.getSectionTeachers(section.id);
+        teachers = (tchResp?.success && (tchResp.data.teachers || tchResp.data)) || [];
+      } catch (e) {
+        console.log('Force delete: getSectionTeachers failed, continuing...', e?.message);
+      }
+
+      // 2) Remove teachers
+      for (const t of teachers) {
+        try {
+          await apiClient.removeTeacherFromSection(section.id, t.id);
+        } catch (e) {
+          console.log('Force delete: removeTeacherFromSection failed for', t.id, e?.message);
+        }
+      }
+      // 3) Remove students
+      for (const s of students) {
+        try {
+          await apiClient.removeStudentFromSection(section.id, s.id);
+        } catch (e) {
+          console.log('Force delete: removeStudentFromSection failed for', s.id, e?.message);
+        }
+      }
+      // 4) Delete section
+      const delResp = await apiClient.deleteSection(section.id);
+      if (delResp?.success) {
+        Alert.alert('Success', 'Section force-deleted successfully');
+        setSections((prev) => (Array.isArray(prev) ? prev.filter((s) => s.id !== section.id) : prev));
+        fetchSections();
+      } else {
+        Alert.alert('Error', delResp?.message || 'Failed to delete section after cleanup');
+      }
+    } catch (e) {
+      Alert.alert('Error', e?.message || 'Force delete failed');
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleManageStudents = async (section) => {
@@ -368,17 +431,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
 
 
   const renderSectionCard = ({ item }) => (
-    <TouchableOpacity
-      style={styles.sectionCard}
-      onPress={() => {
-        if (!item?.id) {
-          console.log('AdminSectionManagement: Missing section id on item:', item);
-          Alert.alert('Error', 'Section id is missing.');
-          return;
-        }
-        navigation.navigate('AdminSectionDetail', { sectionId: item.id, sectionName: item.name });
-      }}
-    >
+    <View style={styles.sectionCard}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionInfo}>
           <Text style={styles.sectionName}>{item.name}</Text>
@@ -406,7 +459,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </TouchableOpacity>
+    </View>
   );
 
   const renderStudentItem = ({ item }) => (
