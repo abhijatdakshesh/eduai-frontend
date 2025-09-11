@@ -33,6 +33,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
   const [selectedSection, setSelectedSection] = useState(null);
   const [availableStudents, setAvailableStudents] = useState([]);
   const [availableTeachers, setAvailableTeachers] = useState([]);
+  const [assignedTeachers, setAssignedTeachers] = useState([]);
   const [selectedStudents, setSelectedStudents] = useState([]);
   const [selectedTeacher, setSelectedTeacher] = useState(null);
   const [creatingTeacher, setCreatingTeacher] = useState(false);
@@ -226,18 +227,25 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     try {
       setLoading(true);
       console.log('AdminSectionManagement: Fetching available teachers for section:', section.id);
-      const response = await apiClient.getAvailableTeachersForSection(section.id);
-      console.log('AdminSectionManagement: Available teachers response:', response);
-      console.log('AdminSectionManagement: Response data structure:', response.data);
-      if (response.success) {
-        const teachers = response.data.teachers || response.data || [];
-        console.log('AdminSectionManagement: Teachers array:', teachers);
+      const [availResp, assignedResp] = await Promise.all([
+        apiClient.getAvailableTeachersForSection(section.id),
+        apiClient.getSectionTeachers(section.id).catch((e) => ({ success: false, data: [] })),
+      ]);
+      console.log('AdminSectionManagement: Available teachers response:', availResp);
+      console.log('AdminSectionManagement: Assigned teachers response:', assignedResp);
+      if (availResp?.success) {
+        const teachers = availResp.data.teachers || availResp.data || [];
         setAvailableTeachers(teachers);
-        setShowTeacherModal(true);
       } else {
-        console.log('AdminSectionManagement: Failed to load teachers:', response.message);
-        Alert.alert('Error', response.message || 'Failed to load available teachers');
+        setAvailableTeachers([]);
       }
+      if (assignedResp?.success) {
+        const teachers = assignedResp.data.teachers || assignedResp.data || [];
+        setAssignedTeachers(teachers);
+      } else {
+        setAssignedTeachers([]);
+      }
+      setShowTeacherModal(true);
     } catch (error) {
       console.error('Error fetching available teachers:', error);
       Alert.alert('Error', 'Failed to load available teachers');
@@ -411,6 +419,8 @@ const AdminSectionManagementScreen = ({ navigation }) => {
 
   const renderTeacherItem = ({ item }) => {
     console.log('AdminSectionManagement: Rendering teacher item:', item);
+    const firstName = item.first_name || item.name?.split(' ')?.[0] || '';
+    const lastName = item.last_name || (item.name?.split(' ')?.slice(1).join(' ') || '');
     return (
       <TouchableOpacity
         style={[
@@ -424,7 +434,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
       >
         <View style={styles.teacherInfo}>
           <Text style={styles.teacherName}>
-            {item.first_name} {item.last_name}
+            {firstName} {lastName}
           </Text>
           <Text style={styles.teacherDetails}>
             {item.department} • {item.email}
@@ -682,21 +692,33 @@ const AdminSectionManagementScreen = ({ navigation }) => {
                 />
               </View>
             ) : (
-              <FlatList
-                data={availableTeachers}
-                renderItem={renderTeacherItem}
-                keyExtractor={(item) => item.id}
-                style={styles.teacherList}
-                showsVerticalScrollIndicator={false}
-                ListEmptyComponent={
-                  <View style={styles.emptyState}>
-                    <Text style={styles.emptyStateText}>No available teachers found</Text>
-                    <Text style={styles.emptyStateSubtext}>
-                      All teachers may already be assigned to sections
-                    </Text>
-                  </View>
-                }
-              />
+              <View>
+                <Text style={[styles.sectionTitle, { marginTop: 0 }]}>Assigned Teachers</Text>
+                <FlatList
+                  data={assignedTeachers}
+                  renderItem={renderTeacherItem}
+                  keyExtractor={(item) => item.id}
+                  style={styles.teacherList}
+                  showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={<Text style={styles.emptyStateText}>None</Text>}
+                />
+                <Text style={[styles.sectionTitle, { marginTop: 12 }]}>Available Teachers</Text>
+                <FlatList
+                  data={availableTeachers}
+                  renderItem={renderTeacherItem}
+                  keyExtractor={(item) => item.id}
+                  style={styles.teacherList}
+                  showsVerticalScrollIndicator={false}
+                  ListEmptyComponent={
+                    <View style={styles.emptyState}>
+                      <Text style={styles.emptyStateText}>No available teachers found</Text>
+                      <Text style={styles.emptyStateSubtext}>
+                        All teachers may already be assigned to sections
+                      </Text>
+                    </View>
+                  }
+                />
+              </View>
             )}
 
             <View style={styles.modalActions}>
