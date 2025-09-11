@@ -351,7 +351,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
 
 
   const renderSectionCard = ({ item }) => (
-    <View style={styles.sectionCard}>
+    <TouchableOpacity style={styles.sectionCard} onPress={() => navigation.navigate('AdminSectionDetail', { sectionId: item.id, sectionName: item.name })}>
       <View style={styles.sectionHeader}>
         <View style={styles.sectionInfo}>
           <Text style={styles.sectionName}>{item.name}</Text>
@@ -383,7 +383,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
           </TouchableOpacity>
         </View>
       </View>
-    </View>
+    </TouchableOpacity>
   );
 
   const renderStudentItem = ({ item }) => (

@@ -44,6 +44,7 @@ import AdminCourseEnrollmentsScreen from '../screens/AdminCourseEnrollmentsScree
 import AdminLogoutScreen from '../screens/AdminLogoutScreen';
 import AdminAttendanceAuditScreen from '../screens/AdminAttendanceAuditScreen';
 import AdminSectionManagementScreen from '../screens/AdminSectionManagementScreen';
+import AdminSectionDetailScreen from '../screens/AdminSectionDetailScreen';
 import TeacherLoginScreen from '../screens/TeacherLoginScreen';
 
 // Teacher Screens
@@ -205,6 +206,13 @@ export const adminScreens = (theme) => [
     name: 'AdminDashboard',
     component: AdminDashboardScreen,
     options: createDrawerScreenOptions('Dashboard', '📊', theme),
+  },
+  // Section detail is a stack-only screen; we don't show it in the drawer but keep it available
+  {
+    name: 'AdminSectionDetail',
+    component: AdminSectionDetailScreen,
+    options: createDrawerScreenOptions('Section Detail', '📋', theme),
+    hidden: true,
   },
   {
     name: 'AdminUserManagement',
