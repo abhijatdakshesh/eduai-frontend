@@ -22,6 +22,7 @@ const isIOS = Platform.OS === 'ios';
 const AdminSectionManagementScreen = ({ navigation }) => {
   const [departments, setDepartments] = useState([]);
   const [selectedDepartment, setSelectedDepartment] = useState(null);
+  const [selectedDepartmentId, setSelectedDepartmentId] = useState(null);
   const [sections, setSections] = useState([]);
   const [loading, setLoading] = useState(true);
   const [refreshing, setRefreshing] = useState(false);
@@ -45,10 +46,10 @@ const AdminSectionManagementScreen = ({ navigation }) => {
   }, []);
 
   useEffect(() => {
-    if (selectedDepartment) {
+    if (selectedDepartmentId) {
       fetchSections();
     }
-  }, [selectedDepartment]);
+  }, [selectedDepartmentId]);
 
   const fetchDepartments = async () => {
     try {
@@ -62,40 +63,55 @@ const AdminSectionManagementScreen = ({ navigation }) => {
         if (Array.isArray(departmentsData) && departmentsData.length > 0) {
           // Check if it's an array of objects or strings
           if (typeof departmentsData[0] === 'object' && departmentsData[0].name) {
-            // Extract department names from objects
-            const departmentNames = departmentsData.map(dept => dept.name);
-            console.log('AdminSectionManagement: Extracted department names:', departmentNames);
-            setDepartments(departmentNames);
-          } else {
-            // It's already an array of strings
-            console.log('AdminSectionManagement: Using departments as strings:', departmentsData);
+            // Keep the full department objects for ID access
+            console.log('AdminSectionManagement: Using department objects:', departmentsData);
             setDepartments(departmentsData);
+          } else {
+            // It's already an array of strings - convert to objects
+            const departmentObjects = departmentsData.map((name, index) => ({ id: index, name }));
+            console.log('AdminSectionManagement: Converted strings to objects:', departmentObjects);
+            setDepartments(departmentObjects);
           }
         } else {
           // Fallback departments
           console.log('AdminSectionManagement: Using fallback departments');
-          setDepartments(['Computer Science', 'Information Science', 'Electronics', 'Mechanical']);
+          setDepartments([
+            { id: 1, name: 'Computer Science' },
+            { id: 2, name: 'Information Science' },
+            { id: 3, name: 'Electronics' },
+            { id: 4, name: 'Mechanical' }
+          ]);
         }
       } else {
         // Fallback departments
         console.log('AdminSectionManagement: API failed, using fallback departments');
-        setDepartments(['Computer Science', 'Information Science', 'Electronics', 'Mechanical']);
+        setDepartments([
+          { id: 1, name: 'Computer Science' },
+          { id: 2, name: 'Information Science' },
+          { id: 3, name: 'Electronics' },
+          { id: 4, name: 'Mechanical' }
+        ]);
       }
     } catch (error) {
       console.error('Error fetching departments:', error);
-      setDepartments(['Computer Science', 'Information Science', 'Electronics', 'Mechanical']);
+      setDepartments([
+        { id: 1, name: 'Computer Science' },
+        { id: 2, name: 'Information Science' },
+        { id: 3, name: 'Electronics' },
+        { id: 4, name: 'Mechanical' }
+      ]);
     } finally {
       setLoading(false);
     }
   };
 
   const fetchSections = async () => {
-    if (!selectedDepartment) return;
+    if (!selectedDepartmentId) return;
     
     try {
       setLoading(true);
       const response = await apiClient.getSections({ 
-        department: selectedDepartment,
+        department_id: selectedDepartmentId,
         academic_year: '2024-2025'
       });
       if (response.success) {
@@ -123,7 +139,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
       return;
     }
 
-    if (!selectedDepartment) {
+    if (!selectedDepartmentId) {
       Alert.alert('Error', 'Please select a department first');
       return;
     }
@@ -132,7 +148,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
       setLoading(true);
       const response = await apiClient.createSection({
         name: newSection.name.toUpperCase(),
-        department: selectedDepartment,
+        department_id: selectedDepartmentId,
         academic_year: newSection.academic_year,
       });
 
@@ -283,17 +299,20 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     <TouchableOpacity
       style={[
         styles.departmentCard,
-        selectedDepartment === item && styles.departmentCardSelected,
+        selectedDepartmentId === item.id && styles.departmentCardSelected,
       ]}
-      onPress={() => setSelectedDepartment(item)}
+      onPress={() => {
+        setSelectedDepartment(item.name);
+        setSelectedDepartmentId(item.id);
+      }}
     >
       <Text style={[
         styles.departmentName,
-        selectedDepartment === item && styles.departmentNameSelected,
+        selectedDepartmentId === item.id && styles.departmentNameSelected,
       ]}>
-        {item}
+        {item.name}
       </Text>
-      {selectedDepartment === item && (
+      {selectedDepartmentId === item.id && (
         <Text style={styles.selectedIndicator}>✓</Text>
       )}
     </TouchableOpacity>
@@ -415,7 +434,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
           <FlatList
             data={departments}
             renderItem={renderDepartmentCard}
-            keyExtractor={(item, index) => `dept-${index}-${item}`}
+            keyExtractor={(item, index) => `dept-${item.id || index}`}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.departmentList}
@@ -423,7 +442,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
         </View>
 
         {/* Section Management */}
-        {selectedDepartment && (
+        {selectedDepartmentId && (
           <View style={styles.section}>
             <View style={styles.sectionHeader}>
               <Text style={styles.sectionTitle}>
