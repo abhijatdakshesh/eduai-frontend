@@ -43,6 +43,7 @@ import AdminClassStudentsScreen from '../screens/AdminClassStudentsScreen';
 import AdminCourseEnrollmentsScreen from '../screens/AdminCourseEnrollmentsScreen';
 import AdminLogoutScreen from '../screens/AdminLogoutScreen';
 import AdminAttendanceAuditScreen from '../screens/AdminAttendanceAuditScreen';
+import AdminSectionManagementScreen from '../screens/AdminSectionManagementScreen';
 import TeacherLoginScreen from '../screens/TeacherLoginScreen';
 
 // Teacher Screens
@@ -214,6 +215,11 @@ export const adminScreens = (theme) => [
     name: 'AdminClassManagement',
     component: AdminClassManagementScreen,
     options: createDrawerScreenOptions('Class Management', '🏫', theme),
+  },
+  {
+    name: 'AdminSectionManagement',
+    component: AdminSectionManagementScreen,
+    options: createDrawerScreenOptions('Section Management', '📋', theme),
   },
   {
     name: 'AdminCourseManagement',

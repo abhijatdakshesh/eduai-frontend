@@ -27,6 +27,7 @@ import LoadingScreen from './components/LoadingScreen';
 
 import AdminClassStudentsScreen from './screens/AdminClassStudentsScreen';
 import AdminCourseEnrollmentsScreen from './screens/AdminCourseEnrollmentsScreen';
+import AdminSectionManagementScreen from './screens/AdminSectionManagementScreen';
 import TeacherClassStudentsScreen from './screens/TeacherClassStudentsScreen';
 import TeacherAssignmentDetailScreen from './screens/TeacherAssignmentDetailScreen';
 import StudentAssignmentDetailScreen from './screens/StudentAssignmentDetailScreen';
@@ -137,6 +138,7 @@ const RootNavigatorComponent = () => {
             <Stack.Screen name="AdminApp" component={AdminStack} />
             <Stack.Screen name="AdminClassStudents" component={AdminClassStudentsScreen} />
             <Stack.Screen name="AdminCourseEnrollments" component={AdminCourseEnrollmentsScreen} />
+            <Stack.Screen name="AdminSectionManagement" component={AdminSectionManagementScreen} />
           </>
         ) : userRole === 'teacher' ? (
           <>

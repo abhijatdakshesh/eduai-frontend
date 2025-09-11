@@ -1870,6 +1870,163 @@ class ApiClient {
     }
   }
 
+  // Section Management API
+  async createSection(sectionData) {
+    try {
+      console.log('API: Creating section...');
+      const response = await this.api.post('/sections', sectionData);
+      console.log('API: Section created successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Section creation error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getSections(filters = {}) {
+    try {
+      console.log('API: Fetching sections...');
+      const response = await this.api.get('/sections', { params: filters });
+      console.log('API: Sections fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Sections fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getSection(sectionId) {
+    try {
+      console.log('API: Fetching section details...');
+      const response = await this.api.get(`/sections/${sectionId}`);
+      console.log('API: Section details fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Section details fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async updateSection(sectionId, sectionData) {
+    try {
+      console.log('API: Updating section...');
+      const response = await this.api.put(`/sections/${sectionId}`, sectionData);
+      console.log('API: Section updated successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Section update error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async deleteSection(sectionId) {
+    try {
+      console.log('API: Deleting section...');
+      const response = await this.api.delete(`/sections/${sectionId}`);
+      console.log('API: Section deleted successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Section deletion error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async addStudentsToSection(sectionId, studentIds) {
+    try {
+      console.log('API: Adding students to section...');
+      const response = await this.api.post(`/sections/${sectionId}/students`, { studentIds });
+      console.log('API: Students added to section successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Add students to section error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async removeStudentFromSection(sectionId, studentId) {
+    try {
+      console.log('API: Removing student from section...');
+      const response = await this.api.delete(`/sections/${sectionId}/students/${studentId}`);
+      console.log('API: Student removed from section successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Remove student from section error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getSectionStudents(sectionId) {
+    try {
+      console.log('API: Fetching section students...');
+      const response = await this.api.get(`/sections/${sectionId}/students`);
+      console.log('API: Section students fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Section students fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getAvailableStudentsForSection(sectionId) {
+    try {
+      console.log('API: Fetching available students for section...');
+      const response = await this.api.get(`/sections/${sectionId}/students/available`);
+      console.log('API: Available students fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Available students fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async assignTeacherToSection(sectionId, teacherId, role = 'homeroom') {
+    try {
+      console.log('API: Assigning teacher to section...');
+      const response = await this.api.post(`/sections/${sectionId}/teachers`, { teacherId, role });
+      console.log('API: Teacher assigned to section successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Assign teacher to section error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async removeTeacherFromSection(sectionId, teacherId) {
+    try {
+      console.log('API: Removing teacher from section...');
+      const response = await this.api.delete(`/sections/${sectionId}/teachers/${teacherId}`);
+      console.log('API: Teacher removed from section successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Remove teacher from section error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getSectionTeachers(sectionId) {
+    try {
+      console.log('API: Fetching section teachers...');
+      const response = await this.api.get(`/sections/${sectionId}/teachers`);
+      console.log('API: Section teachers fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Section teachers fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getAvailableTeachersForSection(sectionId) {
+    try {
+      console.log('API: Fetching available teachers for section...');
+      const response = await this.api.get(`/sections/${sectionId}/teachers/available`);
+      console.log('API: Available teachers fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Available teachers fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
   // Announcements APIs
   // Teacher
   async createAnnouncement(payload) {

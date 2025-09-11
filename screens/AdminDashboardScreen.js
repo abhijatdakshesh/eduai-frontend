@@ -175,6 +175,9 @@ const AdminDashboardScreen = ({ navigation }) => {
       case 'createClass':
         navigation.navigate('AdminClassManagement');
         break;
+      case 'manageSections':
+        navigation.navigate('AdminSectionManagement');
+        break;
       case 'manageCourses':
         navigation.navigate('AdminCourseManagement');
         break;
@@ -424,6 +427,13 @@ const AdminDashboardScreen = ({ navigation }) => {
               icon="🏫"
               color="#e8f5e9"
               onPress={() => handleQuickAction('createClass')}
+            />
+            <QuickActionCard
+              title="Manage Sections"
+              subtitle="Organize by sections"
+              icon="📋"
+              color="#fff3e0"
+              onPress={() => handleQuickAction('manageSections')}
             />
             <QuickActionCard
               title="Manage Courses"
