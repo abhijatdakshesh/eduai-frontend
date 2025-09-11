@@ -54,10 +54,31 @@ const AdminSectionManagementScreen = ({ navigation }) => {
     try {
       setLoading(true);
       const response = await apiClient.getCourseDepartments();
+      console.log('AdminSectionManagement: Department response:', response);
       if (response.success) {
-        setDepartments(response.data || []);
+        // Handle both array of strings and array of objects
+        const departmentsData = response.data || [];
+        console.log('AdminSectionManagement: Departments data:', departmentsData);
+        if (Array.isArray(departmentsData) && departmentsData.length > 0) {
+          // Check if it's an array of objects or strings
+          if (typeof departmentsData[0] === 'object' && departmentsData[0].name) {
+            // Extract department names from objects
+            const departmentNames = departmentsData.map(dept => dept.name);
+            console.log('AdminSectionManagement: Extracted department names:', departmentNames);
+            setDepartments(departmentNames);
+          } else {
+            // It's already an array of strings
+            console.log('AdminSectionManagement: Using departments as strings:', departmentsData);
+            setDepartments(departmentsData);
+          }
+        } else {
+          // Fallback departments
+          console.log('AdminSectionManagement: Using fallback departments');
+          setDepartments(['Computer Science', 'Information Science', 'Electronics', 'Mechanical']);
+        }
       } else {
         // Fallback departments
+        console.log('AdminSectionManagement: API failed, using fallback departments');
         setDepartments(['Computer Science', 'Information Science', 'Electronics', 'Mechanical']);
       }
     } catch (error) {
@@ -394,7 +415,7 @@ const AdminSectionManagementScreen = ({ navigation }) => {
           <FlatList
             data={departments}
             renderItem={renderDepartmentCard}
-            keyExtractor={(item) => item}
+            keyExtractor={(item, index) => `dept-${index}-${item}`}
             horizontal
             showsHorizontalScrollIndicator={false}
             contentContainerStyle={styles.departmentList}
