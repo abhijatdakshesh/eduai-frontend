@@ -238,6 +238,41 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
     console.log('TeacherAssignments: showFilePicker called');
     console.log('TeacherAssignments: Platform:', Platform.OS);
     
+    // Web platform - use direct file input instead of Alert
+    if (Platform.OS === 'web') {
+      console.log('TeacherAssignments: Using web direct file picker');
+      const input = document.createElement('input');
+      input.type = 'file';
+      input.accept = '.pdf,.doc,.docx,.txt,.zip,image/*';
+      input.multiple = false;
+      
+      input.onchange = (event) => {
+        const file = event.target.files[0];
+        if (file) {
+          console.log('TeacherAssignments: Web file selected:', file);
+          
+          if (file.size > 10 * 1024 * 1024) { // 10MB limit
+            alert('File size must be less than 10MB');
+            return;
+          }
+          
+          const newFile = {
+            uri: URL.createObjectURL(file),
+            name: file.name,
+            type: file.type,
+            size: file.size,
+          };
+          
+          console.log('TeacherAssignments: Adding web file to attachments:', newFile);
+          setAttachedFiles(prev => [...prev, newFile]);
+          alert(`File "${file.name}" added successfully!`);
+        }
+      };
+      
+      input.click();
+      return;
+    }
+    
     try {
       Alert.alert(
         'Add File',
@@ -591,6 +626,29 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
                 >
                   <Text style={styles.addFileButtonText}>Test</Text>
                 </TouchableOpacity>
+                
+                {/* Direct file input for web testing */}
+                {Platform.OS === 'web' && (
+                  <TouchableOpacity
+                    style={[styles.addFileButton, { backgroundColor: '#8b5cf6', marginLeft: 8 }]}
+                    onPress={() => {
+                      console.log('Direct file input test');
+                      const input = document.createElement('input');
+                      input.type = 'file';
+                      input.accept = '*/*';
+                      input.onchange = (e) => {
+                        const file = e.target.files[0];
+                        if (file) {
+                          console.log('Direct file selected:', file);
+                          alert(`File selected: ${file.name}`);
+                        }
+                      };
+                      input.click();
+                    }}
+                  >
+                    <Text style={styles.addFileButtonText}>Direct</Text>
+                  </TouchableOpacity>
+                )}
               </View>
               
               <Text style={styles.fileUploadHint}>
