@@ -12,6 +12,7 @@ import {
   TextInput,
   ScrollView,
 } from 'react-native';
+import { Picker } from '@react-native-picker/picker';
 import * as DocumentPicker from 'expo-document-picker';
 import * as ImagePicker from 'expo-image-picker';
 import { useBackButton } from '../utils/backButtonHandler';
@@ -23,6 +24,8 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
   const [assignments, setAssignments] = useState([]);
   const [loading, setLoading] = useState(true);
   const [showCreateModal, setShowCreateModal] = useState(false);
+  const [classes, setClasses] = useState([]);
+  const [classesLoading, setClassesLoading] = useState(false);
   const [newAssignment, setNewAssignment] = useState({
     title: '',
     description: '',
@@ -39,6 +42,30 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
   useEffect(() => {
     fetchAssignments();
   }, []);
+
+  // Load teacher classes when the modal opens
+  useEffect(() => {
+    const loadClasses = async () => {
+      if (!showCreateModal) return;
+      try {
+        setClassesLoading(true);
+        console.log('TeacherAssignments: Fetching teacher classes for selector...');
+        const resp = await apiClient.getTeacherClasses();
+        const list = resp?.data?.classes || resp?.classes || [];
+        if (Array.isArray(list)) {
+          setClasses(list);
+        } else {
+          setClasses([]);
+        }
+      } catch (e) {
+        console.log('TeacherAssignments: Failed to load classes:', e?.message);
+        setClasses([]);
+      } finally {
+        setClassesLoading(false);
+      }
+    };
+    loadClasses();
+  }, [showCreateModal]);
 
   const fetchAssignments = async () => {
     try {
@@ -303,6 +330,11 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
       return;
     }
 
+    if (!newAssignment.classId) {
+      Alert.alert('Error', 'Please select a class');
+      return;
+    }
+
     try {
       setLoading(true);
       console.log('TeacherAssignments: Creating assignment...');
@@ -481,6 +513,32 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
           </View>
 
           <ScrollView style={styles.modalContent} showsVerticalScrollIndicator={false}>
+            {/* Class Selector */}
+            <View style={styles.inputGroup}>
+              <Text style={styles.inputLabel}>Class *</Text>
+              {classesLoading ? (
+                <View style={styles.pickerLoadingWrap}>
+                  <ActivityIndicator color="#1a237e" />
+                </View>
+              ) : (
+                <View style={styles.pickerWrapper}>
+                  <Picker
+                    selectedValue={newAssignment.classId}
+                    onValueChange={(value) => setNewAssignment({ ...newAssignment, classId: value })}
+                    dropdownIconColor="#1f2937"
+                  >
+                    <Picker.Item label="Select a class" value="" />
+                    {classes.map((cls, idx) => (
+                      <Picker.Item
+                        key={String(cls?.id ?? idx)}
+                        label={String(cls?.name || cls?.title || `Class ${idx + 1}`)}
+                        value={String(cls?.id ?? '')}
+                      />
+                    ))}
+                  </Picker>
+                </View>
+              )}
+            </View>
             <View style={styles.inputGroup}>
               <Text style={styles.inputLabel}>Assignment Title *</Text>
               <TextInput
@@ -858,6 +916,20 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: '#1f2937',
+  },
+  pickerWrapper: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+  },
+  pickerLoadingWrap: {
+    backgroundColor: 'white',
+    borderWidth: 1,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    paddingVertical: 12,
+    alignItems: 'center',
   },
   textArea: {
     height: 80,
