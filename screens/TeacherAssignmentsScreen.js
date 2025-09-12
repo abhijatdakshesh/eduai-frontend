@@ -65,13 +65,27 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
 
   const pickDocument = async () => {
     try {
+      console.log('TeacherAssignments: Starting document picker...');
+      console.log('TeacherAssignments: Platform:', Platform.OS);
+      
+      // Check if DocumentPicker is available
+      if (!DocumentPicker.getDocumentAsync) {
+        Alert.alert('Error', 'Document picker is not available on this platform');
+        return;
+      }
+      
       const result = await DocumentPicker.getDocumentAsync({
         type: ['application/pdf', 'application/msword', 'application/vnd.openxmlformats-officedocument.wordprocessingml.document', 'text/plain', 'application/zip'],
         copyToCacheDirectory: true,
+        multiple: false,
       });
+
+      console.log('TeacherAssignments: Document picker result:', result);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const file = result.assets[0];
+        console.log('TeacherAssignments: Selected file:', file);
+        
         if (file.size > 10 * 1024 * 1024) { // 10MB limit
           Alert.alert('Error', 'File size must be less than 10MB');
           return;
@@ -80,29 +94,47 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
         const newFile = {
           uri: file.uri,
           name: file.name,
-          type: file.mimeType,
+          type: file.mimeType || 'application/octet-stream',
           size: file.size,
         };
         
+        console.log('TeacherAssignments: Adding file to attachments:', newFile);
         setAttachedFiles(prev => [...prev, newFile]);
+        Alert.alert('Success', `File "${file.name}" added successfully!`);
+      } else {
+        console.log('TeacherAssignments: Document picker was canceled');
       }
     } catch (error) {
-      console.log('Error picking document:', error);
-      Alert.alert('Error', 'Failed to pick document');
+      console.log('TeacherAssignments: Error picking document:', error);
+      console.log('TeacherAssignments: Error stack:', error.stack);
+      Alert.alert('Error', `Failed to pick document: ${error.message}`);
     }
   };
 
   const pickImage = async () => {
     try {
+      console.log('TeacherAssignments: Starting image picker...');
+      console.log('TeacherAssignments: Platform:', Platform.OS);
+      
+      // Check if ImagePicker is available
+      if (!ImagePicker.launchImageLibraryAsync) {
+        Alert.alert('Error', 'Image picker is not available on this platform');
+        return;
+      }
+      
       const result = await ImagePicker.launchImageLibraryAsync({
         mediaTypes: ImagePicker.MediaTypeOptions.Images,
-        allowsEditing: true,
-        aspect: [4, 3],
+        allowsEditing: false,
         quality: 0.8,
+        allowsMultipleSelection: false,
       });
+
+      console.log('TeacherAssignments: Image picker result:', result);
 
       if (!result.canceled && result.assets && result.assets.length > 0) {
         const image = result.assets[0];
+        console.log('TeacherAssignments: Selected image:', image);
+        
         if (image.fileSize > 10 * 1024 * 1024) { // 10MB limit
           Alert.alert('Error', 'Image size must be less than 10MB');
           return;
@@ -110,16 +142,21 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
         
         const newFile = {
           uri: image.uri,
-          name: `image_${Date.now()}.jpg`,
-          type: 'image/jpeg',
+          name: image.fileName || `image_${Date.now()}.jpg`,
+          type: image.mimeType || 'image/jpeg',
           size: image.fileSize,
         };
         
+        console.log('TeacherAssignments: Adding image to attachments:', newFile);
         setAttachedFiles(prev => [...prev, newFile]);
+        Alert.alert('Success', `Image "${newFile.name}" added successfully!`);
+      } else {
+        console.log('TeacherAssignments: Image picker was canceled');
       }
     } catch (error) {
-      console.log('Error picking image:', error);
-      Alert.alert('Error', 'Failed to pick image');
+      console.log('TeacherAssignments: Error picking image:', error);
+      console.log('TeacherAssignments: Error stack:', error.stack);
+      Alert.alert('Error', `Failed to pick image: ${error.message}`);
     }
   };
 
@@ -154,7 +191,13 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
         uri: file.uri,
         name: file.name,
         type: file.type,
+        size: file.size,
       }));
+      
+      console.log('TeacherAssignments: Creating assignment with data:', {
+        assignment: newAssignment,
+        files: files
+      });
       
       const response = await apiClient.createTeacherAssignment(newAssignment, files);
       console.log('TeacherAssignments: Create assignment response:', response);
@@ -427,18 +470,31 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
                 </View>
               )}
               
-              <TouchableOpacity
-                style={[
-                  styles.addFileButton,
-                  attachedFiles.length >= 5 && styles.addFileButtonDisabled
-                ]}
-                onPress={showFilePicker}
-                disabled={attachedFiles.length >= 5}
-              >
-                <Text style={styles.addFileButtonText}>
-                  {attachedFiles.length >= 5 ? 'Max 5 files' : '+ Add File'}
-                </Text>
-              </TouchableOpacity>
+              <View style={styles.filePickerContainer}>
+                <TouchableOpacity
+                  style={[
+                    styles.addFileButton,
+                    attachedFiles.length >= 5 && styles.addFileButtonDisabled
+                  ]}
+                  onPress={showFilePicker}
+                  disabled={attachedFiles.length >= 5}
+                >
+                  <Text style={styles.addFileButtonText}>
+                    {attachedFiles.length >= 5 ? 'Max 5 files' : '+ Add File'}
+                  </Text>
+                </TouchableOpacity>
+                
+                {/* Debug button for testing */}
+                <TouchableOpacity
+                  style={[styles.addFileButton, { backgroundColor: '#f59e0b', marginLeft: 8 }]}
+                  onPress={() => {
+                    console.log('Current attached files:', attachedFiles);
+                    Alert.alert('Debug', `Attached files: ${attachedFiles.length}\nFiles: ${JSON.stringify(attachedFiles.map(f => f.name), null, 2)}`);
+                  }}
+                >
+                  <Text style={styles.addFileButtonText}>Debug</Text>
+                </TouchableOpacity>
+              </View>
               
               <Text style={styles.fileUploadHint}>
                 Supported: PDF, DOC, DOCX, TXT, ZIP, Images (Max 10MB each, 5 files max)
@@ -737,6 +793,10 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: 'bold',
   },
+  filePickerContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+  },
   addFileButton: {
     backgroundColor: '#3b82f6',
     paddingVertical: 12,
@@ -744,6 +804,7 @@ const styles = StyleSheet.create({
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 8,
+    flex: 1,
   },
   addFileButtonDisabled: {
     backgroundColor: '#9ca3af',

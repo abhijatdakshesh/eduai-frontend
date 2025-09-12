@@ -1573,31 +1573,57 @@ class ApiClient {
   async createTeacherAssignment(assignmentData, files = []) {
     try {
       console.log('API: Creating teacher assignment...');
+      console.log('API: Assignment data:', assignmentData);
+      console.log('API: Files to upload:', files);
+      
       const formData = new FormData();
       
       // Add assignment data
-      formData.append('classId', assignmentData.classId);
+      formData.append('classId', assignmentData.classId || '');
       formData.append('title', assignmentData.title);
       formData.append('description', assignmentData.description);
-      formData.append('instructions', assignmentData.instructions);
+      formData.append('instructions', assignmentData.instructions || '');
       formData.append('dueDate', assignmentData.dueDate);
       formData.append('maxPoints', assignmentData.maxPoints);
       formData.append('assignmentType', assignmentData.assignmentType);
       
       // Add files if any
       if (files && files.length > 0) {
-        files.forEach(file => {
-          formData.append('attachments', file);
+        files.forEach((file, index) => {
+          console.log(`API: Adding file ${index + 1}:`, {
+            name: file.name,
+            type: file.type,
+            size: file.size,
+            uri: file.uri ? 'present' : 'missing'
+          });
+          
+          // Create file object for FormData
+          const fileObj = {
+            uri: file.uri,
+            name: file.name,
+            type: file.type,
+          };
+          
+          formData.append('attachments', fileObj);
         });
       }
       
+      console.log('API: Sending request to /assignments/teacher/create');
       const response = await this.api.post('/assignments/teacher/create', formData, {
-        headers: { 'Content-Type': 'multipart/form-data' }
+        headers: { 
+          'Content-Type': 'multipart/form-data',
+          'Accept': 'application/json'
+        }
       });
       console.log('API: Teacher assignment created successfully');
       return response.data;
     } catch (error) {
       console.log('API: Teacher assignment creation error:', error);
+      console.log('API: Error details:', {
+        message: error.message,
+        response: error.response?.data,
+        status: error.response?.status
+      });
       throw this.handleError(error);
     }
   }
