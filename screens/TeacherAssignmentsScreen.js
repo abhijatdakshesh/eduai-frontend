@@ -68,6 +68,41 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
       console.log('TeacherAssignments: Starting document picker...');
       console.log('TeacherAssignments: Platform:', Platform.OS);
       
+      // Web platform fallback
+      if (Platform.OS === 'web') {
+        console.log('TeacherAssignments: Using web file input fallback');
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = '.pdf,.doc,.docx,.txt,.zip';
+        input.multiple = false;
+        
+        input.onchange = (event) => {
+          const file = event.target.files[0];
+          if (file) {
+            console.log('TeacherAssignments: Web file selected:', file);
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+              Alert.alert('Error', 'File size must be less than 10MB');
+              return;
+            }
+            
+            const newFile = {
+              uri: URL.createObjectURL(file),
+              name: file.name,
+              type: file.type,
+              size: file.size,
+            };
+            
+            console.log('TeacherAssignments: Adding web file to attachments:', newFile);
+            setAttachedFiles(prev => [...prev, newFile]);
+            Alert.alert('Success', `File "${file.name}" added successfully!`);
+          }
+        };
+        
+        input.click();
+        return;
+      }
+      
       // Check if DocumentPicker is available
       if (!DocumentPicker.getDocumentAsync) {
         Alert.alert('Error', 'Document picker is not available on this platform');
@@ -115,6 +150,41 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
     try {
       console.log('TeacherAssignments: Starting image picker...');
       console.log('TeacherAssignments: Platform:', Platform.OS);
+      
+      // Web platform fallback
+      if (Platform.OS === 'web') {
+        console.log('TeacherAssignments: Using web image input fallback');
+        const input = document.createElement('input');
+        input.type = 'file';
+        input.accept = 'image/*';
+        input.multiple = false;
+        
+        input.onchange = (event) => {
+          const file = event.target.files[0];
+          if (file) {
+            console.log('TeacherAssignments: Web image selected:', file);
+            
+            if (file.size > 10 * 1024 * 1024) { // 10MB limit
+              Alert.alert('Error', 'Image size must be less than 10MB');
+              return;
+            }
+            
+            const newFile = {
+              uri: URL.createObjectURL(file),
+              name: file.name || `image_${Date.now()}.jpg`,
+              type: file.type || 'image/jpeg',
+              size: file.size,
+            };
+            
+            console.log('TeacherAssignments: Adding web image to attachments:', newFile);
+            setAttachedFiles(prev => [...prev, newFile]);
+            Alert.alert('Success', `Image "${newFile.name}" added successfully!`);
+          }
+        };
+        
+        input.click();
+        return;
+      }
       
       // Check if ImagePicker is available
       if (!ImagePicker.launchImageLibraryAsync) {
@@ -165,15 +235,31 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
   };
 
   const showFilePicker = () => {
-    Alert.alert(
-      'Add File',
-      'Choose the type of file you want to upload',
-      [
-        { text: 'Document', onPress: pickDocument },
-        { text: 'Image', onPress: pickImage },
-        { text: 'Cancel', style: 'cancel' }
-      ]
-    );
+    console.log('TeacherAssignments: showFilePicker called');
+    console.log('TeacherAssignments: Platform:', Platform.OS);
+    
+    try {
+      Alert.alert(
+        'Add File',
+        'Choose the type of file you want to upload',
+        [
+          { text: 'Document', onPress: () => {
+            console.log('TeacherAssignments: Document option selected');
+            pickDocument();
+          }},
+          { text: 'Image', onPress: () => {
+            console.log('TeacherAssignments: Image option selected');
+            pickImage();
+          }},
+          { text: 'Cancel', style: 'cancel', onPress: () => {
+            console.log('TeacherAssignments: File picker canceled');
+          }}
+        ]
+      );
+    } catch (error) {
+      console.log('TeacherAssignments: Error in showFilePicker:', error);
+      Alert.alert('Error', `Failed to show file picker: ${error.message}`);
+    }
   };
 
   const handleCreateAssignment = async () => {
@@ -493,6 +579,17 @@ const TeacherAssignmentsScreen = ({ navigation }) => {
                   }}
                 >
                   <Text style={styles.addFileButtonText}>Debug</Text>
+                </TouchableOpacity>
+                
+                {/* Test button to verify button functionality */}
+                <TouchableOpacity
+                  style={[styles.addFileButton, { backgroundColor: '#10b981', marginLeft: 8 }]}
+                  onPress={() => {
+                    console.log('Test button clicked - button functionality works');
+                    Alert.alert('Test', 'Button click is working! This means the issue is with the file picker functions.');
+                  }}
+                >
+                  <Text style={styles.addFileButtonText}>Test</Text>
                 </TouchableOpacity>
               </View>
               
