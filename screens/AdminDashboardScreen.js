@@ -22,18 +22,7 @@ const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
 
 const AdminDashboardScreen = ({ navigation }) => {
-  const [stats, setStats] = useState({
-    totalStudents: 1247,
-    totalTeachers: 89,
-    totalClasses: 156,
-    totalCourses: 45,
-    totalParents: 892,
-    activeEnrollments: 1180,
-    attendanceRate: 94.2,
-    averageGPA: 3.42,
-    newEnrollments: 23,
-    pendingApprovals: 7,
-  });
+  const [stats, setStats] = useState(null);
   const [loading, setLoading] = useState(false);
   const [refreshing, setRefreshing] = useState(false);
   const [searchQuery, setSearchQuery] = useState('');
@@ -74,48 +63,37 @@ const AdminDashboardScreen = ({ navigation }) => {
     ]).start();
   };
 
-  const fetchAdminStats = async () => {
+  const fetchAdminStats = async (rangeOverride = null) => {
     try {
       setLoading(true);
       console.log('Fetching admin dashboard stats...');
       
-      // Simulate API call with enhanced data
-      const response = await apiClient.getAdminDashboardStats();
-      if (response.success) {
-        setStats({
-          ...stats,
-          ...response.data.stats,
-        });
+      const rangeToUse = rangeOverride || selectedTimeRange;
+      const response = await apiClient.getAdminDashboardStats({ range: rangeToUse, realtime: 'true' });
+      console.log('Admin dashboard stats response:', JSON.stringify(response));
+      // Be robust to different backend response shapes
+      const raw = response?.data?.stats || response?.stats || response?.data || null;
+      if (raw) {
+        const safeNumber = (v) => (typeof v === 'number' ? v : Number(v))
+        const normalized = {
+          totalStudents: safeNumber(raw.totalStudents ?? raw.total_students ?? raw.students_total ?? 0) || 0,
+          totalTeachers: safeNumber(raw.totalTeachers ?? raw.total_teachers ?? raw.teachers_total ?? 0) || 0,
+          totalClasses: safeNumber(raw.totalClasses ?? raw.total_classes ?? raw.classes_total ?? 0) || 0,
+          totalCourses: safeNumber(raw.totalCourses ?? raw.total_courses ?? raw.courses_total ?? 0) || 0,
+          totalParents: safeNumber(raw.totalParents ?? raw.total_parents ?? raw.parents_total ?? 0) || 0,
+          activeEnrollments: safeNumber(raw.activeEnrollments ?? raw.active_enrollments ?? 0) || 0,
+          attendanceRate: safeNumber(raw.attendanceRate ?? raw.attendance_rate ?? 0) || 0,
+          averageGPA: safeNumber(raw.averageGPA ?? raw.average_gpa ?? 0) || 0,
+          newEnrollments: safeNumber(raw.newEnrollments ?? raw.new_enrollments ?? 0) || 0,
+          pendingApprovals: safeNumber(raw.pendingApprovals ?? raw.pending_approvals ?? 0) || 0,
+        };
+        setStats(normalized);
       } else {
-        // Use enhanced mock data
-        setStats({
-          totalStudents: 1247,
-          totalTeachers: 89,
-          totalClasses: 156,
-          totalCourses: 45,
-          totalParents: 892,
-          activeEnrollments: 1180,
-          attendanceRate: 94.2,
-          averageGPA: 3.42,
-          newEnrollments: 23,
-          pendingApprovals: 7,
-        });
+        setStats(null);
       }
     } catch (error) {
       console.error('Error fetching admin stats:', error);
-      // Use mock data as fallback
-      setStats({
-        totalStudents: 1247,
-        totalTeachers: 89,
-        totalClasses: 156,
-        totalCourses: 45,
-        totalParents: 892,
-        activeEnrollments: 1180,
-        attendanceRate: 94.2,
-        averageGPA: 3.42,
-        newEnrollments: 23,
-        pendingApprovals: 7,
-      });
+      setStats(null);
     } finally {
       setLoading(false);
     }
@@ -211,7 +189,7 @@ const AdminDashboardScreen = ({ navigation }) => {
           <Text style={styles.metricIcon}>{icon}</Text>
           <Text style={styles.metricTitle}>{title}</Text>
         </View>
-        <Text style={[styles.metricValue, { color }]}>{value}</Text>
+        <Text style={[styles.metricValue, { color }]} numberOfLines={1} adjustsFontSizeToFit>{value}</Text>
         {change && (
           <Text style={[styles.metricChange, { color: change > 0 ? '#10b981' : '#ef4444' }]}>
             {change > 0 ? '↗' : '↘'} {Math.abs(change)}%
@@ -260,7 +238,10 @@ const AdminDashboardScreen = ({ navigation }) => {
             styles.timeRangeButton,
             selectedTimeRange === range && styles.timeRangeButtonActive
           ]}
-          onPress={() => setSelectedTimeRange(range)}
+          onPress={async () => {
+            setSelectedTimeRange(range);
+            await fetchAdminStats(range);
+          }}
         >
           <Text style={[
             styles.timeRangeText,
@@ -351,56 +332,54 @@ const AdminDashboardScreen = ({ navigation }) => {
         {/* Key Metrics */}
         <View style={styles.metricsSection}>
           <Text style={styles.sectionTitle}>📊 Key Metrics</Text>
-          <View style={styles.metricsGrid}>
-            <MetricCard 
-              title="Total Students" 
-              value={stats.totalStudents.toLocaleString()} 
-              change={12.5}
-              icon="👥"
-              color="#3b82f6"
-              onPress={() => navigation.navigate('AdminUserManagement', { type: 'students' })}
-            />
-            <MetricCard 
-              title="Active Teachers" 
-              value={stats.totalTeachers} 
-              change={8.2}
-              icon="👨‍🏫"
-              color="#10b981"
-              onPress={() => navigation.navigate('AdminUserManagement', { type: 'teachers' })}
-            />
-            <MetricCard 
-              title="Attendance Rate" 
-              value={`${stats.attendanceRate}%`} 
-              change={-1.2}
-              icon="📅"
-              color="#f59e0b"
-              onPress={() => navigation.navigate('AdminAttendanceAudit')}
-            />
-            <MetricCard 
-              title="Average GPA" 
-              value={stats.averageGPA} 
-              change={2.1}
-              icon="📈"
-              color="#8b5cf6"
-              onPress={() => navigation.navigate('AdminReports')}
-            />
-            <MetricCard 
-              title="New Enrollments" 
-              value={stats.newEnrollments} 
-              change={15.3}
-              icon="🆕"
-              color="#06b6d4"
-              onPress={() => navigation.navigate('AdminUserManagement', { type: 'students' })}
-            />
-            <MetricCard 
-              title="Pending Approvals" 
-              value={stats.pendingApprovals} 
-              change={-5.8}
-              icon="⏳"
-              color="#ef4444"
-              onPress={() => Alert.alert('Pending Approvals', 'Review pending applications')}
-            />
-          </View>
+          {stats ? (
+            <View style={styles.metricsGrid}>
+              <MetricCard 
+                title="Total Students" 
+                value={(stats.totalStudents || 0).toLocaleString()} 
+                icon="👥"
+                color="#3b82f6"
+                onPress={() => navigation.navigate('AdminUserManagement', { type: 'students' })}
+              />
+              <MetricCard 
+                title="Active Teachers" 
+                value={stats.totalTeachers ?? 0} 
+                icon="👨‍🏫"
+                color="#10b981"
+                onPress={() => navigation.navigate('AdminUserManagement', { type: 'teachers' })}
+              />
+              <MetricCard 
+                title="Attendance Rate" 
+                value={`${stats.attendanceRate ?? 0}%`} 
+                icon="📅"
+                color="#f59e0b"
+                onPress={() => navigation.navigate('AdminAttendanceAudit')}
+              />
+              <MetricCard 
+                title="Average GPA" 
+                value={stats.averageGPA ?? 0} 
+                icon="📈"
+                color="#8b5cf6"
+                onPress={() => navigation.navigate('AdminReports')}
+              />
+              <MetricCard 
+                title="New Enrollments" 
+                value={stats.newEnrollments ?? 0} 
+                icon="🆕"
+                color="#06b6d4"
+                onPress={() => navigation.navigate('AdminUserManagement', { type: 'students' })}
+              />
+              <MetricCard 
+                title="Pending Approvals" 
+                value={stats.pendingApprovals ?? 0} 
+                icon="⏳"
+                color="#ef4444"
+                onPress={() => Alert.alert('Pending Approvals', 'Review pending applications')}
+              />
+            </View>
+          ) : (
+            <Text style={{ color: '#6b7280' }}>No real-time data available. Pull to refresh.</Text>
+          )}
         </View>
 
         {/* Quick Actions */}
@@ -429,8 +408,8 @@ const AdminDashboardScreen = ({ navigation }) => {
               onPress={() => handleQuickAction('createClass')}
             />
             <QuickActionCard
-              title="Manage Sections"
-              subtitle="Organize by sections"
+              title="Department Management"
+              subtitle="Organize by departments"
               icon="📋"
               color="#fff3e0"
               onPress={() => handleQuickAction('manageSections')}
@@ -709,9 +688,10 @@ const styles = StyleSheet.create({
     flexWrap: 'wrap',
     marginHorizontal: -8,
     marginTop: -20,
+    justifyContent: 'space-between',
   },
   metricCard: {
-    width: (width - 56) / 2,
+    width: '48%',
     backgroundColor: 'white',
     borderRadius: 20,
     padding: 20,

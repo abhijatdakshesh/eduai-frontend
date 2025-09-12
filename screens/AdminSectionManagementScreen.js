@@ -542,9 +542,9 @@ const AdminSectionManagementScreen = ({ navigation }) => {
       {/* Header */}
       <View style={styles.header}>
         <View style={styles.headerContent}>
-          <Text style={styles.headerTitle}>Section Management</Text>
+          <Text style={styles.headerTitle}>Department Management</Text>
           <Text style={styles.headerSubtitle}>
-            Organize students and teachers by sections
+            Organize students and teachers by departments
           </Text>
         </View>
       </View>

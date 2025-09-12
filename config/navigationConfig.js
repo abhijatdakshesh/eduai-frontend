@@ -214,7 +214,7 @@ export const adminScreens = (theme) => [
   {
     name: 'AdminSectionManagement',
     component: AdminSectionManagementScreen,
-    options: createDrawerScreenOptions('Section Management', '📋', theme),
+    options: createDrawerScreenOptions('Department Management', '📋', theme),
   },
   {
     name: 'AdminCourseManagement',

@@ -374,9 +374,17 @@ class ApiClient {
   }
 
   // Admin Dashboard & Analytics APIs
-  async getAdminDashboardStats() {
+  async getAdminDashboardStats(params = {}) {
     try {
-      const response = await this.api.get('/admin/dashboard/stats');
+      const query = new URLSearchParams();
+      Object.keys(params || {}).forEach(key => {
+        if (params[key] !== undefined && params[key] !== null && params[key] !== '') {
+          query.append(key, String(params[key]));
+        }
+      });
+      const qs = query.toString();
+      const endpoint = `/admin/dashboard/stats${qs ? `?${qs}` : ''}`;
+      const response = await this.api.get(endpoint);
       return response.data;
     } catch (error) {
       throw this.handleError(error);
