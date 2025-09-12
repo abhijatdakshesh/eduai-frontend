@@ -110,8 +110,24 @@ const TeacherClassesScreen = ({ navigation }) => {
     <View style={styles.container}>
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Classes</Text>
-        <Text style={styles.headerSubtitle}>Select a class to mark attendance</Text>
+        <Text style={styles.headerSubtitle}>Manage your classes and take attendance</Text>
       </View>
+      
+      {/* Take Attendance Button */}
+      <View style={styles.attendanceSection}>
+        <TouchableOpacity 
+          style={styles.takeAttendanceBtn} 
+          onPress={() => navigation.navigate('TeacherAttendanceFlow')}
+        >
+          <Text style={styles.takeAttendanceBtnIcon}>📋</Text>
+          <View style={styles.takeAttendanceBtnContent}>
+            <Text style={styles.takeAttendanceBtnTitle}>Take Attendance</Text>
+            <Text style={styles.takeAttendanceBtnSubtitle}>Department → Section → Time → Mark</Text>
+          </View>
+          <Text style={styles.takeAttendanceBtnArrow}>→</Text>
+        </TouchableOpacity>
+      </View>
+
       <FlatList
         data={classes}
         keyExtractor={(i) => String(i.id)}
@@ -134,6 +150,24 @@ const styles = StyleSheet.create({
   },
   headerTitle: { color: 'white', fontWeight: 'bold', fontSize: isIOS ? 28 : 24, marginBottom: 4 },
   headerSubtitle: { color: '#e3f2fd', fontSize: isIOS ? 16 : 14 },
+  attendanceSection: { paddingHorizontal: isIOS ? 20 : 16, marginTop: 16 },
+  takeAttendanceBtn: {
+    backgroundColor: '#1a237e',
+    borderRadius: 16,
+    padding: 20,
+    flexDirection: 'row',
+    alignItems: 'center',
+    shadowColor: '#1a237e',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
+    elevation: 6,
+  },
+  takeAttendanceBtnIcon: { fontSize: 32, marginRight: 16 },
+  takeAttendanceBtnContent: { flex: 1 },
+  takeAttendanceBtnTitle: { color: 'white', fontWeight: '700', fontSize: 18, marginBottom: 4 },
+  takeAttendanceBtnSubtitle: { color: 'rgba(255, 255, 255, 0.8)', fontSize: 14 },
+  takeAttendanceBtnArrow: { color: 'white', fontSize: 24, fontWeight: 'bold' },
   classCard: {
     backgroundColor: 'white',
     borderRadius: 16,

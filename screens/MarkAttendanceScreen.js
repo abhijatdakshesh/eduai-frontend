@@ -10,11 +10,21 @@ const isIOS = Platform.OS === 'ios';
 const statusOptions = ['present', 'absent', 'late'];
 
 const MarkAttendanceScreen = ({ route, navigation }) => {
-  const { classId, className } = route.params || {};
-  const [date, setDate] = useState(new Date().toISOString().slice(0, 10));
-  const [students, setStudents] = useState([]);
+  const { 
+    classId, 
+    className, 
+    department, 
+    section, 
+    timeSlot, 
+    date: initialDate, 
+    students: initialStudents, 
+    flowContext 
+  } = route.params || {};
+  
+  const [date, setDate] = useState(initialDate || new Date().toISOString().slice(0, 10));
+  const [students, setStudents] = useState(initialStudents || []);
   const [marks, setMarks] = useState({}); // studentKey -> { status, notes }
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(!flowContext); // Don't load if students are already provided
   const [saving, setSaving] = useState(false);
   const [dirty, setDirty] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
@@ -177,7 +187,23 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
           };
         })
         .filter(Boolean);
-      const resp = await apiClient.saveTeacherClassAttendance(classId, { date, entries });
+
+      let resp;
+      if (flowContext && department && section && timeSlot) {
+        // Use the new department/section/time-based API
+        const payload = {
+          department_id: department.id,
+          section: section,
+          time_slot: timeSlot.id,
+          date: date,
+          entries: entries
+        };
+        resp = await apiClient.saveDepartmentSectionAttendance(payload);
+      } else {
+        // Use the existing class-based API
+        resp = await apiClient.saveTeacherClassAttendance(classId, { date, entries });
+      }
+
       if (resp?.success) {
         setDirty(false);
         // Show both a banner and a native/web alert for clarity
@@ -579,13 +605,28 @@ Teacher`;
         end={{ x: 1, y: 1 }}
       >
         <View style={styles.headerContent}>
-        <Text style={styles.headerTitle}>{className || 'Mark Attendance'}</Text>
-          <Text style={styles.headerSubtitle}>📅 {new Date(date).toLocaleDateString('en-US', { 
-            weekday: 'long', 
-            year: 'numeric', 
-            month: 'long', 
-            day: 'numeric' 
-          })}</Text>
+        <Text style={styles.headerTitle}>
+          {flowContext && department && section && timeSlot 
+            ? `${department.name} - Section ${section}` 
+            : (className || 'Mark Attendance')
+          }
+        </Text>
+          <Text style={styles.headerSubtitle}>
+            {flowContext && timeSlot 
+              ? `📅 ${new Date(date).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })} • ${timeSlot.label}`
+              : `📅 ${new Date(date).toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}`
+            }
+          </Text>
       </View>
       </LinearGradient>
 

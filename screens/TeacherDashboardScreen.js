@@ -165,12 +165,20 @@ const TeacherDashboardScreen = ({ navigation }) => {
       <View style={styles.actions}>
         <Text style={styles.sectionCaption}>Quick actions</Text>
         <View style={styles.actionsRow}>
-          <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('TeacherMarkAttendance')}>
+          <TouchableOpacity style={[styles.quickAction, styles.primaryAction]} onPress={() => navigation.navigate('TeacherAttendanceFlow')}>
             <View style={[styles.iconCircle, { backgroundColor: '#EEF2FF' }]}>
+              <Text style={styles.quickActionEmoji}>📋</Text>
+            </View>
+            <Text style={[styles.quickActionText, styles.primaryActionText]}>Take Attendance</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('TeacherMarkAttendance')}>
+            <View style={[styles.iconCircle, { backgroundColor: '#F0F9FF' }]}>
               <Text style={styles.quickActionEmoji}>✅</Text>
             </View>
-            <Text style={styles.quickActionText}>Mark Attendance</Text>
+            <Text style={styles.quickActionText}>Quick Mark</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.actionsRow}>
           <TouchableOpacity style={styles.quickAction} onPress={() => navigation.navigate('TeacherAnnouncements')}>
             <View style={[styles.iconCircle, { backgroundColor: '#ECFEFF' }]}>
               <Text style={styles.quickActionEmoji}>📣</Text>
@@ -237,8 +245,8 @@ const TeacherDashboardScreen = ({ navigation }) => {
                     <Text style={styles.classTitle} numberOfLines={1}>{item?.name || item?.title || 'Unnamed Class'}</Text>
                     <Text style={styles.classMeta}>{(item?.subject || item?.course || '—')} • {(item?.enrolled_students ?? 0)} students</Text>
                   </View>
-                  <TouchableOpacity style={styles.classBtn} onPress={() => navigation.navigate('TeacherMarkAttendance', { classId: item?.id })}>
-                    <Text style={styles.classBtnText}>Mark</Text>
+                  <TouchableOpacity style={styles.classBtn} onPress={() => navigation.navigate('TeacherAttendanceFlow')}>
+                    <Text style={styles.classBtnText}>Take Attendance</Text>
                   </TouchableOpacity>
                 </View>
               )}
@@ -270,9 +278,11 @@ const styles = StyleSheet.create({
   sectionCaption: { color: '#64748b', marginBottom: 8, fontSize: 12, textTransform: 'uppercase', letterSpacing: 1 },
   actionsRow: { flexDirection: 'row', gap: 12 },
   quickAction: { flex: 1, backgroundColor: '#ffffff', borderWidth: 1, borderColor: '#e2e8f0', borderRadius: 14, paddingVertical: 14, paddingHorizontal: 12, alignItems: 'center', shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
+  primaryAction: { backgroundColor: '#1a237e', borderColor: '#1a237e', shadowColor: '#1a237e', shadowOpacity: 0.2, shadowRadius: 8, elevation: 4 },
   iconCircle: { width: 42, height: 42, borderRadius: 32, alignItems: 'center', justifyContent: 'center', marginBottom: 8 },
   quickActionEmoji: { fontSize: 20 },
   quickActionText: { color: '#374151', fontWeight: '600', fontSize: 13, textAlign: 'center' },
+  primaryActionText: { color: '#ffffff', fontWeight: '700' },
   lists: { paddingHorizontal: isIOS ? 20 : 16, marginTop: 18 },
   section: { backgroundColor: '#ffffff', borderColor: '#e2e8f0', borderWidth: 1, borderRadius: 16, padding: 16, marginBottom: 16, shadowColor: '#000', shadowOffset: { width: 0, height: 2 }, shadowOpacity: 0.05, shadowRadius: 4, elevation: 2 },
   sectionHeader: { flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 },

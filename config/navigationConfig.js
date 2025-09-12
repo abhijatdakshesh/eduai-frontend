@@ -60,6 +60,7 @@ import TeacherGradebookScreen from '../screens/TeacherGradebookScreen';
 import TeacherUploadResultsScreen from '../screens/TeacherUploadResultsScreen';
 import TeacherAnnouncementsScreen from '../screens/TeacherAnnouncementsScreen';
 import TeacherProfileScreen from '../screens/TeacherProfileScreen';
+import TeacherAttendanceFlowScreen from '../screens/TeacherAttendanceFlowScreen';
 
 // Parent Screens
 import ParentLoginScreen from '../screens/ParentLoginScreen';
@@ -256,6 +257,11 @@ export const teacherScreens = (theme) => [
     options: createDrawerScreenOptions('Dashboard', '📊', theme),
   },
   {
+    name: 'TeacherAttendanceFlow',
+    component: TeacherAttendanceFlowScreen,
+    options: createDrawerScreenOptions('Take Attendance', '📋', theme),
+  },
+  {
     name: 'TeacherClasses',
     component: TeacherClassesScreen,
     options: createDrawerScreenOptions('My Classes', '🏫', theme),
@@ -268,7 +274,7 @@ export const teacherScreens = (theme) => [
   {
     name: 'TeacherMarkAttendance',
     component: MarkAttendanceScreen,
-    options: createDrawerScreenOptions('Mark Attendance', '✅', theme),
+    options: createDrawerScreenOptions('Quick Mark', '✅', theme),
   },
   {
     name: 'TeacherSummary',
@@ -399,6 +405,10 @@ export const teacherStackScreens = [
   {
     name: 'TeacherAssignmentDetail',
     component: TeacherAssignmentDetailScreen,
+  },
+  {
+    name: 'MarkAttendance',
+    component: MarkAttendanceScreen,
   },
 ];
 

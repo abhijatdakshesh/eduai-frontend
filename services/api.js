@@ -2035,6 +2035,67 @@ class ApiClient {
     }
   }
 
+  // Teacher Attendance Flow APIs
+  async getSectionsByDepartment(departmentId) {
+    try {
+      console.log('API: Fetching sections by department...');
+      const response = await this.api.get(`/teacher/departments/${departmentId}/sections`);
+      console.log('API: Sections fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Sections fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getStudentsByDepartmentSectionTime(departmentId, section, timeSlot, date) {
+    try {
+      console.log('API: Fetching students by department, section, and time...');
+      const query = new URLSearchParams({
+        department_id: departmentId,
+        section: section,
+        time_slot: timeSlot,
+        date: date
+      });
+      const response = await this.api.get(`/teacher/attendance/students?${query.toString()}`);
+      console.log('API: Students fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Students fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async saveDepartmentSectionAttendance(payload) {
+    try {
+      console.log('API: Saving department section attendance...');
+      const response = await this.api.post('/teacher/attendance/mark', payload);
+      console.log('API: Attendance saved successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Attendance save error:', error);
+      throw this.handleError(error);
+    }
+  }
+
+  async getDepartmentSectionAttendance(departmentId, section, timeSlot, date) {
+    try {
+      console.log('API: Fetching department section attendance...');
+      const query = new URLSearchParams({
+        department_id: departmentId,
+        section: section,
+        time_slot: timeSlot,
+        date: date
+      });
+      const response = await this.api.get(`/teacher/attendance/records?${query.toString()}`);
+      console.log('API: Attendance records fetched successfully');
+      return response.data;
+    } catch (error) {
+      console.log('API: Attendance records fetch error:', error);
+      throw this.handleError(error);
+    }
+  }
+
   // Announcements APIs
   // Teacher
   async createAnnouncement(payload) {
