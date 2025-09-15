@@ -147,12 +147,18 @@ class ApiClient {
       });
 
       if (response.data.success) {
-        const { access_token, refresh_token } = response.data.data.tokens;
-        await this.setTokens(access_token, refresh_token);
-        console.log('API: Token refresh successful');
-        return true;
+        // Handle different response formats
+        const tokens = response.data.data?.tokens || response.data.data || response.data.tokens;
+        if (tokens && tokens.access_token && tokens.refresh_token) {
+          await this.setTokens(tokens.access_token, tokens.refresh_token);
+          console.log('API: Token refresh successful');
+          return true;
+        } else {
+          console.log('API: Token refresh failed - invalid token format:', response.data);
+          return false;
+        }
       } else {
-        console.log('API: Token refresh failed - invalid response');
+        console.log('API: Token refresh failed - invalid response:', response.data);
         return false;
       }
     } catch (error) {
@@ -162,8 +168,10 @@ class ApiClient {
   }
 
   async setTokens(accessToken, refreshToken) {
+    console.log('API: Setting tokens - Access token length:', accessToken?.length, 'Refresh token length:', refreshToken?.length);
     await AsyncStorage.setItem('accessToken', accessToken);
     await AsyncStorage.setItem('refreshToken', refreshToken);
+    console.log('API: Tokens set successfully');
   }
 
   async getToken() {
@@ -177,8 +185,10 @@ class ApiClient {
   }
 
   async clearTokens() {
+    console.log('API: Clearing tokens...');
     await AsyncStorage.removeItem('accessToken');
     await AsyncStorage.removeItem('refreshToken');
+    console.log('API: Tokens cleared');
   }
 
   async isTokenExpired(token) {
@@ -197,6 +207,9 @@ class ApiClient {
 
   async ensureValidToken() {
     const accessToken = await AsyncStorage.getItem('accessToken');
+    const refreshToken = await AsyncStorage.getItem('refreshToken');
+    
+    console.log('API: Token status check - Access token exists:', !!accessToken, 'Refresh token exists:', !!refreshToken);
     
     if (!accessToken) {
       console.log('API: No access token found');
@@ -209,6 +222,7 @@ class ApiClient {
       return await this.refreshToken();
     }
 
+    console.log('API: Access token is valid');
     return true;
   }
 
@@ -1144,6 +1158,63 @@ class ApiClient {
     }
   }
 
+  // Assessments & Marks APIs (Teacher)
+  async createAssessment(payload) {
+    try {
+      const response = await this.api.post('/assessments', payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async updateAssessment(assessmentId, payload) {
+    try {
+      const response = await this.api.put(`/assessments/${encodeURIComponent(assessmentId)}`, payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async bulkUpsertMarks(assessmentId, rows = [], idempotencyKey) {
+    try {
+      const payload = { rows };
+      if (idempotencyKey) payload.idempotencyKey = idempotencyKey;
+      const response = await this.api.post(`/assessments/${encodeURIComponent(assessmentId)}/marks/bulk`, payload);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async generateAssessmentReport(assessmentId, options = {}) {
+    try {
+      const response = await this.api.post(`/assessments/${encodeURIComponent(assessmentId)}/report`, options);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async publishAssessment(assessmentId, body = {}) {
+    try {
+      const response = await this.api.post(`/assessments/${encodeURIComponent(assessmentId)}/publish`, body);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
+  async notifyAssessment(assessmentId, body = {}) {
+    try {
+      const response = await this.api.post(`/assessments/${encodeURIComponent(assessmentId)}/notify`, body);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Courses APIs
   async getCourses(filters = {}) {
     try {
@@ -2064,12 +2135,37 @@ class ApiClient {
   // Teacher Attendance Flow APIs
   async getSectionsByDepartment(departmentId) {
     try {
-      console.log('API: Fetching sections by department...');
-      const response = await this.api.get(`/teacher/departments/${departmentId}/sections`);
-      console.log('API: Sections fetched successfully');
+      console.log('API: Fetching teacher classes (sections) by department...');
+      // Use teacher classes instead of admin sections endpoint
+      const response = await this.api.get('/teacher/classes');
+      console.log('API: Teacher classes fetched successfully');
+      
+      // Filter classes by department if needed, or return all classes
+      if (response.data?.success && response.data?.data?.classes) {
+        const classes = response.data.data.classes;
+        // Map classes to sections format for compatibility
+        const sections = classes.map(cls => ({
+          id: cls.id,
+          name: cls.name,
+          department_id: departmentId, // Use the requested department ID
+          grade_level: cls.grade_level,
+          academic_year: cls.academic_year,
+          max_students: cls.max_students,
+          current_students: cls.current_students,
+          status: cls.status
+        }));
+        
+        return {
+          success: true,
+          data: {
+            sections: sections
+          }
+        };
+      }
+      
       return response.data;
     } catch (error) {
-      console.log('API: Sections fetch error:', error);
+      console.log('API: Teacher classes fetch error:', error);
       throw this.handleError(error);
     }
   }
@@ -2077,15 +2173,24 @@ class ApiClient {
   async getStudentsByDepartmentSectionTime(departmentId, section, timeSlot, date) {
     try {
       console.log('API: Fetching students by department, section, and time...');
-      const query = new URLSearchParams({
-        department_id: departmentId,
-        section: section,
-        time_slot: timeSlot,
-        date: date
-      });
-      const response = await this.api.get(`/teacher/attendance/students?${query.toString()}`);
+      
+      // First, get teacher classes
+      const classesResponse = await this.api.get('/teacher/classes');
+      
+      if (!classesResponse.data?.success || !classesResponse.data?.data?.classes) {
+        throw new Error('No classes found for teacher');
+      }
+      
+      // Find the class that matches the section name
+      const targetClass = classesResponse.data.data.classes.find(cls => cls.name === section);
+      if (!targetClass) {
+        throw new Error(`Class ${section} not found`);
+      }
+      
+      // Get students for the class using teacher endpoint
+      const studentsResponse = await this.api.get(`/teacher/classes/${targetClass.id}/students`);
       console.log('API: Students fetched successfully');
-      return response.data;
+      return studentsResponse.data;
     } catch (error) {
       console.log('API: Students fetch error:', error);
       throw this.handleError(error);
@@ -2095,7 +2200,46 @@ class ApiClient {
   async saveDepartmentSectionAttendance(payload) {
     try {
       console.log('API: Saving department section attendance...');
-      const response = await this.api.post('/teacher/attendance/mark', payload);
+      
+      // Extract classId from payload - it should be in the section field
+      let classId = payload.classId || payload.class_id;
+      
+      // If no classId in payload, try to find it from the section name
+      if (!classId && payload.section) {
+        const classesResponse = await this.api.get('/teacher/classes');
+        if (classesResponse.data?.success && classesResponse.data?.data?.classes) {
+          const targetClass = classesResponse.data.data.classes.find(cls => cls.name === payload.section);
+          if (targetClass) {
+            classId = targetClass.id;
+          }
+        }
+      }
+      
+      if (!classId) {
+        throw new Error('Class ID is required for attendance marking');
+      }
+      
+      // Build request body matching backend contract
+      const body = {
+        date: payload.date,
+        time_slot: payload.time_slot,
+        entries: (payload.entries || []).map(e => ({
+          student_id: e.student_id || e.studentId,
+          status: e.status,
+          notes: e.notes || ''
+        }))
+      };
+
+      // Add Idempotency-Key header (skip on web to avoid CORS preflight blocks)
+      const idempotencyKey = (typeof global !== 'undefined' && global.crypto?.randomUUID)
+        ? global.crypto.randomUUID()
+        : (typeof crypto !== 'undefined' && crypto.randomUUID ? crypto.randomUUID() : String(Date.now()));
+      const isWeb = typeof window !== 'undefined' && typeof document !== 'undefined';
+
+      // Use the existing class-based attendance endpoint
+      const response = await this.api.post(`/teacher/classes/${classId}/attendance`, body, {
+        headers: isWeb ? {} : { 'Idempotency-Key': idempotencyKey }
+      });
       console.log('API: Attendance saved successfully');
       return response.data;
     } catch (error) {
@@ -2107,13 +2251,22 @@ class ApiClient {
   async getDepartmentSectionAttendance(departmentId, section, timeSlot, date) {
     try {
       console.log('API: Fetching department section attendance...');
-      const query = new URLSearchParams({
-        department_id: departmentId,
-        section: section,
-        time_slot: timeSlot,
-        date: date
-      });
-      const response = await this.api.get(`/teacher/attendance/records?${query.toString()}`);
+      
+      // First, get teacher classes
+      const classesResponse = await this.api.get('/teacher/classes');
+      
+      if (!classesResponse.data?.success || !classesResponse.data?.data?.classes) {
+        throw new Error('No classes found for teacher');
+      }
+      
+      // Find the class that matches the section name
+      const targetClass = classesResponse.data.data.classes.find(cls => cls.name === section);
+      if (!targetClass) {
+        throw new Error(`Class ${section} not found`);
+      }
+      
+      // Use the existing class-based attendance endpoint
+      const response = await this.api.get(`/teacher/classes/${targetClass.id}/attendance?date=${encodeURIComponent(date)}`);
       console.log('API: Attendance records fetched successfully');
       return response.data;
     } catch (error) {
@@ -2220,6 +2373,8 @@ class ApiClient {
       const { status, data } = error.response;
       
       switch (status) {
+        case 422:
+          return Object.assign(new Error(data.message || 'Validation error'), { validation: data?.data?.errors || data?.errors || [] });
         case 400:
           return new Error(data.message || 'Invalid request');
         case 401:

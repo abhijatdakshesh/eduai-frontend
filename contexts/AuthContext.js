@@ -69,10 +69,11 @@ export const AuthProvider = ({ children }) => {
     setIsAuthenticated(false);
     
     try {
-      await AsyncStorage.clear(); // Clear all storage to ensure complete logout
-      console.log('AsyncStorage cleared successfully');
+      // Only clear auth-related items, not all storage
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user', 'deviceId']);
+      console.log('Auth-related AsyncStorage items cleared successfully');
     } catch (error) {
-      console.log('Error clearing AsyncStorage:', error);
+      console.log('Error clearing auth AsyncStorage items:', error);
     }
     
     console.log('Authentication state cleared - user should be null, isAuthenticated should be false');
@@ -156,12 +157,12 @@ export const AuthProvider = ({ children }) => {
   const logout = async (logoutAllSessions = false) => {
     console.log('Logout function called');
     
-    // Clear all stored data first
+    // Clear auth-related data first
     try {
-      await AsyncStorage.clear();
-      console.log('AsyncStorage cleared');
+      await AsyncStorage.multiRemove(['accessToken', 'refreshToken', 'user', 'deviceId']);
+      console.log('Auth-related AsyncStorage items cleared');
     } catch (error) {
-      console.log('Error clearing AsyncStorage:', error);
+      console.log('Error clearing auth AsyncStorage items:', error);
     }
     
     // Try to call the API logout endpoint (but don't wait for it)

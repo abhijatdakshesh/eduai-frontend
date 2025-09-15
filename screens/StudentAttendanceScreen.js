@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from 'react';
+import React, { useEffect, useState, useCallback } from 'react';
 import { 
   View, 
   Text, 
@@ -24,6 +24,7 @@ import {
   Divider
 } from '../components/UIComponents';
 import { apiClient } from '../services/api';
+import { useRealtimeAttendance } from '../contexts/RealtimeAttendanceContext';
 
 const { width, height } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -37,6 +38,17 @@ const StudentAttendanceScreen = ({ navigation }) => {
   const [summaryTotals, setSummaryTotals] = useState({ present: 0, absent: 0, late: 0, excused: 0 });
   const [searchQuery, setSearchQuery] = useState('');
   const [selectedFilter, setSelectedFilter] = useState('all');
+  const [currentClassId, setCurrentClassId] = useState(null);
+
+  // Real-time attendance context
+  const { 
+    isConnected, 
+    getAttendanceForClass, 
+    subscribeToClass, 
+    unsubscribeFromClass,
+    notifications,
+    removeNotification
+  } = useRealtimeAttendance();
 
   const load = async (isRefresh = false) => {
     try {
@@ -80,6 +92,20 @@ const StudentAttendanceScreen = ({ navigation }) => {
         }, { present: 0, absent: 0, late: 0, excused: 0 });
       }
       setSummaryTotals(totals);
+      
+      // Extract class ID from records for real-time subscription
+      if (recs && recs.length > 0) {
+        const classId = recs[0].classId || recs[0].class_id;
+        if (classId && classId !== currentClassId) {
+          // Unsubscribe from previous class
+          if (currentClassId) {
+            unsubscribeFromClass(currentClassId);
+          }
+          // Subscribe to new class
+          setCurrentClassId(classId);
+          subscribeToClass(classId);
+        }
+      }
     } catch (e) {
       Alert.alert('Error', e?.message || 'Failed to load attendance');
     } finally {
@@ -91,6 +117,15 @@ const StudentAttendanceScreen = ({ navigation }) => {
   useEffect(() => { 
     load(); 
   }, []);
+
+  // Cleanup subscription on unmount
+  useEffect(() => {
+    return () => {
+      if (currentClassId) {
+        unsubscribeFromClass(currentClassId);
+      }
+    };
+  }, [currentClassId, unsubscribeFromClass]);
 
   const onRefresh = () => {
     load(true);
@@ -329,6 +364,22 @@ const StudentAttendanceScreen = ({ navigation }) => {
       <View style={styles.header}>
         <Text style={styles.headerTitle}>My Attendance</Text>
         <Text style={styles.headerSubtitle}>Track your academic presence</Text>
+        
+        {/* Live Status Indicator */}
+        <View style={styles.liveStatusContainer}>
+          <View style={[
+            styles.liveStatusDot, 
+            { backgroundColor: isConnected ? '#10b981' : '#ef4444' }
+          ]} />
+          <Text style={styles.liveStatusText}>
+            {isConnected ? 'Live Updates Active' : 'Offline'}
+          </Text>
+          {notifications.length > 0 && (
+            <View style={styles.notificationBadge}>
+              <Text style={styles.notificationCount}>{notifications.length}</Text>
+            </View>
+          )}
+        </View>
       </View>
 
       <ScrollView 
@@ -438,6 +489,41 @@ const styles = StyleSheet.create({
   headerSubtitle: {
     color: '#e3f2fd',
     fontSize: isIOS ? 16 : 14,
+  },
+  liveStatusContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    marginTop: 12,
+    paddingHorizontal: 12,
+    paddingVertical: 8,
+    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+    borderRadius: 20,
+    alignSelf: 'flex-start',
+  },
+  liveStatusDot: {
+    width: 8,
+    height: 8,
+    borderRadius: 4,
+    marginRight: 8,
+  },
+  liveStatusText: {
+    color: '#ffffff',
+    fontSize: 12,
+    fontWeight: '500',
+  },
+  notificationBadge: {
+    backgroundColor: '#ff4444',
+    borderRadius: 10,
+    minWidth: 20,
+    height: 20,
+    justifyContent: 'center',
+    alignItems: 'center',
+    marginLeft: 8,
+  },
+  notificationCount: {
+    color: '#ffffff',
+    fontSize: 10,
+    fontWeight: 'bold',
   },
   scrollView: {
     flex: 1,

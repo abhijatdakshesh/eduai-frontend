@@ -98,12 +98,23 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
   const saveAttendance = async () => {
     try {
       setSaving(true);
+      // Resolve classId from selected section when possible
+      let classId = null;
+      const sectionObj = (sections || []).find((sec) => {
+        if (typeof sec === 'string') return sec === selectedSection;
+        const name = sec?.name || sec?.section || sec?.title;
+        return name === selectedSection;
+      });
+      if (sectionObj && typeof sectionObj === 'object' && sectionObj.id) {
+        classId = sectionObj.id;
+      }
       const entries = students
         .map((s) => {
           const key = getStudentKey(s);
           if (!key) return null;
           return {
             student_id: key,
+            studentId: key,
             status: marks[key]?.status || 'present',
             notes: marks[key]?.notes || '',
           };
@@ -115,6 +126,7 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
         section: selectedSection,
         time_slot: selectedTimeSlot.id,
         date: selectedDate,
+        classId: classId || undefined,
         entries: entries
       };
       
@@ -128,7 +140,11 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
         Alert.alert('Error', resp?.message || 'Failed to save attendance');
       }
     } catch (e) {
-      Alert.alert('Error', e?.message || 'Failed to save attendance');
+      if (e?.validation && Array.isArray(e.validation) && e.validation.length > 0) {
+        Alert.alert('Validation error', e.validation.map(v => `• ${v}`).join('\n'));
+      } else {
+        Alert.alert('Error', e?.message || 'Failed to save attendance');
+      }
     } finally {
       setSaving(false);
     }
@@ -512,23 +528,32 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
         </View>
       ) : (
         <View style={styles.selectionContainer}>
-          {sections.map((section) => (
-            <TouchableOpacity
-              key={section}
-              style={[
-                styles.selectionCard,
-                selectedSection === section && styles.selectionCardSelected
-              ]}
-              onPress={() => setSelectedSection(section)}
-            >
-              <Text style={[
-                styles.selectionCardText,
-                selectedSection === section && styles.selectionCardTextSelected
-              ]}>
-                Section {section}
-              </Text>
-            </TouchableOpacity>
-          ))}
+          {sections.map((sectionItem) => {
+            const sectionName = typeof sectionItem === 'string' 
+              ? sectionItem 
+              : (sectionItem?.name || sectionItem?.section || sectionItem?.title || '');
+            const sectionKey = typeof sectionItem === 'string' 
+              ? sectionItem 
+              : (String(sectionItem?.id || sectionItem?.name || sectionName));
+
+            return (
+              <TouchableOpacity
+                key={sectionKey}
+                style={[
+                  styles.selectionCard,
+                  selectedSection === sectionName && styles.selectionCardSelected
+                ]}
+                onPress={() => setSelectedSection(sectionName)}
+              >
+                <Text style={[
+                  styles.selectionCardText,
+                  selectedSection === sectionName && styles.selectionCardTextSelected
+                ]}>
+                  Section {sectionName}
+                </Text>
+              </TouchableOpacity>
+            );
+          })}
         </View>
       )}
     </View>
@@ -595,7 +620,14 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
 
           {/* Student List with Attendance Marking */}
           <View style={styles.studentListContainer}>
-            {students.map((student) => renderStudentCard(student))}
+            {students.map((student) => {
+              const key = getStudentKey(student) || String(student?.id || student?.student_id || Math.random());
+              return (
+                <React.Fragment key={key}>
+                  {renderStudentCard(student)}
+                </React.Fragment>
+              );
+            })}
           </View>
         </View>
       )}

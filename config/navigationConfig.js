@@ -51,13 +51,14 @@ import TeacherClassesScreen from '../screens/TeacherClassesScreen';
 import TeacherClassStudentsScreen from '../screens/TeacherClassStudentsScreen';
 import TeacherAssignmentsScreen from '../screens/TeacherAssignmentsScreen';
 import TeacherAssignmentDetailScreen from '../screens/TeacherAssignmentDetailScreen';
-import MarkAttendanceScreen from '../screens/MarkAttendanceScreen';
+// Removed Quick Mark screen
 import TeacherDashboardScreen from '../screens/TeacherDashboardScreen';
 import TeacherLogoutScreen from '../screens/TeacherLogoutScreen';
 import AttendanceSummaryScreen from '../screens/AttendanceSummaryScreen';
 import TeacherQRCheckInScreen from '../screens/TeacherQRCheckInScreen';
 import TeacherGradebookScreen from '../screens/TeacherGradebookScreen';
 import TeacherUploadResultsScreen from '../screens/TeacherUploadResultsScreen';
+import TeacherMarksEntryScreen from '../screens/TeacherMarksEntryScreen';
 import TeacherAnnouncementsScreen from '../screens/TeacherAnnouncementsScreen';
 import TeacherProfileScreen from '../screens/TeacherProfileScreen';
 import TeacherAttendanceFlowScreen from '../screens/TeacherAttendanceFlowScreen';
@@ -272,11 +273,6 @@ export const teacherScreens = (theme) => [
     options: createDrawerScreenOptions('Assignments', '📝', theme),
   },
   {
-    name: 'TeacherMarkAttendance',
-    component: MarkAttendanceScreen,
-    options: createDrawerScreenOptions('Quick Mark', '✅', theme),
-  },
-  {
     name: 'TeacherSummary',
     component: AttendanceSummaryScreen,
     options: createDrawerScreenOptions('Summary', '🧾', theme),
@@ -285,6 +281,11 @@ export const teacherScreens = (theme) => [
     name: 'TeacherUploadResults',
     component: TeacherUploadResultsScreen,
     options: createDrawerScreenOptions('Upload Results', '📊', theme),
+  },
+  {
+    name: 'TeacherMarksEntry',
+    component: TeacherMarksEntryScreen,
+    options: createDrawerScreenOptions('Marks Entry', '🧮', theme),
   },
   {
     name: 'TeacherAnnouncements',
@@ -405,10 +406,6 @@ export const teacherStackScreens = [
   {
     name: 'TeacherAssignmentDetail',
     component: TeacherAssignmentDetailScreen,
-  },
-  {
-    name: 'MarkAttendance',
-    component: MarkAttendanceScreen,
   },
 ];
 

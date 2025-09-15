@@ -357,6 +357,63 @@ export const reportsAPI = {
   },
 };
 
+// Assessments & Marks (Teacher)
+export const assessmentsAPI = {
+  createAssessment: async (payload) => {
+    try {
+      const response = await apiClient.createAssessment(payload);
+      return ApiResponse.success(response.data, 'Assessment created');
+    } catch (error) {
+      return handleApiError(error, 'Failed to create assessment');
+    }
+  },
+
+  updateAssessment: async (assessmentId, payload) => {
+    try {
+      const response = await apiClient.updateAssessment(assessmentId, payload);
+      return ApiResponse.success(response.data, 'Assessment updated');
+    } catch (error) {
+      return handleApiError(error, 'Failed to update assessment');
+    }
+  },
+
+  bulkUpsertMarks: async (assessmentId, rows, idempotencyKey) => {
+    try {
+      const response = await apiClient.bulkUpsertMarks(assessmentId, rows, idempotencyKey);
+      return ApiResponse.success(response.data, 'Marks saved');
+    } catch (error) {
+      return handleApiError(error, 'Failed to save marks');
+    }
+  },
+
+  generateReport: async (assessmentId, options = {}) => {
+    try {
+      const response = await apiClient.generateAssessmentReport(assessmentId, options);
+      return ApiResponse.success(response.data, 'Report generated');
+    } catch (error) {
+      return handleApiError(error, 'Failed to generate report');
+    }
+  },
+
+  publish: async (assessmentId, body = {}) => {
+    try {
+      const response = await apiClient.publishAssessment(assessmentId, body);
+      return ApiResponse.success(response.data, 'Assessment published');
+    } catch (error) {
+      return handleApiError(error, 'Failed to publish assessment');
+    }
+  },
+
+  notify: async (assessmentId, body = {}) => {
+    try {
+      const response = await apiClient.notifyAssessment(assessmentId, body);
+      return ApiResponse.success(response.data, 'Notifications queued');
+    } catch (error) {
+      return handleApiError(error, 'Failed to send notifications');
+    }
+  },
+};
+
 // Utility functions
 export const apiUtils = {
   // Debounce function for search inputs
