@@ -1153,6 +1153,36 @@ class ApiClient {
     }
   }
 
+  // Admin Departments API
+  async getAdminDepartments() {
+    try {
+      console.log('API: Fetching departments...');
+      const response = await this.api.get('/admin/departments');
+      console.log('API: Departments response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Departments error:', error.response?.status, error.response?.data?.message || error.message);
+      throw this.handleError(error);
+    }
+  }
+
+  // Admin Bulk Import Validation API
+  async validateBulkImport(formData) {
+    try {
+      console.log('API: Validating bulk import file...');
+      const response = await this.api.post('/admin/bulk-import/validate', formData, {
+        headers: {
+          'Content-Type': 'multipart/form-data',
+        },
+      });
+      console.log('API: Bulk import validation response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Bulk import validation error:', error.response?.status, error.response?.data?.message || error.message);
+      throw this.handleError(error);
+    }
+  }
+
   // Attendance reasons
   async getAttendanceReasons() {
     try {
