@@ -1,40 +1,10 @@
-import React, { useState, useEffect } from 'react';
-import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ScrollView, TextInput } from 'react-native';
+import React, { useState } from 'react';
+import { View, Text, StyleSheet, TouchableOpacity, Platform, Alert, ScrollView } from 'react-native';
 import { apiClient } from '../services/api';
 
 const AdminBulkImportScreen = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState('unified');
-  const [departments, setDepartments] = useState([]);
-  const [filters, setFilters] = useState({
-    department: '',
-    academic_year: '',
-    semester: ''
-  });
-
-  // Load departments on component mount
-  useEffect(() => {
-    loadDepartments();
-  }, []);
-
-  const loadDepartments = async () => {
-    try {
-      const response = await apiClient.getAdminDepartments();
-      if (response.success && response.data?.departments) {
-        setDepartments(response.data.departments);
-      }
-    } catch (error) {
-      console.log('Failed to load departments:', error.message);
-      // Set some default departments for fallback
-      setDepartments([
-        { id: '1', name: 'Computer Science', code: 'CS' },
-        { id: '2', name: 'Mathematics', code: 'MATH' },
-        { id: '3', name: 'Physics', code: 'PHY' },
-        { id: '4', name: 'Biology', code: 'BIO' },
-        { id: '5', name: 'Chemistry', code: 'CHEM' }
-      ]);
-    }
-  };
 
   const downloadUnifiedTemplate = () => {
     if (Platform.OS !== 'web') {
@@ -204,20 +174,15 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
     try {
       setUploading(true);
       
-      // Use the real backend export endpoint with filters
-      const exportParams = {};
-      if (filters.department) exportParams.department = filters.department;
-      if (filters.academic_year) exportParams.academic_year = filters.academic_year;
-      if (filters.semester) exportParams.semester = filters.semester;
-      
-      console.log('Exporting with filters:', exportParams);
-      const response = await apiClient.exportStudents(exportParams);
+      // Use the real backend export endpoint
+      console.log('Exporting all students...');
+      const response = await apiClient.exportStudents();
       
       if (response.success && response.data) {
         // Create CSV content from the response data
         const students = response.data.students || [];
         if (students.length === 0) {
-          Alert.alert('No Data', 'No students found to export with the current filters.');
+          Alert.alert('No Data', 'No students found to export.');
           return;
         }
 
@@ -292,59 +257,9 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
       <View style={styles.section}>
         <Text style={styles.sectionTitle}>📤 Export Existing Data</Text>
         <Text style={styles.sectionDescription}>
-          Export students with their parent information, department assignments, and academic details to CSV format. Use filters to export specific subsets.
+          Export all students with their parent information, department assignments, and academic details to CSV format.
         </Text>
         
-        {/* Export Filters */}
-        <View style={styles.filtersContainer}>
-          <Text style={styles.filtersTitle}>🔍 Export Filters (Optional)</Text>
-          
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Department:</Text>
-            <View style={styles.filterInputContainer}>
-              <TextInput
-                style={styles.filterInput}
-                value={filters.department}
-                onChangeText={(text) => setFilters(prev => ({ ...prev, department: text }))}
-                placeholder="e.g., Computer Science"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-          </View>
-          
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Academic Year:</Text>
-            <View style={styles.filterInputContainer}>
-              <TextInput
-                style={styles.filterInput}
-                value={filters.academic_year}
-                onChangeText={(text) => setFilters(prev => ({ ...prev, academic_year: text }))}
-                placeholder="e.g., 2024-2025"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-          </View>
-          
-          <View style={styles.filterRow}>
-            <Text style={styles.filterLabel}>Semester:</Text>
-            <View style={styles.filterInputContainer}>
-              <TextInput
-                style={styles.filterInput}
-                value={filters.semester}
-                onChangeText={(text) => setFilters(prev => ({ ...prev, semester: text }))}
-                placeholder="e.g., 1, 2, 3, 4, 5, 6, 7, 8"
-                placeholderTextColor="#9ca3af"
-              />
-            </View>
-          </View>
-          
-          <TouchableOpacity 
-            style={[styles.btn, styles.secondary, styles.clearFiltersBtn]} 
-            onPress={() => setFilters({ department: '', academic_year: '', semester: '' })}
-          >
-            <Text style={styles.btnText}>🗑️ Clear Filters</Text>
-          </TouchableOpacity>
-        </View>
         
         <View style={styles.row}>
           <TouchableOpacity 
@@ -356,18 +271,6 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
           </TouchableOpacity>
         </View>
         
-        {Object.values(filters).some(filter => filter.trim() !== '') && (
-          <View style={styles.activeFiltersBox}>
-            <Text style={styles.activeFiltersText}>
-              🎯 <Text style={styles.bold}>Active Filters:</Text> {
-                Object.entries(filters)
-                  .filter(([_, value]) => value.trim() !== '')
-                  .map(([key, value]) => `${key}: ${value}`)
-                  .join(', ')
-              }
-            </Text>
-          </View>
-        )}
       </View>
 
       {/* Single Unified Template Section */}
@@ -502,15 +405,6 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '600', color: '#1f2937' },
   highlightBox: { backgroundColor: '#f0f9ff', borderLeftWidth: 4, borderLeftColor: '#3b82f6', padding: 12, marginTop: 12, borderRadius: 8 },
   highlightText: { color: '#1e40af', fontSize: 14, lineHeight: 20 },
-  filtersContainer: { backgroundColor: '#f8fafc', padding: 16, borderRadius: 8, marginBottom: 16, borderWidth: 1, borderColor: '#e5e7eb' },
-  filtersTitle: { color: '#374151', fontWeight: '600', fontSize: 16, marginBottom: 12 },
-  filterRow: { flexDirection: 'row', alignItems: 'center', marginBottom: 12 },
-  filterLabel: { color: '#4b5563', fontSize: 14, fontWeight: '500', minWidth: 120 },
-  filterInputContainer: { flex: 1, marginLeft: 8 },
-  filterInput: { backgroundColor: 'white', borderWidth: 1, borderColor: '#d1d5db', borderRadius: 6, paddingHorizontal: 12, paddingVertical: 8, fontSize: 14, color: '#374151' },
-  clearFiltersBtn: { alignSelf: 'flex-start', marginTop: 8 },
-  activeFiltersBox: { backgroundColor: '#fef3c7', borderLeftWidth: 4, borderLeftColor: '#f59e0b', padding: 12, marginTop: 12, borderRadius: 8 },
-  activeFiltersText: { color: '#92400e', fontSize: 14, lineHeight: 20 },
 });
 
 export default AdminBulkImportScreen;
