@@ -24,10 +24,20 @@ class ApiClient {
     // Request interceptor to add auth token
     this.api.interceptors.request.use(
       async (config) => {
-        // Skip token validation for auth endpoints (login, register, refresh, etc.)
-        if (config.url?.includes('/auth/')) {
-          console.log('API: Skipping token validation for auth endpoint:', config.url);
-          // Still add device info headers for auth endpoints
+        // Only skip token validation for truly unauthenticated endpoints
+        const unauthenticatedAuthPaths = [
+          '/auth/login',
+          '/auth/register',
+          '/auth/refresh',
+          '/auth/forgot-password',
+          '/auth/reset-password',
+          '/auth/resend-verification',
+          '/auth/verify-email'
+        ];
+        const isUnauthenticatedAuth = unauthenticatedAuthPaths.some((path) => config.url?.endsWith(path));
+        if (isUnauthenticatedAuth) {
+          console.log('API: Skipping token validation for unauthenticated endpoint:', config.url);
+          // Still add device info headers for these endpoints
           config.headers['X-Device-Id'] = await this.getDeviceId();
           config.headers['X-Platform'] = Device.osName || 'unknown';
           config.headers['X-OS-Version'] = Device.osVersion || 'unknown';
@@ -62,9 +72,19 @@ class ApiClient {
       async (error) => {
         const originalRequest = error.config;
 
-        // Skip token refresh for auth endpoints (login, register, refresh, etc.)
-        if (originalRequest.url?.includes('/auth/')) {
-          console.log('API: Skipping token refresh for auth endpoint:', originalRequest.url);
+        // Only skip token refresh for truly unauthenticated endpoints
+        const unauthenticatedAuthPaths = [
+          '/auth/login',
+          '/auth/register',
+          '/auth/refresh',
+          '/auth/forgot-password',
+          '/auth/reset-password',
+          '/auth/resend-verification',
+          '/auth/verify-email'
+        ];
+        const isUnauthenticatedAuth = unauthenticatedAuthPaths.some((path) => originalRequest.url?.endsWith(path));
+        if (isUnauthenticatedAuth) {
+          console.log('API: Skipping token refresh for unauthenticated endpoint:', originalRequest.url);
           return Promise.reject(error);
         }
 
@@ -1134,7 +1154,26 @@ class ApiClient {
       console.log(`API: ${type} bulk import response:`, response.data);
       return response.data;
     } catch (error) {
-      console.log(`API: ${type} bulk import error:`, error.response?.status, error.response?.data?.message || error.message);
+      const status = error.response?.status;
+      const message = error.response?.data?.message || error.message;
+      console.log(`API: ${type} bulk import error:`, status, message);
+      // If specific type endpoints are not available, fall back to unified import
+      if (status === 404) {
+        console.log(`API: ${type} endpoint not found, falling back to unified bulk import...`);
+        try {
+          const fallbackResp = await this.bulkImportUnified(formData);
+          // Annotate response so UI can indicate fallback usage
+          if (fallbackResp && typeof fallbackResp === 'object') {
+            try {
+              fallbackResp.meta = Object.assign({}, fallbackResp.meta, { used_unified_fallback: true, original_type: type });
+            } catch (_) {}
+          }
+          return fallbackResp;
+        } catch (fallbackError) {
+          console.log('API: Unified bulk import fallback failed:', fallbackError.response?.status, fallbackError.response?.data?.message || fallbackError.message);
+          throw this.handleError(fallbackError);
+        }
+      }
       throw this.handleError(error);
     }
   }

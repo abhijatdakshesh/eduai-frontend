@@ -5,6 +5,15 @@ import { apiClient } from '../services/api';
 const AdminBulkImportScreen = () => {
   const [uploading, setUploading] = useState(false);
   const [uploadType, setUploadType] = useState('unified');
+  const [statusMessage, setStatusMessage] = useState('');
+  const [statusKind, setStatusKind] = useState('info'); // 'info' | 'success' | 'error'
+  const [errorDetails, setErrorDetails] = useState([]); // [{ row, errors: [], error: string, data: {} }]
+
+  const setStatus = (msg, kind = 'info') => {
+    console.log('[BulkImport][Status]', kind, msg);
+    setStatusMessage(msg);
+    setStatusKind(kind);
+  };
 
   const downloadUnifiedTemplate = () => {
     if (Platform.OS !== 'web') {
@@ -86,14 +95,33 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
       return;
     }
 
+    console.log('[BulkImport] Opening file picker for type:', type);
+    setStatus('Waiting for file selection…', 'info');
+    setErrorDetails([]);
     const input = document.createElement('input');
     input.type = 'file';
     input.accept = '.csv,text/csv';
+    input.style.display = 'none';
+    document.body.appendChild(input);
     input.onchange = async (ev) => {
       const file = ev.target.files && ev.target.files[0];
-      if (!file) return;
+      if (!file) {
+        console.log('[BulkImport] No file selected');
+        setStatus('No file selected', 'error');
+        try { document.body.removeChild(input); } catch (_) {}
+        return;
+      }
+
+      console.log('[BulkImport] Selected file:', file.name, 'size:', file.size, 'type:', file.type);
+      if (!file.name.toLowerCase().endsWith('.csv')) {
+        Alert.alert('Invalid File', 'Please select a .csv file.');
+        setStatus('Invalid file type. Please select a .csv file.', 'error');
+        try { document.body.removeChild(input); } catch (_) {}
+        return;
+      }
 
       setUploading(true);
+      setStatus('Uploading file…', 'info');
       try {
         const formData = new FormData();
         formData.append('file', file);
@@ -105,10 +133,16 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
         if (type === 'unified') {
           try {
             console.log('Validating CSV before import...');
+            setStatus('Validating CSV…', 'info');
             const validationResponse = await apiClient.validateBulkImport(formData);
             if (validationResponse.success) {
-              const { valid_rows, invalid_rows, errors } = validationResponse.data;
+              const { valid_rows, invalid_rows } = validationResponse.data || {};
+              const validationErrors = validationResponse.data?.validation_errors || validationResponse.data?.errors || [];
+              if (Array.isArray(validationErrors) && validationErrors.length > 0) {
+                setErrorDetails(validationErrors);
+              }
               if (invalid_rows > 0) {
+                setStatus(`Validation found ${invalid_rows} invalid rows, ${valid_rows} valid. Awaiting confirmation…`, 'error');
                 Alert.alert(
                   'Validation Issues', 
                   `Found ${invalid_rows} invalid rows. ${valid_rows} valid rows found. Do you want to proceed with import?`,
@@ -117,11 +151,17 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
                     { text: 'Proceed', onPress: () => proceedWithImport(type, formData) }
                   ]
                 );
+                console.log('[BulkImport] Validation had issues. Waiting for user decision.');
                 return;
               }
+              console.log('[BulkImport] Validation passed. Proceeding with import.');
+              setStatus('Validation passed. Importing…', 'info');
+              // Clear any previous validation errors before import
+              setErrorDetails([]);
             }
           } catch (validationError) {
             console.log('Validation failed, proceeding with import:', validationError.message);
+            setStatus('Validation call failed. Proceeding with import…', 'info');
           }
         }
         
@@ -129,8 +169,16 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
       } catch (error) {
         console.error('Bulk import error:', error);
         Alert.alert('Import Error', error.message || 'Failed to import CSV file');
+        setStatus(error.message || 'Failed to import CSV file', 'error');
+        try {
+          // If backend sent validation errors in error object
+          if (error.validation && Array.isArray(error.validation)) {
+            setErrorDetails(error.validation);
+          }
+        } catch (_) {}
       } finally {
         setUploading(false);
+        try { document.body.removeChild(input); } catch (_) {}
       }
     };
     input.click();
@@ -138,6 +186,9 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
 
   const proceedWithImport = async (type, formData) => {
     try {
+      console.log('[BulkImport] Starting import for type:', type);
+      setStatus('Starting import. Please wait…', 'info');
+      try { Alert.alert('Import', 'Starting import. Please wait...'); } catch (_) {}
       // Call the appropriate API endpoint
       let response;
       if (type === 'unified') {
@@ -148,20 +199,45 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
 
       if (response.success) {
         const imported = response.data?.imported || response.data?.imported_count || 0;
-        const errors = response.data?.errors || response.data?.error_count || 0;
+        const errorsFromCounts = response.data?.errors_count || response.data?.error_count || (typeof response.data?.errors === 'number' ? response.data.errors : 0) || 0;
         const skipped = response.data?.skipped || response.data?.skipped_count || 0;
+        const detailsErrors = response.data?.details?.errors || response.data?.errors_detail || (Array.isArray(response.data?.errors) ? response.data.errors : []);
+        const errors = errorsFromCounts || (Array.isArray(detailsErrors) ? detailsErrors.length : 0);
         
         let message = `Successfully imported ${imported} records.`;
         if (errors > 0) message += ` ${errors} errors.`;
         if (skipped > 0) message += ` ${skipped} skipped.`;
+        if (response.meta?.used_unified_fallback) {
+          message += ` (Used unified importer fallback for "${response.meta.original_type}")`;
+        }
         
-        Alert.alert('Import Successful', message);
+        try { Alert.alert('Import Successful', message); } catch (_) {}
+        setStatus(message, errors > 0 ? 'error' : 'success');
+        console.log('[BulkImport] Import success:', { imported, errors, skipped });
+        if (Array.isArray(detailsErrors) && detailsErrors.length > 0) {
+          setErrorDetails(detailsErrors);
+        } else {
+          // Clear previous errors if none in this run
+          setErrorDetails([]);
+        }
       } else {
-        Alert.alert('Import Failed', response.message || 'Unknown error occurred');
+        try { Alert.alert('Import Failed', response.message || 'Unknown error occurred'); } catch (_) {}
+        setStatus(response.message || 'Import failed', 'error');
+        console.log('[BulkImport] Import failed. Raw response:', response);
+        const detailsErrors = response.data?.details?.errors || response.data?.errors || [];
+        if (Array.isArray(detailsErrors) && detailsErrors.length > 0) {
+          setErrorDetails(detailsErrors);
+        }
       }
     } catch (error) {
       console.error('Import error:', error);
-      Alert.alert('Import Error', error.message || 'Failed to import CSV file');
+      try { Alert.alert('Import Error', error.message || 'Failed to import CSV file'); } catch (_) {}
+      setStatus(error.message || 'Failed to import CSV file', 'error');
+      try {
+        if (error.validation && Array.isArray(error.validation)) {
+          setErrorDetails(error.validation);
+        }
+      } catch (_) {}
     }
   };
 
@@ -252,6 +328,44 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
         <Text style={styles.headerTitle}>Bulk Import & Export</Text>
         <Text style={styles.headerSubtitle}>Import students, teachers, parents, and classes via CSV or export existing data</Text>
       </View>
+
+      {/* Inline Status */}
+      {statusMessage ? (
+        <View style={[
+          styles.statusBox,
+          statusKind === 'success' ? styles.statusSuccess : statusKind === 'error' ? styles.statusError : styles.statusInfo,
+        ]}>
+          <Text style={styles.statusText}>{statusMessage}</Text>
+        </View>
+      ) : null}
+
+      {/* Detailed Errors */}
+      {Array.isArray(errorDetails) && errorDetails.length > 0 ? (
+        <View style={styles.section}>
+          <Text style={styles.sectionTitle}>❗ Import Errors ({errorDetails.length})</Text>
+          <View style={styles.errorListContainer}>
+            {errorDetails.map((e, idx) => {
+              const row = e.row || e.line || e.index || e.i;
+              const messages = Array.isArray(e.errors) ? e.errors : (e.error ? [e.error] : []);
+              return (
+                <View key={idx} style={styles.errorItem}>
+                  <Text style={styles.errorRowNum}>{row ? `Row ${row}` : `Item ${idx + 1}`}</Text>
+                  {messages.length > 0 ? (
+                    messages.map((m, i2) => (
+                      <Text key={i2} style={styles.errorMessage}>- {String(m)}</Text>
+                    ))
+                  ) : (
+                    <Text style={styles.errorMessage}>- Unknown error</Text>
+                  )}
+                  {e.field ? (
+                    <Text style={styles.errorMeta}>Field: {String(e.field)}</Text>
+                  ) : null}
+                </View>
+              );
+            })}
+          </View>
+        </View>
+      ) : null}
 
       {/* Export Section */}
       <View style={styles.section}>
@@ -405,6 +519,11 @@ const styles = StyleSheet.create({
   bold: { fontWeight: '600', color: '#1f2937' },
   highlightBox: { backgroundColor: '#f0f9ff', borderLeftWidth: 4, borderLeftColor: '#3b82f6', padding: 12, marginTop: 12, borderRadius: 8 },
   highlightText: { color: '#1e40af', fontSize: 14, lineHeight: 20 },
+  errorListContainer: { backgroundColor: '#fff7ed', borderLeftWidth: 4, borderLeftColor: '#f97316', padding: 12, borderRadius: 8 },
+  errorItem: { marginBottom: 10 },
+  errorRowNum: { color: '#b45309', fontWeight: '700' },
+  errorMessage: { color: '#92400e', fontSize: 13, marginTop: 2 },
+  errorMeta: { color: '#a16207', fontSize: 12, marginTop: 2 }
 });
 
 export default AdminBulkImportScreen;
