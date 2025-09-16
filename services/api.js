@@ -1139,6 +1139,20 @@ class ApiClient {
     }
   }
 
+  // Admin Export APIs
+  async exportStudents(params = {}) {
+    try {
+      console.log('API: Exporting students data...');
+      const queryString = new URLSearchParams(params).toString();
+      const response = await this.api.get(`/admin/students/export${queryString ? `?${queryString}` : ''}`);
+      console.log('API: Students export response:', response.data);
+      return response.data;
+    } catch (error) {
+      console.log('API: Students export error:', error.response?.status, error.response?.data?.message || error.message);
+      throw this.handleError(error);
+    }
+  }
+
   // Attendance reasons
   async getAttendanceReasons() {
     try {

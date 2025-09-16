@@ -78,8 +78,8 @@ const MainAppStack = ({ route }) => {
   );
 };
 
-// Admin Stack Navigator
-const AdminStack = () => {
+// Admin Drawer Navigator
+const AdminDrawer = () => {
   return (
     <Drawer.Navigator
       initialRouteName="AdminDashboard"
@@ -94,6 +94,22 @@ const AdminStack = () => {
         />
       ))}
     </Drawer.Navigator>
+  );
+};
+
+// Admin Stack Navigator (includes drawer + additional screens)
+const AdminStack = () => {
+  return (
+    <Stack.Navigator
+      screenOptions={{ 
+        headerShown: false,
+        cardStyle: { backgroundColor: theme.colors.background }
+      }}
+    >
+      <Stack.Screen name="AdminDrawer" component={AdminDrawer} />
+      <Stack.Screen name="AdminClassStudents" component={AdminClassStudentsScreen} />
+      <Stack.Screen name="AdminCourseEnrollments" component={AdminCourseEnrollmentsScreen} />
+    </Stack.Navigator>
   );
 };
 

@@ -1,0 +1,20 @@
+type,first_name,last_name,email,password,role,student_id,department,academic_year,semester,section,grade_level,class_name,room_id,teacher_email,parent_email,parent_phone,parent_relationship,phone,address,date_of_birth,gender,emergency_contact,medical_info,enrollment_date,status
+student,John,Doe,john.doe@student.edu,password123,student,STU001,Computer Science,2024-2025,1,A,Grade 10,CS101,ROOM-101,teacher@school.edu,parent@email.com,+1234567890,Father,+1234567890,123 Main St,2005-01-15,Male,John Parent +1234567890,None,2024-01-01,active
+student,Jane,Smith,jane.smith@student.edu,password123,student,STU002,Mathematics,2024-2025,2,B,Grade 10,MATH101,ROOM-102,teacher2@school.edu,parent2@email.com,+1234567891,Mother,+1234567891,456 Oak Ave,2005-03-22,Female,Jane Parent +1234567891,Allergies: Peanuts,2024-01-01,active
+student,Mike,Johnson,mike.johnson@student.edu,password123,student,STU003,Physics,2024-2025,3,C,Grade 11,PHY201,ROOM-103,teacher3@school.edu,parent3@email.com,+1234567892,Father,+1234567892,789 Pine St,2004-07-10,Male,Mike Parent +1234567892,None,2024-01-01,active
+student,Sarah,Williams,sarah.williams@student.edu,password123,student,STU004,Computer Science,2024-2025,4,A,Grade 10,CS101,ROOM-101,teacher@school.edu,parent4@email.com,+1234567893,Mother,+1234567893,321 Elm St,2005-09-12,Female,Sarah Parent +1234567893,None,2024-01-01,active
+student,David,Brown,david.brown@student.edu,password123,student,STU005,Mathematics,2024-2025,5,B,Grade 11,MATH201,ROOM-104,teacher4@school.edu,parent5@email.com,+1234567894,Father,+1234567894,654 Maple Dr,2004-11-25,Male,David Parent +1234567894,None,2024-01-01,active
+teacher,Mr.,Anderson,teacher@school.edu,password123,teacher,,,,,,,Mathematics 10A,ROOM-101,,,,,,+1234567895,789 Pine St,1980-05-10,Male,,None,2024-01-01,active
+teacher,Ms.,Brown,teacher2@school.edu,password123,teacher,,,,,,,English 10B,ROOM-102,,,,,,+1234567896,654 Maple Dr,1982-12-03,Female,,None,2024-01-01,active
+teacher,Dr.,Wilson,teacher3@school.edu,password123,teacher,,,,,,,Physics 201,ROOM-103,,,,,,+1234567897,987 Cedar Ln,1978-08-20,Male,,None,2024-01-01,active
+teacher,Ms.,Davis,teacher4@school.edu,password123,teacher,,,,,,,Mathematics 201,ROOM-104,,,,,,+1234567898,555 Oak St,1985-03-15,Female,,None,2024-01-01,active
+parent,Mrs.,Williams,parent@email.com,password123,parent,,,,,,,,,,,,,+1234567899,321 Elm St,1985-08-15,Female,,None,2024-01-01,active
+parent,Mr.,Davis,parent2@email.com,password123,parent,,,,,,,,,,,,,+1234567900,987 Cedar Ln,1983-11-20,Male,,None,2024-01-01,active
+parent,Mrs.,Wilson,parent3@email.com,password123,parent,,,,,,,,,,,,,+1234567901,555 Oak St,1987-03-15,Female,,None,2024-01-01,active
+parent,Mr.,Brown,parent4@email.com,password123,parent,,,,,,,,,,,,,+1234567902,654 Maple Dr,1984-07-08,Male,,None,2024-01-01,active
+parent,Mrs.,Johnson,parent5@email.com,password123,parent,,,,,,,,,,,,,+1234567903,789 Pine St,1986-12-12,Female,,None,2024-01-01,active
+class,,,class@system.edu,,class,,,,,Grade 10,Mathematics 10A,ROOM-101,teacher@school.edu,,,,,,,,,2024-01-01,active
+class,,,class2@system.edu,,class,,,,,Grade 10,English 10B,ROOM-102,teacher2@school.edu,,,,,,,,,2024-01-01,active
+class,,,class3@system.edu,,class,,,,,Grade 11,Physics 201,ROOM-103,teacher3@school.edu,,,,,,,,,2024-01-01,active
+class,,,class4@system.edu,,class,,,,,Grade 11,Mathematics 201,ROOM-104,teacher4@school.edu,,,,,,,,,2024-01-01,active
+class,,,class5@system.edu,,class,,,,,Grade 10,Computer Science 101,ROOM-101,teacher@school.edu,,,,,,,,,2024-01-01,active

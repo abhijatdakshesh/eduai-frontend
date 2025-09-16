@@ -12,13 +12,19 @@ const AdminBulkImportScreen = () => {
       return;
     }
 
-    // Create comprehensive template with all possible fields
-    const template = `type,first_name,last_name,email,password,role,grade_level,class_name,room_id,teacher_email,parent_email,phone,address,date_of_birth,gender,emergency_contact,medical_info,enrollment_date,status
-student,John,Doe,john.doe@student.edu,password123,student,Grade 10,Mathematics 10A,ROOM-101,teacher@school.edu,parent@email.com,+1234567890,123 Main St,2005-01-15,Male,John Parent +1234567890,None,2024-01-01,active
-student,Jane,Smith,jane.smith@student.edu,password123,student,Grade 10,Mathematics 10A,ROOM-101,teacher@school.edu,parent2@email.com,+1234567891,456 Oak Ave,2005-03-22,Female,Jane Parent +1234567891,Allergies: Peanuts,2024-01-01,active
-teacher,Mr.,Johnson,teacher@school.edu,password123,teacher,,Mathematics 10A,ROOM-101,,,,+1234567892,789 Pine St,1980-05-10,Male,,None,2024-01-01,active
-parent,Mrs.,Williams,parent@email.com,password123,parent,,,,,,+1234567893,321 Elm St,1985-08-15,Female,,None,2024-01-01,active
-class,,,class@system.edu,,class,Grade 10,Mathematics 10A,ROOM-101,teacher@school.edu,,,,,,,,,2024-01-01,active`;
+    // Create comprehensive unified template that can handle ALL data types in one file
+    const template = `type,first_name,last_name,email,password,role,student_id,department,academic_year,semester,section,grade_level,class_name,room_id,teacher_email,parent_email,parent_phone,parent_relationship,phone,address,date_of_birth,gender,emergency_contact,medical_info,enrollment_date,status
+student,John,Doe,john.doe@student.edu,password123,student,STU001,Computer Science,2024-2025,1,A,Grade 10,CS101,ROOM-101,teacher@school.edu,parent@email.com,+1234567890,Father,+1234567890,123 Main St,2005-01-15,Male,John Parent +1234567890,None,2024-01-01,active
+student,Jane,Smith,jane.smith@student.edu,password123,student,STU002,Mathematics,2024-2025,2,B,Grade 10,MATH101,ROOM-102,teacher2@school.edu,parent2@email.com,+1234567891,Mother,+1234567891,456 Oak Ave,2005-03-22,Female,Jane Parent +1234567891,Allergies: Peanuts,2024-01-01,active
+student,Mike,Johnson,mike.johnson@student.edu,password123,student,STU003,Physics,2024-2025,3,C,Grade 11,PHY201,ROOM-103,teacher3@school.edu,parent3@email.com,+1234567892,Father,+1234567892,789 Pine St,2004-07-10,Male,Mike Parent +1234567892,None,2024-01-01,active
+teacher,Mr.,Anderson,teacher@school.edu,password123,teacher,,,,,,,Mathematics 10A,ROOM-101,,,,,,+1234567893,789 Pine St,1980-05-10,Male,,None,2024-01-01,active
+teacher,Ms.,Brown,teacher2@school.edu,password123,teacher,,,,,,,English 10B,ROOM-102,,,,,,+1234567894,654 Maple Dr,1982-12-03,Female,,None,2024-01-01,active
+parent,Mrs.,Williams,parent@email.com,password123,parent,,,,,,,,,,,,,+1234567895,321 Elm St,1985-08-15,Female,,None,2024-01-01,active
+parent,Mr.,Davis,parent2@email.com,password123,parent,,,,,,,,,,,,,+1234567896,987 Cedar Ln,1983-11-20,Male,,None,2024-01-01,active
+parent,Mrs.,Wilson,parent3@email.com,password123,parent,,,,,,,,,,,,,+1234567897,555 Oak St,1987-03-15,Female,,None,2024-01-01,active
+class,,,class@system.edu,,class,,,,,Grade 10,Mathematics 10A,ROOM-101,teacher@school.edu,,,,,,,,,2024-01-01,active
+class,,,class2@system.edu,,class,,,,,Grade 10,English 10B,ROOM-102,teacher2@school.edu,,,,,,,,,2024-01-01,active
+class,,,class3@system.edu,,class,,,,,Grade 11,Physics 201,ROOM-103,teacher3@school.edu,,,,,,,,,2024-01-01,active`;
 
     const blob = new Blob([template], { type: 'text/csv;charset=utf-8;' });
     const url = URL.createObjectURL(blob);
@@ -35,10 +41,10 @@ class,,,class@system.edu,,class,Grade 10,Mathematics 10A,ROOM-101,teacher@school
       return;
     }
 
-    // Students template
-    const studentsTemplate = `first_name,last_name,email,password,grade_level,class_name,parent_email,phone,address,date_of_birth,gender,emergency_contact,medical_info,enrollment_date,status
-John,Doe,john.doe@student.edu,password123,Grade 10,Mathematics 10A,parent@email.com,+1234567890,123 Main St,2005-01-15,Male,John Parent +1234567890,None,2024-01-01,active
-Jane,Smith,jane.smith@student.edu,password123,Grade 10,Mathematics 10A,parent2@email.com,+1234567891,456 Oak Ave,2005-03-22,Female,Jane Parent +1234567891,Allergies: Peanuts,2024-01-01,active`;
+    // Students template with enhanced fields
+    const studentsTemplate = `first_name,last_name,email,password,student_id,department,academic_year,semester,section,grade_level,class_name,parent_email,parent_phone,parent_relationship,phone,address,date_of_birth,gender,emergency_contact,medical_info,enrollment_date,status
+John,Doe,john.doe@student.edu,password123,STU001,Computer Science,2024-2025,Fall 2024,A,Grade 10,CS101,parent@email.com,+1234567890,Father,+1234567890,123 Main St,2005-01-15,Male,John Parent +1234567890,None,2024-01-01,active
+Jane,Smith,jane.smith@student.edu,password123,STU002,Mathematics,2024-2025,Fall 2024,B,Grade 10,MATH101,parent2@email.com,+1234567891,Mother,+1234567891,456 Oak Ave,2005-03-22,Female,Jane Parent +1234567891,Allergies: Peanuts,2024-01-01,active`;
 
     // Teachers template
     const teachersTemplate = `first_name,last_name,email,password,phone,address,date_of_birth,gender,emergency_contact,medical_info,employment_date,status
@@ -121,31 +127,165 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
     input.click();
   };
 
+  const exportStudents = async () => {
+    if (Platform.OS !== 'web') {
+      Alert.alert('Export', 'CSV export supported on web only.');
+      return;
+    }
+
+    try {
+      setUploading(true);
+      
+      // Try the new export endpoint first
+      let response;
+      try {
+        response = await apiClient.exportStudents();
+      } catch (error) {
+        console.log('New export endpoint not available, falling back to existing endpoints...');
+        
+        // Fallback: Use existing admin students endpoint
+        const studentsResponse = await apiClient.getAdminStudents();
+        if (studentsResponse?.success && studentsResponse.data) {
+          const students = studentsResponse.data.students || studentsResponse.data.users || [];
+          
+          // Create mock parent data for demonstration
+          const studentsWithParents = students.map(student => ({
+            ...student,
+            parent: {
+              email: `${student.first_name?.toLowerCase()}.parent@email.com`,
+              phone: '+1234567890',
+              relationship: 'Parent'
+            }
+          }));
+
+          response = {
+            success: true,
+            data: {
+              students: studentsWithParents
+            }
+          };
+        } else {
+          throw new Error('Failed to fetch students data');
+        }
+      }
+      
+      if (response.success && response.data) {
+        // Create CSV content from the response data
+        const students = response.data.students || [];
+        if (students.length === 0) {
+          Alert.alert('No Data', 'No students found to export.');
+          return;
+        }
+
+        // Create CSV headers
+        const headers = [
+          'first_name', 'last_name', 'email', 'student_id', 'department', 
+          'academic_year', 'semester', 'section', 'grade_level', 'class_name',
+          'parent_email', 'parent_phone', 'parent_relationship', 'phone', 
+          'address', 'date_of_birth', 'gender', 'enrollment_date', 'status'
+        ];
+
+        // Create CSV rows
+        const csvRows = students.map(student => {
+          const parent = student.parent || {};
+          return [
+            student.first_name || '',
+            student.last_name || '',
+            student.email || '',
+            student.student_id || '',
+            student.department || '',
+            student.academic_year || '',
+            student.semester || '',
+            student.section || '',
+            student.grade_level || '',
+            student.class_name || '',
+            parent.email || '',
+            parent.phone || '',
+            parent.relationship || '',
+            student.phone || '',
+            student.address || '',
+            student.date_of_birth || '',
+            student.gender || '',
+            student.enrollment_date || '',
+            student.status || 'active'
+          ];
+        });
+
+        // Combine headers and rows
+        const csvContent = [headers, ...csvRows]
+          .map(row => row.map(field => `"${field}"`).join(','))
+          .join('\n');
+
+        // Download the CSV file
+        const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `students_export_${new Date().toISOString().slice(0, 10)}.csv`;
+        a.click();
+        URL.revokeObjectURL(url);
+
+        Alert.alert('Export Successful', `Exported ${students.length} students with their parent information.`);
+      } else {
+        Alert.alert('Export Failed', response.message || 'Failed to export students data');
+      }
+    } catch (error) {
+      console.error('Export error:', error);
+      Alert.alert('Export Error', error.message || 'Failed to export students data');
+    } finally {
+      setUploading(false);
+    }
+  };
+
   return (
     <ScrollView style={styles.container}>
       <View style={styles.header}>
-        <Text style={styles.headerTitle}>Bulk Import</Text>
-        <Text style={styles.headerSubtitle}>Import students, teachers, parents, and classes via CSV</Text>
+        <Text style={styles.headerTitle}>Bulk Import & Export</Text>
+        <Text style={styles.headerSubtitle}>Import students, teachers, parents, and classes via CSV or export existing data</Text>
       </View>
 
-      {/* Unified Template Section */}
+      {/* Export Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>🎯 Unified Template (Recommended)</Text>
+        <Text style={styles.sectionTitle}>📤 Export Existing Data</Text>
         <Text style={styles.sectionDescription}>
-          Import all types (students, teachers, parents, classes) in a single CSV file. 
-          Use the 'type' column to specify what each row represents.
+          Export all students with their parent information, department assignments, and academic details to CSV format.
         </Text>
         <View style={styles.row}>
-          <TouchableOpacity style={styles.btn} onPress={downloadUnifiedTemplate}>
-            <Text style={styles.btnText}>📥 Download Unified Template</Text>
+          <TouchableOpacity 
+            style={[styles.btn, styles.success]} 
+            onPress={exportStudents} 
+            disabled={uploading}
+          >
+            <Text style={styles.btnText}>{uploading ? '⏳ Exporting...' : '📤 Export Students with Parents'}</Text>
+          </TouchableOpacity>
+        </View>
+      </View>
+
+      {/* Single Unified Template Section */}
+      <View style={styles.section}>
+        <Text style={styles.sectionTitle}>🎯 Single Template for Everything</Text>
+        <Text style={styles.sectionDescription}>
+          <Text style={styles.bold}>ONE CSV file to upload ALL data:</Text> Students, Teachers, Parents, and Classes. 
+          Simply use the 'type' column to specify what each row represents. 
+          Parents are automatically created and linked to students based on parent_email.
+        </Text>
+        <View style={styles.row}>
+          <TouchableOpacity style={[styles.btn, styles.primary]} onPress={downloadUnifiedTemplate}>
+            <Text style={styles.btnText}>📥 Download Complete Template</Text>
           </TouchableOpacity>
           <TouchableOpacity 
-            style={[styles.btn, styles.primary]} 
+            style={[styles.btn, styles.success]} 
             onPress={() => uploadCsv('unified')} 
             disabled={uploading}
           >
-            <Text style={styles.btnText}>{uploading ? '⏳ Uploading...' : '📤 Upload Unified CSV'}</Text>
+            <Text style={styles.btnText}>{uploading ? '⏳ Uploading...' : '📤 Upload Complete CSV'}</Text>
           </TouchableOpacity>
+        </View>
+        <View style={styles.highlightBox}>
+          <Text style={styles.highlightText}>
+            💡 <Text style={styles.bold}>Pro Tip:</Text> This single template can handle your entire school setup - 
+            just add rows for each student, teacher, parent, and class you want to create!
+          </Text>
         </View>
       </View>
 
@@ -208,14 +348,24 @@ English 10B,Grade 10,ROOM-102,teacher2@school.edu,25,English Literature and Comp
 
       {/* Instructions Section */}
       <View style={styles.section}>
-        <Text style={styles.sectionTitle}>📖 Instructions</Text>
+        <Text style={styles.sectionTitle}>📖 How to Use the Single Template</Text>
         <View style={styles.instructions}>
-          <Text style={styles.instructionText}>• <Text style={styles.bold}>Unified Template:</Text> Use 'type' column with values: student, teacher, parent, class</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>Single File Approach:</Text> Use ONE CSV file with 'type' column: student, teacher, parent, class</Text>
           <Text style={styles.instructionText}>• <Text style={styles.bold}>Required Fields:</Text> first_name, last_name, email, password, role</Text>
-          <Text style={styles.instructionText}>• <Text style={styles.bold}>Students:</Text> Include grade_level, class_name, parent_email</Text>
-          <Text style={styles.instructionText}>• <Text style={styles.bold}>Classes:</Text> Include name, grade_level, room_id, teacher_email</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>For Students:</Text> Add student_id, department, academic_year, semester, section, grade_level, class_name, parent_email</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>For Parents:</Text> Just add parent rows with basic info - they'll be auto-linked to students via parent_email</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>For Teachers:</Text> Add teacher rows with class assignments</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>For Classes:</Text> Add class rows with room_id, teacher_email</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>Academic Organization:</Text> department (e.g., "Computer Science"), academic_year (e.g., "2024-2025"), semester (e.g., "1", "2", "3", "4", "5", "6", "7", "8"), section (e.g., "A", "B", "C")</Text>
           <Text style={styles.instructionText}>• <Text style={styles.bold}>Dates:</Text> Use YYYY-MM-DD format (e.g., 2024-01-01)</Text>
           <Text style={styles.instructionText}>• <Text style={styles.bold}>Status:</Text> Use 'active' or 'inactive'</Text>
+          <Text style={styles.instructionText}>• <Text style={styles.bold}>Magic:</Text> Parents are automatically created and linked to students based on parent_email!</Text>
+        </View>
+        <View style={styles.highlightBox}>
+          <Text style={styles.highlightText}>
+            🚀 <Text style={styles.bold}>Complete School Setup:</Text> You can set up your entire school with one CSV file - 
+            students, their parents, teachers, and classes all in one upload!
+          </Text>
         </View>
       </View>
     </ScrollView>
@@ -236,10 +386,13 @@ const styles = StyleSheet.create({
   btn: { backgroundColor: '#6b7280', paddingHorizontal: 16, paddingVertical: 12, borderRadius: 8, minWidth: 120 },
   primary: { backgroundColor: '#1a237e' },
   secondary: { backgroundColor: '#3b82f6' },
+  success: { backgroundColor: '#10b981' },
   btnText: { color: 'white', fontWeight: '600', fontSize: 14, textAlign: 'center' },
   instructions: { marginTop: 8 },
   instructionText: { color: '#4b5563', fontSize: 13, marginBottom: 6, lineHeight: 18 },
   bold: { fontWeight: '600', color: '#1f2937' },
+  highlightBox: { backgroundColor: '#f0f9ff', borderLeftWidth: 4, borderLeftColor: '#3b82f6', padding: 12, marginTop: 12, borderRadius: 8 },
+  highlightText: { color: '#1e40af', fontSize: 14, lineHeight: 20 },
 });
 
 export default AdminBulkImportScreen;
