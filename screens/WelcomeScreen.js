@@ -95,7 +95,7 @@ const WelcomeScreen = ({ navigation }) => {
           </View>
           
           <Text style={styles.title}>Welcome to</Text>
-          <Text style={styles.appName}>EduAI</Text>
+          <Text style={styles.appName}>EdAI</Text>
           <Text style={styles.subtitle}>
             Your Complete Academic Management Solution
           </Text>
