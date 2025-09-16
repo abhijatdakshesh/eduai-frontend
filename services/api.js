@@ -724,6 +724,16 @@ class ApiClient {
     }
   }
 
+  // Teacher: subjects taught in a class
+  async getTeacherClassSubjects(classId) {
+    try {
+      const response = await this.api.get(`/teacher/classes/${encodeURIComponent(classId)}/subjects`);
+      return response.data;
+    } catch (error) {
+      throw this.handleError(error);
+    }
+  }
+
   // Students not yet enrolled in the class
   async getAvailableStudents(classId) {
     try {

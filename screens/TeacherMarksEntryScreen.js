@@ -1,7 +1,9 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StyleSheet, Dimensions } from 'react-native';
 import { assessmentsAPI } from '../services/apiService';
 import { apiClient } from '../services/api';
+
+const { width } = Dimensions.get('window');
 
 const initialTestState = {
   name: '',
@@ -10,12 +12,14 @@ const initialTestState = {
   weightage: 0,
   term: 'T1',
   subjectId: '',
+  examinationType: 'internal',
   notes: '',
 };
 
 export default function TeacherMarksEntryScreen() {
-  const [departmentId, setDepartmentId] = useState('');
-  const [sectionId, setSectionId] = useState('');
+  const [year, setYear] = useState('');
+  const [semester, setSemester] = useState('');
+  const [classId, setClassId] = useState('');
   const [subjectId, setSubjectId] = useState('');
   const [students, setStudents] = useState([]);
   const [test, setTest] = useState(initialTestState);
@@ -24,15 +28,48 @@ export default function TeacherMarksEntryScreen() {
   const [loading, setLoading] = useState(false);
   const [errors, setErrors] = useState({});
 
-  const canCreate = useMemo(() => sectionId && subjectId && test.name && test.maxMarks > 0, [sectionId, subjectId, test]);
+  const [subjects, setSubjects] = useState([]);
+  const [classes, setClasses] = useState([]);
+
+  useEffect(() => {
+    const loadClasses = async () => {
+      try {
+        const res = await apiClient.getTeacherClasses?.();
+        if (res?.success) {
+          setClasses(res.data?.classes || []);
+        }
+      } catch {}
+    };
+    loadClasses();
+  }, []);
+
+  useEffect(() => {
+    const loadSubjects = async () => {
+      if (!classId) return;
+      try {
+        const res = await apiClient.getTeacherClassSubjects(classId);
+        if (res?.success) {
+          setSubjects(res.data?.subjects || []);
+        } else {
+          setSubjects([]);
+        }
+      } catch {
+        setSubjects([]);
+      }
+    };
+    loadSubjects();
+  }, [classId]);
+
+  const canCreate = useMemo(() => classId && subjectId && test.name && test.maxMarks > 0, [classId, subjectId, test]);
   const canSaveMarks = useMemo(() => assessmentId && Object.keys(marksMap).length > 0, [assessmentId, marksMap]);
 
   const handleFetchRoster = async () => {
     try {
       setLoading(true);
-      const res = await apiClient.getSectionStudents(sectionId);
+      const res = await apiClient.getClassStudents(classId);
       if (res?.success) {
-        setStudents(res.data?.students || res.data || []);
+        const list = res.data?.students || res.data || [];
+        setStudents(Array.isArray(list) ? list : []);
       } else {
         setStudents([]);
       }
@@ -45,13 +82,14 @@ export default function TeacherMarksEntryScreen() {
 
   const validateTest = () => {
     const next = {};
-    if (!sectionId) next.sectionId = 'Section is required';
+    if (!classId) next.classId = 'Class/Section is required';
     if (!subjectId) next.subjectId = 'Subject is required';
     if (!test.name) next.name = 'Test name is required';
     if (!test.date || !/^\d{4}-\d{2}-\d{2}$/.test(test.date)) next.date = 'Date must be YYYY-MM-DD';
     if (!(Number(test.maxMarks) > 0)) next.maxMarks = 'Max marks must be > 0';
     if (Number(test.weightage) < 0) next.weightage = 'Weightage cannot be negative';
     if (!test.term) next.term = 'Term is required';
+    if (!test.examinationType) next.examinationType = 'Examination type is required';
     setErrors(next);
     return Object.keys(next).length === 0;
   };
@@ -61,13 +99,14 @@ export default function TeacherMarksEntryScreen() {
       if (!validateTest()) return;
       setLoading(true);
       const payload = {
-        sectionId,
+        classId,
         subjectId,
         name: test.name,
         date: test.date,
         maxMarks: Number(test.maxMarks),
         weightage: Number(test.weightage || 0),
         term: test.term,
+        examinationType: test.examinationType,
         notes: test.notes || '',
       };
       const res = await assessmentsAPI.createAssessment(payload);
@@ -101,12 +140,17 @@ export default function TeacherMarksEntryScreen() {
           }
         }
       }
-      const rows = students.map((s) => ({
-        studentId: s.id || s.studentId || s.student_id,
-        marks: marksMap[s.id || s.studentId || s.student_id]?.marks ?? null,
-        absent: marksMap[s.id || s.studentId || s.student_id]?.absent || false,
-        remarks: marksMap[s.id || s.studentId || s.student_id]?.remarks || '',
-      }));
+      const rows = students.map((s) => {
+        const sid = s.id || s.studentId || s.student_id;
+        const row = marksMap[sid] || {};
+        return {
+          studentId: sid,
+          student_id: sid,
+          marks: row.marks ?? null,
+          absent: !!row.absent,
+          remarks: row.remarks || '',
+        };
+      });
       const res = await assessmentsAPI.bulkUpsertMarks(assessmentId, rows, `fe_${Date.now()}`);
       if (res.success) {
         Alert.alert('Saved', 'Marks saved');
@@ -190,168 +234,721 @@ export default function TeacherMarksEntryScreen() {
       setMarksMap((m) => ({ ...m, [sid]: { ...m[sid], marks: clamped } }));
     };
     return (
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 8 }}>
-        <Text style={{ width: 120 }}>{item.name || item.full_name || item.roll_no || sid}</Text>
+      <View style={styles.studentRow}>
+        <Text style={styles.studentName}>{item.name || item.full_name || item.roll_no || sid}</Text>
         <TextInput
           keyboardType="numeric"
           placeholder="Marks"
           value={current.marks !== undefined && current.marks !== null ? String(current.marks) : ''}
           onChangeText={handleMarksChange}
           editable={!current.absent}
-          style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, marginHorizontal: 8, width: 80, backgroundColor: current.absent ? '#f3f4f6' : 'white' }}
+          style={[
+            styles.marksInput,
+            current.absent && styles.marksInputDisabled
+          ]}
+          placeholderTextColor="#9ca3af"
         />
-        <TouchableOpacity onPress={() => setMarksMap((m) => ({ ...m, [sid]: { ...m[sid], absent: !m[sid]?.absent } }))}
-          style={{ padding: 8, backgroundColor: current.absent ? '#fee2e2' : '#e5e7eb', borderRadius: 6 }}>
-          <Text>{current.absent ? 'Absent' : 'Present'}</Text>
+        <TouchableOpacity 
+          onPress={() => setMarksMap((m) => ({ ...m, [sid]: { ...m[sid], absent: !m[sid]?.absent } }))}
+          style={[
+            styles.statusButton,
+            current.absent ? styles.statusButtonAbsent : styles.statusButtonPresent
+          ]}
+        >
+          <Text style={[
+            styles.statusButtonText,
+            current.absent ? styles.statusButtonTextAbsent : styles.statusButtonTextPresent
+          ]}>
+            {current.absent ? '❌ Absent' : '✅ Present'}
+          </Text>
         </TouchableOpacity>
         <TextInput
           placeholder="Remarks"
           value={current.remarks || ''}
           onChangeText={(t) => setMarksMap((m) => ({ ...m, [sid]: { ...m[sid], remarks: t } }))}
-          style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 8, marginLeft: 8, flex: 1 }}
+          style={styles.remarksInput}
+          placeholderTextColor="#9ca3af"
         />
       </View>
     );
   };
 
   return (
-    <ScrollView contentContainerStyle={{ padding: 16 }}>
-      <Text style={{ fontSize: 20, fontWeight: '600', marginBottom: 12 }}>Teacher Marks Entry</Text>
+    <ScrollView style={styles.container} contentContainerStyle={styles.contentContainer}>
+      <View style={styles.header}>
+        <Text style={styles.title}>📝 Marks Entry</Text>
+        <Text style={styles.subtitle}>Create assessments and enter student marks</Text>
+      </View>
+      
       {loading && (
-        <View style={{ paddingVertical: 8 }}><ActivityIndicator /></View>
+        <View style={styles.loadingContainer}>
+          <ActivityIndicator size="large" color="#3b82f6" />
+          <Text style={styles.loadingText}>Processing...</Text>
+        </View>
       )}
 
-      {/* Minimal inputs for Department, Section, Subject */}
-      <View style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <Text style={{ fontWeight: '600', marginBottom: 8 }}>Class Context</Text>
-        <Text style={{ marginBottom: 4 }}>Department ID</Text>
-        <TextInput placeholder="Enter Department ID" value={departmentId} onChangeText={setDepartmentId}
-          style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 10, marginBottom: 8 }} />
+      {/* Class and Subject Selection */}
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>🎓 Class Context</Text>
+        </View>
+        
+        <View style={styles.inputRow}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Academic Year <Text style={styles.required}>*</Text></Text>
+            <TextInput 
+              placeholder="e.g., 2024-2025" 
+              value={year} 
+              onChangeText={setYear}
+              style={styles.input}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Semester <Text style={styles.required}>*</Text></Text>
+            <TextInput 
+              placeholder="e.g., 1, 2, 3" 
+              value={semester} 
+              onChangeText={setSemester}
+              style={styles.input}
+              placeholderTextColor="#9ca3af"
+            />
+          </View>
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Section ID <Text style={{ color: '#dc2626' }}>*</Text></Text>
-        <TextInput placeholder="Enter Section ID" value={sectionId} onChangeText={setSectionId}
-          style={{ borderWidth: 1, borderColor: errors.sectionId ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.sectionId ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.sectionId}</Text> : null}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Class/Section <Text style={styles.required}>*</Text></Text>
+          <View style={[styles.dropdown, errors.classId && styles.inputError]}>
+            <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
+              {classes.length > 0 ? (
+                classes.map((cls) => (
+                  <TouchableOpacity
+                    key={cls.id}
+                    onPress={() => setClassId(cls.id)}
+                    style={[
+                      styles.dropdownItem,
+                      classId === cls.id && styles.dropdownItemSelected
+                    ]}
+                  >
+                    <Text style={[
+                      styles.dropdownItemText,
+                      classId === cls.id && styles.dropdownItemTextSelected
+                    ]}>
+                      {cls.name} ({cls.grade_level}) - {cls.academic_year}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>No classes available</Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+          {errors.classId ? <Text style={styles.errorText}>{errors.classId}</Text> : null}
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Subject ID <Text style={{ color: '#dc2626' }}>*</Text></Text>
-        <TextInput placeholder="Enter Subject ID" value={subjectId} onChangeText={(v) => { setSubjectId(v); setTest((t) => ({ ...t, subjectId: v })); }}
-          style={{ borderWidth: 1, borderColor: errors.subjectId ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.subjectId ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.subjectId}</Text> : null}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Subject <Text style={styles.required}>*</Text></Text>
+          <View style={[styles.dropdown, errors.subjectId && styles.inputError]}>
+            <ScrollView style={styles.dropdownScroll} showsVerticalScrollIndicator={false}>
+              {subjects.length > 0 ? (
+                subjects.map((subj) => (
+                  <TouchableOpacity
+                    key={subj.id}
+                    onPress={() => {
+                      setSubjectId(subj.id);
+                      setTest((t) => ({ ...t, subjectId: subj.id }));
+                    }}
+                    style={[
+                      styles.dropdownItem,
+                      subjectId === subj.id && styles.dropdownItemSelected
+                    ]}
+                  >
+                    <Text style={[
+                      styles.dropdownItemText,
+                      subjectId === subj.id && styles.dropdownItemTextSelected
+                    ]}>
+                      {subj.name || subj.subject_name || subj.code}
+                    </Text>
+                  </TouchableOpacity>
+                ))
+              ) : (
+                <View style={styles.emptyState}>
+                  <Text style={styles.emptyStateText}>
+                    {classId ? 'No subjects available for this class' : 'Select a class first'}
+                  </Text>
+                </View>
+              )}
+            </ScrollView>
+          </View>
+          {errors.subjectId ? <Text style={styles.errorText}>{errors.subjectId}</Text> : null}
+        </View>
 
-        <TouchableOpacity onPress={handleFetchRoster} style={{ backgroundColor: '#2563eb', padding: 12, borderRadius: 8, marginTop: 4 }}>
-          <Text style={{ color: '#fff', textAlign: 'center' }}>Load Students</Text>
+        <TouchableOpacity 
+          onPress={handleFetchRoster} 
+          style={[styles.primaryButton, !classId && styles.buttonDisabled]}
+          disabled={!classId}
+        >
+          <Text style={styles.primaryButtonText}>👥 Load Students</Text>
         </TouchableOpacity>
       </View>
 
 
       {/* Test details */}
-      <View style={{ borderWidth: 1, borderColor: '#e5e7eb', borderRadius: 8, padding: 12, marginBottom: 16 }}>
-        <Text style={{ fontWeight: '600', marginBottom: 8 }}>Test Details</Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>📋 Test Details</Text>
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Test Name <Text style={{ color: '#dc2626' }}>*</Text></Text>
-        <TextInput placeholder="Enter Test Name" value={test.name} onChangeText={(v) => setTest((t) => ({ ...t, name: v }))}
-          style={{ borderWidth: 1, borderColor: errors.name ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.name ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.name}</Text> : null}
+        <View style={styles.inputRow}>
+          <View style={[styles.inputGroup, { flex: 2 }]}>
+            <Text style={styles.label}>Test Name <Text style={styles.required}>*</Text></Text>
+            <TextInput 
+              placeholder="Enter Test Name" 
+              value={test.name} 
+              onChangeText={(v) => setTest((t) => ({ ...t, name: v }))}
+              style={[styles.input, errors.name && styles.inputError]}
+              placeholderTextColor="#9ca3af"
+            />
+            {errors.name ? <Text style={styles.errorText}>{errors.name}</Text> : null}
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Date <Text style={styles.required}>*</Text></Text>
+            <TextInput 
+              placeholder="YYYY-MM-DD" 
+              value={test.date} 
+              onChangeText={(v) => setTest((t) => ({ ...t, date: v }))}
+              style={[styles.input, errors.date && styles.inputError]}
+              placeholderTextColor="#9ca3af"
+            />
+            {errors.date ? <Text style={styles.errorText}>{errors.date}</Text> : null}
+          </View>
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Date (YYYY-MM-DD) <Text style={{ color: '#dc2626' }}>*</Text></Text>
-        <TextInput placeholder="YYYY-MM-DD" value={test.date} onChangeText={(v) => setTest((t) => ({ ...t, date: v }))}
-          style={{ borderWidth: 1, borderColor: errors.date ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.date ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.date}</Text> : null}
+        <View style={styles.inputRow}>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Max Marks <Text style={styles.required}>*</Text></Text>
+            <TextInput 
+              placeholder="e.g. 100" 
+              keyboardType="numeric" 
+              value={String(test.maxMarks)} 
+              onChangeText={(v) => setTest((t) => ({ ...t, maxMarks: Number(v || 0) }))}
+              style={[styles.input, errors.maxMarks && styles.inputError]}
+              placeholderTextColor="#9ca3af"
+            />
+            {errors.maxMarks ? <Text style={styles.errorText}>{errors.maxMarks}</Text> : null}
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Weightage (%)</Text>
+            <TextInput 
+              placeholder="e.g. 10" 
+              keyboardType="numeric" 
+              value={String(test.weightage)} 
+              onChangeText={(v) => setTest((t) => ({ ...t, weightage: Number(v || 0) }))}
+              style={[styles.input, errors.weightage && styles.inputError]}
+              placeholderTextColor="#9ca3af"
+            />
+            {errors.weightage ? <Text style={styles.errorText}>{errors.weightage}</Text> : null}
+          </View>
+          <View style={styles.inputGroup}>
+            <Text style={styles.label}>Term <Text style={styles.required}>*</Text></Text>
+            <TextInput 
+              placeholder="e.g. T1" 
+              value={test.term} 
+              onChangeText={(v) => setTest((t) => ({ ...t, term: v }))}
+              style={[styles.input, errors.term && styles.inputError]}
+              placeholderTextColor="#9ca3af"
+            />
+            {errors.term ? <Text style={styles.errorText}>{errors.term}</Text> : null}
+          </View>
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Max Marks <Text style={{ color: '#dc2626' }}>*</Text></Text>
-        <TextInput placeholder="e.g. 100" keyboardType="numeric" value={String(test.maxMarks)} onChangeText={(v) => setTest((t) => ({ ...t, maxMarks: Number(v || 0) }))}
-          style={{ borderWidth: 1, borderColor: errors.maxMarks ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.maxMarks ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.maxMarks}</Text> : null}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Examination Type <Text style={styles.required}>*</Text></Text>
+          <View style={styles.toggleContainer}>
+            <TouchableOpacity
+              onPress={() => setTest((t) => ({ ...t, examinationType: 'internal' }))}
+              style={[
+                styles.toggleButton,
+                styles.toggleButtonLeft,
+                test.examinationType === 'internal' && styles.toggleButtonActive
+              ]}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                test.examinationType === 'internal' && styles.toggleButtonTextActive
+              ]}>
+                📚 Internals
+              </Text>
+            </TouchableOpacity>
+            <TouchableOpacity
+              onPress={() => setTest((t) => ({ ...t, examinationType: 'external' }))}
+              style={[
+                styles.toggleButton,
+                styles.toggleButtonRight,
+                test.examinationType === 'external' && styles.toggleButtonActive
+              ]}
+            >
+              <Text style={[
+                styles.toggleButtonText,
+                test.examinationType === 'external' && styles.toggleButtonTextActive
+              ]}>
+                🎯 External
+              </Text>
+            </TouchableOpacity>
+          </View>
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Weightage (%)</Text>
-        <TextInput placeholder="e.g. 10" keyboardType="numeric" value={String(test.weightage)} onChangeText={(v) => setTest((t) => ({ ...t, weightage: Number(v || 0) }))}
-          style={{ borderWidth: 1, borderColor: errors.weightage ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.weightage ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.weightage}</Text> : null}
+        <View style={styles.inputGroup}>
+          <Text style={styles.label}>Notes</Text>
+          <TextInput 
+            placeholder="Optional notes (syllabus, instructions)" 
+            value={test.notes} 
+            onChangeText={(v) => setTest((t) => ({ ...t, notes: v }))}
+            style={styles.textArea}
+            placeholderTextColor="#9ca3af"
+            multiline
+            numberOfLines={3}
+          />
+        </View>
 
-        <Text style={{ marginBottom: 4 }}>Term <Text style={{ color: '#dc2626' }}>*</Text></Text>
-        <TextInput placeholder="e.g. T1" value={test.term} onChangeText={(v) => setTest((t) => ({ ...t, term: v }))}
-          style={{ borderWidth: 1, borderColor: errors.term ? '#dc2626' : '#ddd', borderRadius: 6, padding: 10, marginBottom: 4 }} />
-        {errors.term ? <Text style={{ color: '#dc2626', marginBottom: 8 }}>{errors.term}</Text> : null}
-
-        <Text style={{ marginBottom: 4 }}>Notes</Text>
-        <TextInput placeholder="Optional notes (syllabus, instructions)" value={test.notes} onChangeText={(v) => setTest((t) => ({ ...t, notes: v }))}
-          style={{ borderWidth: 1, borderColor: '#ddd', borderRadius: 6, padding: 10, marginBottom: 8 }} />
-
-        <TouchableOpacity onPress={handleCreateAssessment} disabled={!canCreate}
-          style={{ backgroundColor: canCreate ? '#16a34a' : '#9ca3af', padding: 12, borderRadius: 8, marginTop: 4 }}>
-          <Text style={{ color: '#fff', textAlign: 'center' }}>{assessmentId ? 'Assessment Created' : 'Create Assessment'}</Text>
+        <TouchableOpacity 
+          onPress={handleCreateAssessment} 
+          disabled={!canCreate}
+          style={[styles.primaryButton, !canCreate && styles.buttonDisabled]}
+        >
+          <Text style={styles.primaryButtonText}>
+            {assessmentId ? '✅ Assessment Created' : '📝 Create Assessment'}
+          </Text>
         </TouchableOpacity>
       </View>
 
       {/* Marks table */}
-      <Text style={{ fontWeight: '600', marginBottom: 8 }}>Enter Marks</Text>
-      <View style={{ flexDirection: 'row', alignItems: 'center', paddingVertical: 6, borderBottomWidth: 1, borderBottomColor: '#e5e7eb' }}>
-        <Text style={{ width: 120, fontWeight: '600' }}>Student</Text>
-        <Text style={{ width: 80, fontWeight: '600', textAlign: 'center' }}>Marks</Text>
-        <Text style={{ width: 80, fontWeight: '600', textAlign: 'center' }}>Status</Text>
-        <Text style={{ flex: 1, fontWeight: '600', marginLeft: 8 }}>Remarks</Text>
+      <View style={styles.card}>
+        <View style={styles.cardHeader}>
+          <Text style={styles.cardTitle}>📊 Enter Marks</Text>
+        </View>
+        
+        {students.length > 0 ? (
+          <>
+            <View style={styles.tableHeader}>
+              <Text style={[styles.tableHeaderText, { width: 120 }]}>Student</Text>
+              <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'center' }]}>Marks</Text>
+              <Text style={[styles.tableHeaderText, { width: 80, textAlign: 'center' }]}>Status</Text>
+              <Text style={[styles.tableHeaderText, { flex: 1, marginLeft: 8 }]}>Remarks</Text>
+            </View>
+            <View style={styles.bulkActionsContainer}>
+              <TouchableOpacity 
+                onPress={() => setMarksMap((m) => {
+                  const next = { ...m };
+                  students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; next[sid] = { ...(next[sid] || {}), absent: false }; });
+                  return next;
+                })} 
+                style={styles.bulkActionButton}
+              >
+                <Text style={styles.bulkActionText}>✅ All Present</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setMarksMap((m) => {
+                  const next = { ...m };
+                  students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; next[sid] = { ...(next[sid] || {}), absent: true, marks: null }; });
+                  return next;
+                })} 
+                style={styles.bulkActionButton}
+              >
+                <Text style={styles.bulkActionText}>❌ All Absent</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => setMarksMap((m) => {
+                  const next = { ...m };
+                  students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; if (next[sid]) next[sid] = { ...next[sid], marks: null }; });
+                  return next;
+                })} 
+                style={styles.bulkActionButton}
+              >
+                <Text style={styles.bulkActionText}>🗑️ Clear Marks</Text>
+              </TouchableOpacity>
+              <TouchableOpacity 
+                onPress={() => {
+                  const maxAllowed = Number(test.maxMarks) || 0;
+                  setMarksMap((m) => {
+                    const next = { ...m };
+                    students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; next[sid] = { ...(next[sid] || {}), marks: maxAllowed, absent: false }; });
+                    return next;
+                  });
+                }} 
+                style={styles.bulkActionButton}
+              >
+                <Text style={styles.bulkActionText}>🎯 Fill Max</Text>
+              </TouchableOpacity>
+            </View>
+            
+            <FlatList
+              data={students}
+              keyExtractor={(item, index) => String(item.id || item.studentId || item.student_id || index)}
+              renderItem={renderStudent}
+              ItemSeparatorComponent={() => <View style={styles.studentSeparator} />}
+              style={styles.studentsList}
+            />
+
+            <TouchableOpacity 
+              onPress={handleSaveMarks} 
+              disabled={!canSaveMarks}
+              style={[styles.primaryButton, !canSaveMarks && styles.buttonDisabled]}
+            >
+              <Text style={styles.primaryButtonText}>💾 Save Marks</Text>
+            </TouchableOpacity>
+          </>
+        ) : (
+          <View style={styles.emptyState}>
+            <Text style={styles.emptyStateText}>No students loaded. Please select a class and load students first.</Text>
+          </View>
+        )}
       </View>
-      <View style={{ flexDirection: 'row', marginTop: 8, marginBottom: 8 }}>
-        <TouchableOpacity onPress={() => setMarksMap((m) => {
-          const next = { ...m };
-          students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; next[sid] = { ...(next[sid] || {}), absent: false }; });
-          return next;
-        })} style={{ backgroundColor: '#e5e7eb', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }}>
-          <Text>All Present</Text>
+
+      <View style={styles.actionsContainer}>
+        <TouchableOpacity 
+          onPress={handleGenerateReport} 
+          disabled={!assessmentId}
+          style={[styles.actionButton, styles.reportButton, !assessmentId && styles.buttonDisabled]}
+        >
+          <Text style={styles.actionButtonText}>📊 Generate Report</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMarksMap((m) => {
-          const next = { ...m };
-          students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; next[sid] = { ...(next[sid] || {}), absent: true, marks: null }; });
-          return next;
-        })} style={{ backgroundColor: '#e5e7eb', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }}>
-          <Text>All Absent</Text>
+
+        <TouchableOpacity 
+          onPress={handlePublish} 
+          disabled={!assessmentId}
+          style={[styles.actionButton, styles.publishButton, !assessmentId && styles.buttonDisabled]}
+        >
+          <Text style={styles.actionButtonText}>🚀 Publish</Text>
         </TouchableOpacity>
-        <TouchableOpacity onPress={() => setMarksMap((m) => {
-          const next = { ...m };
-          students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; if (next[sid]) next[sid] = { ...next[sid], marks: null }; });
-          return next;
-        })} style={{ backgroundColor: '#e5e7eb', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6, marginRight: 8 }}>
-          <Text>Clear Marks</Text>
-        </TouchableOpacity>
-        <TouchableOpacity onPress={() => {
-          const maxAllowed = Number(test.maxMarks) || 0;
-          setMarksMap((m) => {
-            const next = { ...m };
-            students.forEach((s) => { const sid = s.id || s.studentId || s.student_id; next[sid] = { ...(next[sid] || {}), marks: maxAllowed, absent: false }; });
-            return next;
-          });
-        }} style={{ backgroundColor: '#e5e7eb', paddingVertical: 8, paddingHorizontal: 12, borderRadius: 6 }}>
-          <Text>Fill Max</Text>
+
+        <TouchableOpacity 
+          onPress={handleNotify} 
+          disabled={!assessmentId}
+          style={[styles.actionButton, styles.notifyButton, !assessmentId && styles.buttonDisabled]}
+        >
+          <Text style={styles.actionButtonText}>📧 Notify Parents</Text>
         </TouchableOpacity>
       </View>
-      <FlatList
-        data={students}
-        keyExtractor={(item, index) => String(item.id || item.studentId || item.student_id || index)}
-        renderItem={renderStudent}
-        ItemSeparatorComponent={() => <View style={{ height: 8 }} />}
-      />
-
-      <TouchableOpacity onPress={handleSaveMarks} disabled={!canSaveMarks}
-        style={{ backgroundColor: canSaveMarks ? '#0ea5e9' : '#9ca3af', padding: 12, borderRadius: 8, marginVertical: 16 }}>
-        <Text style={{ color: '#fff', textAlign: 'center' }}>Save Marks</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={handleGenerateReport} disabled={!assessmentId}
-        style={{ backgroundColor: assessmentId ? '#7c3aed' : '#9ca3af', padding: 12, borderRadius: 8, marginBottom: 8 }}>
-        <Text style={{ color: '#fff', textAlign: 'center' }}>Generate Report</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={handlePublish} disabled={!assessmentId}
-        style={{ backgroundColor: assessmentId ? '#f59e0b' : '#9ca3af', padding: 12, borderRadius: 8, marginBottom: 8 }}>
-        <Text style={{ color: '#fff', textAlign: 'center' }}>Publish</Text>
-      </TouchableOpacity>
-
-      <TouchableOpacity onPress={handleNotify} disabled={!assessmentId}
-        style={{ backgroundColor: assessmentId ? '#ef4444' : '#9ca3af', padding: 12, borderRadius: 8, marginBottom: 24 }}>
-        <Text style={{ color: '#fff', textAlign: 'center' }}>Notify Parents</Text>
-      </TouchableOpacity>
     </ScrollView>
   );
 }
 
-
+const styles = StyleSheet.create({
+  container: {
+    flex: 1,
+    backgroundColor: '#f8fafc',
+  },
+  contentContainer: {
+    padding: 16,
+    paddingBottom: 32,
+  },
+  header: {
+    marginBottom: 24,
+    paddingTop: 16,
+  },
+  title: {
+    fontSize: 28,
+    fontWeight: '700',
+    color: '#1e293b',
+    marginBottom: 4,
+  },
+  subtitle: {
+    fontSize: 16,
+    color: '#64748b',
+    fontWeight: '500',
+  },
+  loadingContainer: {
+    alignItems: 'center',
+    paddingVertical: 20,
+  },
+  loadingText: {
+    marginTop: 8,
+    color: '#64748b',
+    fontSize: 14,
+  },
+  card: {
+    backgroundColor: 'white',
+    borderRadius: 12,
+    padding: 20,
+    marginBottom: 20,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 2,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  cardHeader: {
+    marginBottom: 16,
+    paddingBottom: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e2e8f0',
+  },
+  cardTitle: {
+    fontSize: 18,
+    fontWeight: '600',
+    color: '#1e293b',
+  },
+  inputRow: {
+    flexDirection: 'row',
+    gap: 12,
+    marginBottom: 16,
+  },
+  inputGroup: {
+    flex: 1,
+  },
+  label: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+    marginBottom: 6,
+  },
+  required: {
+    color: '#dc2626',
+  },
+  input: {
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9fafb',
+    color: '#1f2937',
+  },
+  inputError: {
+    borderColor: '#dc2626',
+    backgroundColor: '#fef2f2',
+  },
+  textArea: {
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    padding: 12,
+    fontSize: 16,
+    backgroundColor: '#f9fafb',
+    color: '#1f2937',
+    minHeight: 80,
+    textAlignVertical: 'top',
+  },
+  errorText: {
+    color: '#dc2626',
+    fontSize: 12,
+    marginTop: 4,
+    fontWeight: '500',
+  },
+  dropdown: {
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    borderRadius: 8,
+    backgroundColor: '#f9fafb',
+    maxHeight: 120,
+  },
+  dropdownScroll: {
+    maxHeight: 120,
+  },
+  dropdownItem: {
+    padding: 12,
+    borderBottomWidth: 1,
+    borderBottomColor: '#e5e7eb',
+  },
+  dropdownItemSelected: {
+    backgroundColor: '#3b82f6',
+  },
+  dropdownItemText: {
+    fontSize: 14,
+    color: '#374151',
+    fontWeight: '500',
+  },
+  dropdownItemTextSelected: {
+    color: 'white',
+    fontWeight: '600',
+  },
+  emptyState: {
+    padding: 20,
+    alignItems: 'center',
+  },
+  emptyStateText: {
+    color: '#6b7280',
+    fontSize: 14,
+    textAlign: 'center',
+    fontStyle: 'italic',
+  },
+  toggleContainer: {
+    flexDirection: 'row',
+    borderRadius: 8,
+    overflow: 'hidden',
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+  },
+  toggleButton: {
+    flex: 1,
+    padding: 12,
+    backgroundColor: '#f9fafb',
+    alignItems: 'center',
+  },
+  toggleButtonLeft: {
+    borderRightWidth: 1,
+    borderRightColor: '#d1d5db',
+  },
+  toggleButtonRight: {
+    borderLeftWidth: 1,
+    borderLeftColor: '#d1d5db',
+  },
+  toggleButtonActive: {
+    backgroundColor: '#3b82f6',
+  },
+  toggleButtonText: {
+    fontSize: 14,
+    fontWeight: '600',
+    color: '#374151',
+  },
+  toggleButtonTextActive: {
+    color: 'white',
+  },
+  primaryButton: {
+    backgroundColor: '#3b82f6',
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+    marginTop: 8,
+  },
+  primaryButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  buttonDisabled: {
+    backgroundColor: '#9ca3af',
+  },
+  tableHeader: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: '#f1f5f9',
+    borderRadius: 8,
+    marginBottom: 12,
+  },
+  tableHeaderText: {
+    fontWeight: '600',
+    color: '#475569',
+    fontSize: 14,
+  },
+  bulkActionsContainer: {
+    flexDirection: 'row',
+    flexWrap: 'wrap',
+    gap: 8,
+    marginBottom: 16,
+  },
+  bulkActionButton: {
+    backgroundColor: '#e2e8f0',
+    paddingVertical: 8,
+    paddingHorizontal: 12,
+    borderRadius: 6,
+    flex: 1,
+    minWidth: 80,
+  },
+  bulkActionText: {
+    color: '#475569',
+    fontSize: 12,
+    fontWeight: '600',
+    textAlign: 'center',
+  },
+  studentsList: {
+    maxHeight: 300,
+    marginBottom: 16,
+  },
+  studentSeparator: {
+    height: 8,
+  },
+  actionsContainer: {
+    gap: 12,
+    marginTop: 8,
+  },
+  actionButton: {
+    padding: 14,
+    borderRadius: 8,
+    alignItems: 'center',
+  },
+  reportButton: {
+    backgroundColor: '#7c3aed',
+  },
+  publishButton: {
+    backgroundColor: '#f59e0b',
+  },
+  notifyButton: {
+    backgroundColor: '#059669',
+  },
+  actionButtonText: {
+    color: 'white',
+    fontSize: 16,
+    fontWeight: '600',
+  },
+  studentRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    paddingVertical: 12,
+    paddingHorizontal: 8,
+    backgroundColor: 'white',
+    borderRadius: 8,
+    borderWidth: 1,
+    borderColor: '#e2e8f0',
+  },
+  studentName: {
+    width: 120,
+    fontSize: 14,
+    fontWeight: '500',
+    color: '#374151',
+  },
+  marksInput: {
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    padding: 8,
+    marginHorizontal: 8,
+    width: 80,
+    backgroundColor: 'white',
+    fontSize: 14,
+    textAlign: 'center',
+  },
+  marksInputDisabled: {
+    backgroundColor: '#f3f4f6',
+    color: '#9ca3af',
+  },
+  statusButton: {
+    padding: 8,
+    borderRadius: 6,
+    width: 80,
+    alignItems: 'center',
+  },
+  statusButtonPresent: {
+    backgroundColor: '#dcfce7',
+  },
+  statusButtonAbsent: {
+    backgroundColor: '#fee2e2',
+  },
+  statusButtonText: {
+    fontSize: 12,
+    fontWeight: '600',
+  },
+  statusButtonTextPresent: {
+    color: '#166534',
+  },
+  statusButtonTextAbsent: {
+    color: '#dc2626',
+  },
+  remarksInput: {
+    borderWidth: 1.5,
+    borderColor: '#d1d5db',
+    borderRadius: 6,
+    padding: 8,
+    marginLeft: 8,
+    flex: 1,
+    fontSize: 14,
+  },
+});
