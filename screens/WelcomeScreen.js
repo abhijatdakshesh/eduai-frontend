@@ -13,6 +13,12 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
+// Responsive card width: 3 cols on wide screens, else 2 cols
+const maxContentWidth = 960;
+const computedContentWidth = Math.min(width, maxContentWidth);
+const featureCols = computedContentWidth >= 900 ? 3 : 2;
+const horizontalGap = 12;
+const featureCardWidth = (computedContentWidth - horizontalGap * (featureCols - 1) - 48) / featureCols; // 24px padding each side total 48
 
 const WelcomeScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -341,9 +347,10 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
+    gap: horizontalGap,
   },
   featureCard: {
-    width: (width - 72) / 2,
+    width: featureCardWidth,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 12,
     padding: 12,
@@ -384,7 +391,10 @@ const styles = StyleSheet.create({
     maxWidth: 720,
   },
   mainButtons: {
-    marginBottom: 25,
+    marginBottom: 20,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 480,
   },
   button: {
     height: 50,
@@ -451,6 +461,7 @@ const styles = StyleSheet.create({
   roleButtonsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
+    gap: 8,
   },
   roleButton: {
     flex: 1,
