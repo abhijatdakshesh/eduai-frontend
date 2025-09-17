@@ -1,13 +1,19 @@
 // Environment configuration
+// Allow overriding via environment variables for web builds (Vercel)
+const RUNTIME_API_BASE =
+  (typeof process !== 'undefined' && process.env && (
+    process.env.EXPO_PUBLIC_API_BASE_URL || process.env.NEXT_PUBLIC_API_BASE_URL
+  )) || null;
+
 const ENV = {
   development: {
-    API_BASE_URL: 'http://localhost:3001/api/v1',
+    API_BASE_URL: RUNTIME_API_BASE || 'http://localhost:3001/api/v1',
     ENVIRONMENT: 'development',
     USE_MOCKS: false,
     ALLOW_DEMO_LOGINS: false,
   },
   production: {
-    API_BASE_URL: 'https://your-production-domain.com/api/v1',
+    API_BASE_URL: RUNTIME_API_BASE || 'https://eduai-backend-t7ow.onrender.com/api/v1',
     ENVIRONMENT: 'production',
     USE_MOCKS: false,
     ALLOW_DEMO_LOGINS: false,
