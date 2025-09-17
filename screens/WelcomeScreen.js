@@ -12,6 +12,7 @@ import {
 import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
+const isWeb = Platform.OS === 'web';
 
 const WelcomeScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
@@ -23,18 +24,18 @@ const WelcomeScreen = ({ navigation }) => {
       Animated.timing(fadeAnim, {
         toValue: 1,
         duration: 1000,
-        useNativeDriver: true,
+        useNativeDriver: !isWeb,
       }),
       Animated.timing(slideAnim, {
         toValue: 0,
         duration: 800,
-        useNativeDriver: true,
+        useNativeDriver: !isWeb,
       }),
       Animated.spring(scaleAnim, {
         toValue: 1,
         tension: 50,
         friction: 7,
-        useNativeDriver: true,
+        useNativeDriver: !isWeb,
       }),
     ]).start();
   }, []);
@@ -67,6 +68,7 @@ const WelcomeScreen = ({ navigation }) => {
       style={styles.container}
     >
       <ScrollView 
+        style={styles.scroll}
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={false}
         bounces={true}
@@ -253,10 +255,14 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
   },
+  scroll: {
+    flex: 1,
+  },
   scrollContainer: {
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 40 : 20,
     paddingBottom: 40,
+    minHeight: height + 200,
   },
   header: {
     alignItems: 'center',
