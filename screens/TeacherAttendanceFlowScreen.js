@@ -693,11 +693,7 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
           <View style={styles.studentListContainer}>
             {students.map((student) => {
               const key = getStudentKey(student) || String(student?.id || student?.student_id || Math.random());
-              return (
-                <React.Fragment key={key}>
-                  {renderStudentCard(student)}
-                </React.Fragment>
-              );
+              return renderStudentCard(student);
             })}
           </View>
         </View>
