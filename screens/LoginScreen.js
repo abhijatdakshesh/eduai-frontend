@@ -135,40 +135,7 @@ const LoginScreen = ({ navigation }) => {
             <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
           </TouchableOpacity>
 
-          {/* Quick fill credentials */}
-          <View style={styles.quickFillRow}>
-            <Text style={styles.quickFillLabel}>Quick fill:</Text>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => { setEmail('cse.student@eduai.com'); setPassword('password123'); }}
-            >
-              <Text style={styles.quickFillChipText}>CSE Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => { setEmail('ise.student@eduai.com'); setPassword('password123'); }}
-            >
-              <Text style={styles.quickFillChipText}>ISE Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => { setEmail('cse.teacher@eduai.com'); setPassword('password123'); }}
-            >
-              <Text style={styles.quickFillChipText}>CSE Teacher</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => { setEmail('ise.teacher@eduai.com'); setPassword('password123'); }}
-            >
-              <Text style={styles.quickFillChipText}>ISE Teacher</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => { setEmail('admin@eduai.com'); setPassword('password123'); }}
-            >
-              <Text style={styles.quickFillChipText}>Admin</Text>
-            </TouchableOpacity>
-          </View>
+
 
           {/* Admin Login */}
           <TouchableOpacity 

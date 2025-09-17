@@ -75,28 +75,7 @@ const AdminLoginScreen = ({ navigation }) => {
           </Text>
         </TouchableOpacity>
 
-        {/* Quick fill credentials */}
-        <View style={styles.quickFillRow}>
-          <Text style={styles.quickFillLabel}>Quick fill:</Text>
-          <TouchableOpacity
-            style={styles.quickFillChip}
-            onPress={() => { setEmail('admin@eduai.com'); setPassword('password123'); }}
-          >
-            <Text style={styles.quickFillChipText}>Admin</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickFillChip}
-            onPress={() => { setEmail('teacher@eduai.com'); setPassword('password123'); }}
-          >
-            <Text style={styles.quickFillChipText}>Teacher</Text>
-          </TouchableOpacity>
-          <TouchableOpacity
-            style={styles.quickFillChip}
-            onPress={() => { setEmail('student@eduai.com'); setPassword('password123'); }}
-          >
-            <Text style={styles.quickFillChipText}>Student</Text>
-          </TouchableOpacity>
-        </View>
+
 
         <TouchableOpacity
           style={styles.backButton}
