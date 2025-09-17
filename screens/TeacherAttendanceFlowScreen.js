@@ -275,28 +275,67 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
     }
   };
 
+  // Department-specific sections configuration
+  const getDepartmentSections = (departmentName) => {
+    const departmentSections = {
+      'Computer Science': ['A', 'B', 'C', 'D', 'E'],
+      'Information Science': ['A', 'B', 'C'],
+      'Electronics': ['A', 'B', 'C', 'D'],
+      'Mechanical': ['A', 'B', 'C', 'D', 'E', 'F'],
+      'Civil': ['A', 'B', 'C'],
+      'Electrical': ['A', 'B', 'C', 'D'],
+      'Chemical': ['A', 'B'],
+      'Aerospace': ['A', 'B', 'C'],
+      'Biotechnology': ['A', 'B'],
+      'Textile': ['A', 'B', 'C']
+    };
+    
+    // Return sections for the department, or default sections if not found
+    return departmentSections[departmentName] || ['A', 'B', 'C', 'D'];
+  };
+
   const fetchSections = async () => {
     if (!selectedDepartment) return;
     
     try {
       setLoadingSections(true);
-      // Try to fetch sections from API first
+      
+      // Get department-specific sections first
+      const departmentSections = getDepartmentSections(selectedDepartment.name);
+      
+      // Try to fetch sections from API, but prioritize department-specific sections
       try {
         const response = await apiClient.getSectionsByDepartment(selectedDepartment.id);
         if (response?.success && response?.data?.sections?.length > 0) {
-          setSections(response.data.sections);
+          // Check if API returned actual section letters (A, B, C, etc.) or class names
+          const apiSections = response.data.sections;
+          const hasSectionLetters = apiSections.some(section => {
+            const sectionName = typeof section === 'string' ? section : (section?.name || section?.section || '');
+            return /^[A-Z]$/.test(sectionName.trim());
+          });
+          
+          if (hasSectionLetters) {
+            // API returned proper section letters, use them
+            setSections(apiSections);
+          } else {
+            // API returned class names instead of section letters, use department-specific sections
+            console.log('API returned class names instead of section letters, using department-specific sections');
+            setSections(departmentSections);
+          }
         } else {
-          // Fallback to predefined sections
-          setSections(['A', 'B', 'C', 'D']);
+          // No API data, use department-specific sections
+          setSections(departmentSections);
         }
       } catch (apiError) {
-        console.log('API call failed, using fallback sections:', apiError?.message);
-        // Fallback to predefined sections
-        setSections(['A', 'B', 'C', 'D']);
+        console.log('API call failed, using department-specific sections:', apiError?.message);
+        // Fallback to department-specific sections
+        setSections(departmentSections);
       }
     } catch (error) {
       console.error('Error fetching sections:', error);
-      setSections(['A', 'B', 'C', 'D']); // Fallback
+      // Fallback to department-specific sections
+      const departmentSections = getDepartmentSections(selectedDepartment.name);
+      setSections(departmentSections);
     } finally {
       setLoadingSections(false);
     }
@@ -589,7 +628,7 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
     <View style={styles.stepContent}>
       <Text style={styles.stepTitle}>Select Section</Text>
       <Text style={styles.stepDescription}>
-        Choose the section (A, B, C, D) for {selectedDepartment?.name}
+        Choose the section for {selectedDepartment?.name}
       </Text>
       
       {loadingSections ? (
@@ -693,7 +732,11 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
           <View style={styles.studentListContainer}>
             {students.map((student) => {
               const key = getStudentKey(student) || String(student?.id || student?.student_id || Math.random());
-              return renderStudentCard(student);
+              return (
+                <View key={key}>
+                  {renderStudentCard(student)}
+                </View>
+              );
             })}
           </View>
         </View>
