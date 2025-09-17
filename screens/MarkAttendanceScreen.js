@@ -4,6 +4,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../services/api';
 import { useBackButton } from '../utils/backButtonHandler';
 import { theme } from '../config/theme';
+import ParentNotificationModal from '../components/ParentNotificationModal';
 
 const isIOS = Platform.OS === 'ios';
 
@@ -30,6 +31,15 @@ const MarkAttendanceScreen = ({ route, navigation }) => {
   const [showSaved, setShowSaved] = useState(false);
   const [summary, setSummary] = useState({ present: 0, absent: 0, late: 0 });
   const [reasons, setReasons] = useState([]);
+  
+  // Modal state for parent notifications
+  const [notificationModal, setNotificationModal] = useState({
+    visible: false,
+    student: null,
+    attendanceStatus: null,
+    notes: '',
+    communicationType: null, // 'whatsapp' or 'ai_call'
+  });
 
   useBackButton(navigation);
 
@@ -363,126 +373,43 @@ STU005,absent,Personal reason`;
     }
   };
 
-  // WhatsApp and AI Call functionality
-  const sendWhatsAppToParents = async (studentId = null) => {
-    try {
-      // Get attendance summary for messaging
-      const absentStudents = students.filter(s => {
-        const key = getStudentKey(s);
-        return marks[key]?.status === 'absent' || marks[key]?.status === 'late';
-      });
-
-      if (studentId) {
-        // Send to specific student's parent
-        const student = students.find(s => getStudentKey(s) === studentId);
-        if (!student) {
-          Alert.alert('Error', 'Student not found');
-          return;
-        }
-        
-        const studentMark = marks[studentId];
-        const message = `Dear Parent/Guardian,
-
-Your ward ${student.first_name || student.name} (ID: ${student.student_id || student.id}) was marked as ${studentMark?.status?.toUpperCase()} on ${date}.
-
-${studentMark?.notes ? `Reason: ${studentMark.notes}` : ''}
-
-Please ensure regular attendance for better academic performance.
-
-Best regards,
-Teacher`;
-
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-        
-        if (Platform.OS === 'web') {
-          window.open(whatsappUrl, '_blank');
-        } else {
-          await Linking.openURL(whatsappUrl);
-        }
-      } else {
-        // Send to all parents of absent/late students
-        if (absentStudents.length === 0) {
-          Alert.alert('Info', 'No absent or late students to notify');
-          return;
-        }
-
-        const message = `Dear Parents/Guardians,
-
-Attendance Report for ${date}:
-
-${absentStudents.map(s => {
-          const key = getStudentKey(s);
-          const mark = marks[key];
-          return `• ${s.first_name || s.name} (ID: ${s.student_id || s.id}) - ${mark?.status?.toUpperCase()}${mark?.notes ? ` (${mark.notes})` : ''}`;
-        }).join('\n')}
-
-Please ensure regular attendance for better academic performance.
-
-Best regards,
-Teacher`;
-
-        const whatsappUrl = `https://wa.me/?text=${encodeURIComponent(message)}`;
-        
-        if (Platform.OS === 'web') {
-          window.open(whatsappUrl, '_blank');
-        } else {
-          await Linking.openURL(whatsappUrl);
-        }
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to open WhatsApp: ' + error.message);
+  // WhatsApp and AI Call functionality with modal review
+  const showNotificationModal = (studentId, communicationType) => {
+    const student = students.find(s => getStudentKey(s) === studentId);
+    if (!student) {
+      Alert.alert('Error', 'Student not found');
+      return;
     }
+    
+    const studentMark = marks[studentId];
+    if (!studentMark || (studentMark.status !== 'absent' && studentMark.status !== 'late')) {
+      Alert.alert('Info', 'Student is not marked as absent or late');
+      return;
+    }
+    
+    setNotificationModal({
+      visible: true,
+      student: student,
+      attendanceStatus: studentMark.status,
+      notes: studentMark.notes || '',
+      communicationType: communicationType,
+    });
   };
 
-  const initiateAICall = async (studentId = null) => {
-    try {
-      if (studentId) {
-        // AI Call for specific student
-        const student = students.find(s => getStudentKey(s) === studentId);
-        if (!student) {
-          Alert.alert('Error', 'Student not found');
-          return;
-        }
-        
-        const studentMark = marks[studentId];
-        Alert.alert(
-          'AI Call Initiated',
-          `AI call will be made to ${student.first_name || student.name}'s parent regarding their ${studentMark?.status?.toUpperCase()} status on ${date}.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Confirm', onPress: () => {
-              // TODO: Implement actual AI call functionality
-              Alert.alert('Success', 'AI call has been scheduled and will be made shortly.');
-            }}
-          ]
-        );
-      } else {
-        // AI Call for all absent/late students
-        const absentStudents = students.filter(s => {
-          const key = getStudentKey(s);
-          return marks[key]?.status === 'absent' || marks[key]?.status === 'late';
-        });
+  const closeNotificationModal = () => {
+    setNotificationModal({
+      visible: false,
+      student: null,
+      attendanceStatus: null,
+      notes: '',
+      communicationType: null,
+    });
+  };
 
-        if (absentStudents.length === 0) {
-          Alert.alert('Info', 'No absent or late students to call about');
-          return;
-        }
-
-        Alert.alert(
-          'AI Call Initiated',
-          `AI calls will be made to parents of ${absentStudents.length} students regarding their attendance status on ${date}.`,
-          [
-            { text: 'Cancel', style: 'cancel' },
-            { text: 'Confirm', onPress: () => {
-              // TODO: Implement actual AI call functionality
-              Alert.alert('Success', 'AI calls have been scheduled and will be made shortly.');
-            }}
-          ]
-        );
-      }
-    } catch (error) {
-      Alert.alert('Error', 'Failed to initiate AI call: ' + error.message);
-    }
+  const handleNotificationProceed = () => {
+    // This function is called after the user confirms the notification
+    // You can add any additional logic here if needed
+    console.log('Notification sent successfully');
   };
 
   const renderRow = ({ item }) => {
@@ -577,13 +504,13 @@ Teacher`;
               <View style={styles.communicationActions}>
                   <TouchableOpacity 
                   style={[styles.commActionBtn, styles.whatsappActionBtn]} 
-                    onPress={() => sendWhatsAppToParents(key)}
+                    onPress={() => showNotificationModal(key, 'whatsapp')}
                   >
-                  <Text style={styles.commActionBtnText}>📱 Notify Parent</Text>
+                  <Text style={styles.commActionBtnText}>📱 Send WhatsApp</Text>
                   </TouchableOpacity>
                   <TouchableOpacity 
                   style={[styles.commActionBtn, styles.aiCallActionBtn]} 
-                    onPress={() => initiateAICall(key)}
+                    onPress={() => showNotificationModal(key, 'ai_call')}
                   >
                   <Text style={styles.commActionBtnText}>🤖 AI Call</Text>
                   </TouchableOpacity>
@@ -663,10 +590,38 @@ Teacher`;
       {/* Communication & Export Section */}
       <View style={styles.communicationSection}>
         <View style={styles.communicationButtons}>
-          <TouchableOpacity style={[styles.commBtn, styles.whatsappBtn]} onPress={() => sendWhatsAppToParents()}>
+          <TouchableOpacity style={[styles.commBtn, styles.whatsappBtn]} onPress={() => {
+            const absentStudents = students.filter(s => {
+              const key = getStudentKey(s);
+              return marks[key]?.status === 'absent' || marks[key]?.status === 'late';
+            });
+            if (absentStudents.length === 0) {
+              Alert.alert('Info', 'No absent or late students to notify');
+            } else {
+              Alert.alert(
+                'Bulk WhatsApp Notifications',
+                `To send WhatsApp messages to parents of ${absentStudents.length} absent/late students, please use the individual "Send WhatsApp" buttons next to each student's name for a personalized review experience.`,
+                [{ text: 'OK' }]
+              );
+            }
+          }}>
             <Text style={styles.commBtnText}>📱 Notify Parents</Text>
               </TouchableOpacity>
-          <TouchableOpacity style={[styles.commBtn, styles.aiCallBtn]} onPress={() => initiateAICall()}>
+          <TouchableOpacity style={[styles.commBtn, styles.aiCallBtn]} onPress={() => {
+            const absentStudents = students.filter(s => {
+              const key = getStudentKey(s);
+              return marks[key]?.status === 'absent' || marks[key]?.status === 'late';
+            });
+            if (absentStudents.length === 0) {
+              Alert.alert('Info', 'No absent or late students to call about');
+            } else {
+              Alert.alert(
+                'Bulk AI Calls',
+                `To make AI calls to parents of ${absentStudents.length} absent/late students, please use the individual "AI Call" buttons next to each student's name for a personalized review experience.`,
+                [{ text: 'OK' }]
+              );
+            }
+          }}>
             <Text style={styles.commBtnText}>🤖 AI Calls</Text>
               </TouchableOpacity>
         </View>
@@ -724,6 +679,18 @@ Teacher`;
           showsVerticalScrollIndicator={false}
         />
       )}
+
+      {/* Parent Notification Modal */}
+      <ParentNotificationModal
+        visible={notificationModal.visible}
+        onClose={closeNotificationModal}
+        student={notificationModal.student}
+        attendanceStatus={notificationModal.attendanceStatus}
+        date={date}
+        notes={notificationModal.notes}
+        communicationType={notificationModal.communicationType}
+        onProceed={handleNotificationProceed}
+      />
     </View>
   );
 };

@@ -17,6 +17,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { apiClient } from '../services/api';
 import { useBackButton } from '../utils/backButtonHandler';
 import { theme } from '../config/theme';
+import ParentNotificationModal from '../components/ParentNotificationModal';
 
 const { width } = Dimensions.get('window');
 const isIOS = Platform.OS === 'ios';
@@ -46,6 +47,15 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
   const [dirty, setDirty] = useState(false);
   const [showSaved, setShowSaved] = useState(false);
   const [reasons, setReasons] = useState([]);
+  
+  // Modal state for parent notifications
+  const [notificationModal, setNotificationModal] = useState({
+    visible: false,
+    student: null,
+    attendanceStatus: null,
+    notes: '',
+    communicationType: null, // 'whatsapp' or 'ai_call'
+  });
 
   useBackButton(navigation);
 
@@ -148,6 +158,47 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
     } finally {
       setSaving(false);
     }
+  };
+
+  // WhatsApp and AI Call functionality with modal review
+  const showNotificationModal = (studentId, communicationType) => {
+    const student = students.find(s => getStudentKey(s) === studentId);
+    
+    if (!student) {
+      Alert.alert('Error', 'Student not found');
+      return;
+    }
+    
+    const studentMark = marks[studentId];
+    
+    if (!studentMark || (studentMark.status !== 'absent' && studentMark.status !== 'late')) {
+      Alert.alert('Info', 'Student is not marked as absent or late');
+      return;
+    }
+    
+    setNotificationModal({
+      visible: true,
+      student: student,
+      attendanceStatus: studentMark.status,
+      notes: studentMark.notes || '',
+      communicationType: communicationType,
+    });
+  };
+
+  const closeNotificationModal = () => {
+    setNotificationModal({
+      visible: false,
+      student: null,
+      attendanceStatus: null,
+      notes: '',
+      communicationType: null,
+    });
+  };
+
+  const handleNotificationProceed = () => {
+    // This function is called after the user confirms the notification
+    // You can add any additional logic here if needed
+    console.log('Notification sent successfully');
   };
 
   // Generate time slots (9 AM to 5 PM, 1-hour intervals)
@@ -368,6 +419,7 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
     
     const studentId = student.student_id || student.roll_number || student.id;
     
+    
     return (
       <View key={student.id} style={styles.studentCard}>
         {/* Student Info Header */}
@@ -415,7 +467,7 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
             
             {/* Quick Reason Chips */}
             <View style={styles.reasonChips}>
-              {reasons.map((r) => (
+              {(reasons.length > 0 ? reasons : ['Sick', 'Personal', 'Travel', 'Late Transport']).map((r) => (
                 <TouchableOpacity 
                   key={r} 
                   style={[
@@ -445,6 +497,25 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
             />
           </View>
         )}
+
+        {/* Communication Actions - Always show for absent/late students */}
+        {(current.status === 'absent' || current.status === 'late') && (
+          <View style={styles.communicationActions}>
+            <TouchableOpacity 
+              style={[styles.commActionBtn, styles.whatsappActionBtn]} 
+              onPress={() => showNotificationModal(key, 'whatsapp')}
+            >
+              <Text style={styles.commActionBtnText}>📱 Send WhatsApp</Text>
+            </TouchableOpacity>
+            <TouchableOpacity 
+              style={[styles.commActionBtn, styles.aiCallActionBtn]} 
+              onPress={() => showNotificationModal(key, 'ai_call')}
+            >
+              <Text style={styles.commActionBtnText}>🤖 AI Call</Text>
+            </TouchableOpacity>
+          </View>
+        )}
+
       </View>
     );
   };
@@ -712,6 +783,18 @@ const TeacherAttendanceFlowScreen = ({ navigation }) => {
           )}
         </View>
       </View>
+
+      {/* Parent Notification Modal */}
+      <ParentNotificationModal
+        visible={notificationModal.visible}
+        onClose={closeNotificationModal}
+        student={notificationModal.student}
+        attendanceStatus={notificationModal.attendanceStatus}
+        date={selectedDate}
+        notes={notificationModal.notes}
+        communicationType={notificationModal.communicationType}
+        onProceed={handleNotificationProceed}
+      />
     </View>
   );
 };
@@ -1102,6 +1185,55 @@ const styles = StyleSheet.create({
     color: theme.colors.text,
     minHeight: 60,
     textAlignVertical: 'top',
+  },
+  
+  // Communication actions styles
+  communicationActions: {
+    flexDirection: 'row',
+    marginTop: 12,
+    marginBottom: 8,
+    gap: 8,
+    paddingHorizontal: 4,
+  },
+  commActionBtn: {
+    flex: 1,
+    paddingVertical: 14,
+    paddingHorizontal: 16,
+    borderRadius: 12,
+    alignItems: 'center',
+    justifyContent: 'center',
+    flexDirection: 'row',
+    ...theme.shadows.medium,
+    borderWidth: 2,
+    borderColor: 'rgba(255, 255, 255, 0.3)',
+    minHeight: 48,
+  },
+  whatsappActionBtn: {
+    backgroundColor: '#25D366',
+    borderColor: 'rgba(37, 211, 102, 0.3)',
+    shadowColor: '#25D366',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  aiCallActionBtn: {
+    backgroundColor: '#8B5CF6',
+    borderColor: 'rgba(139, 92, 246, 0.3)',
+    shadowColor: '#8B5CF6',
+    shadowOpacity: 0.25,
+    shadowRadius: 6,
+    shadowOffset: { width: 0, height: 3 },
+    elevation: 4,
+  },
+  commActionBtnText: {
+    color: 'white',
+    fontWeight: '700',
+    fontSize: 14,
+    marginLeft: 4,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   
   // Action buttons styles
