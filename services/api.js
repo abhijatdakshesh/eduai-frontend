@@ -3,15 +3,23 @@ import AsyncStorage from '@react-native-async-storage/async-storage';
 import * as Device from 'expo-device';
 import Constants from 'expo-constants';
 
-import { API_BASE_URL } from '../config/environment';
+import { API_BASE_URL, ENVIRONMENT } from '../config/environment';
+import { Platform } from 'react-native';
 
 // API Configuration
 
 class ApiClient {
   constructor() {
+    const runtimeTimeout =
+      (typeof process !== 'undefined' && process.env &&
+        (Number(process.env.EXPO_PUBLIC_API_TIMEOUT_MS) || Number(process.env.NEXT_PUBLIC_API_TIMEOUT_MS))) ||
+      null;
+    const isWeb = Platform?.OS === 'web';
+    const defaultTimeout = ENVIRONMENT === 'production' ? (isWeb ? 25000 : 15000) : 10000;
+    const timeoutMs = runtimeTimeout || defaultTimeout;
     this.api = axios.create({
       baseURL: API_BASE_URL,
-      timeout: 10000,
+      timeout: timeoutMs,
       headers: {
         'Content-Type': 'application/json',
       },
@@ -271,21 +279,34 @@ class ApiClient {
   async login(email, password) {
     try {
       console.log('API: Attempting login for email:', email);
-      const response = await this.api.post('/auth/login', {
-        email,
-        password,
-      });
-      console.log('API: Login response status:', response.status);
-      if (response.data.success) {
-        console.log('API: Login successful, setting tokens');
-        await this.setTokens(
-          response.data.data.tokens.access_token,
-          response.data.data.tokens.refresh_token
-        );
-      } else {
-        console.log('API: Login failed:', response.data.message);
+      let attempt = 0;
+      let lastError;
+      while (attempt < 2) {
+        try {
+          const response = await this.api.post('/auth/login', { email, password });
+          console.log('API: Login response status:', response.status);
+          if (response.data.success) {
+            console.log('API: Login successful, setting tokens');
+            await this.setTokens(
+              response.data.data.tokens.access_token,
+              response.data.data.tokens.refresh_token
+            );
+          } else {
+            console.log('API: Login failed:', response.data.message);
+          }
+          return response.data;
+        } catch (err) {
+          lastError = err;
+          const isTimeout = err?.code === 'ECONNABORTED' || /timeout/i.test(err?.message || '');
+          if (isTimeout && attempt === 0) {
+            console.log('API: Login timeout, retrying once...');
+            attempt += 1;
+            continue;
+          }
+          throw err;
+        }
       }
-      return response.data;
+      throw lastError;
     } catch (error) {
       console.log('API: Login error:', error.response?.status, error.response?.data?.message || error.message);
       throw this.handleError(error);
