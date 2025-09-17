@@ -262,12 +262,14 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 40 : 20,
     paddingBottom: 40,
-    minHeight: height + 200,
   },
   header: {
     alignItems: 'center',
     marginBottom: 30,
     paddingTop: 10,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 960,
   },
   logoContainer: {
     marginBottom: 20,
@@ -321,6 +323,9 @@ const styles = StyleSheet.create({
   },
   featuresSection: {
     marginBottom: 30,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 960,
   },
   featuresTitle: {
     fontSize: 20,
@@ -374,6 +379,9 @@ const styles = StyleSheet.create({
   },
   buttonSection: {
     marginBottom: 30,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 720,
   },
   mainButtons: {
     marginBottom: 25,
@@ -487,6 +495,9 @@ const styles = StyleSheet.create({
   footer: {
     alignItems: 'center',
     marginTop: 15,
+    alignSelf: 'center',
+    width: '100%',
+    maxWidth: 960,
   },
   footerText: {
     fontSize: 14,
