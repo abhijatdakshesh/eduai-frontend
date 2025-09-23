@@ -140,7 +140,7 @@ const SignupScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1 }}>
         <View style={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         
@@ -308,17 +308,16 @@ const SignupScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
-    backgroundColor: '#f5f5f5',
+    backgroundColor: '#ffffff',
     ...(typeof document !== 'undefined' ? { overflow: 'auto', minHeight: '100vh' } : {}),
   },
   content: {
     flex: 1,
-    justifyContent: 'center',
-    padding: 16,
-    paddingTop: 16,
-    maxWidth: 420,
+    justifyContent: 'flex-start',
+    padding: 24,
+    paddingTop: 24,
     width: '100%',
-    alignSelf: 'center',
+    alignSelf: 'stretch',
     ...(typeof document !== 'undefined' ? { minHeight: '100vh' } : {}),
   },
   title: {
@@ -330,16 +329,16 @@ const styles = StyleSheet.create({
   },
   form: {
     backgroundColor: 'white',
-    padding: 16,
-    borderRadius: 10,
-    shadowColor: '#000',
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.1,
-    shadowRadius: 4,
-    elevation: 3,
-    maxWidth: 420,
-    alignSelf: 'center',
+    padding: 24,
+    borderRadius: 0,
+    shadowColor: 'transparent',
+    shadowOffset: { width: 0, height: 0 },
+    shadowOpacity: 0,
+    shadowRadius: 0,
+    elevation: 0,
     width: '100%',
+    alignSelf: 'stretch',
+    ...(typeof document !== 'undefined' ? { minHeight: 'calc(100vh - 56px)' } : {}),
   },
   label: {
     fontSize: 13,
@@ -351,9 +350,9 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#e1e5e9',
     borderRadius: 8,
-    paddingVertical: 10,
-    paddingHorizontal: 12,
-    fontSize: 14,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
+    fontSize: 15,
     marginBottom: 10,
     backgroundColor: 'white',
   },
@@ -363,8 +362,8 @@ const styles = StyleSheet.create({
   },
   userTypeButton: {
     flex: 1,
-    paddingVertical: 8,
-    paddingHorizontal: 10,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
     borderWidth: 1,
     borderColor: '#e1e5e9',
     borderRadius: 8,
@@ -376,7 +375,7 @@ const styles = StyleSheet.create({
     borderColor: '#1a237e',
   },
   userTypeText: {
-    fontSize: 13,
+    fontSize: 14,
     color: '#666',
   },
   userTypeTextActive: {
@@ -385,8 +384,8 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#1a237e',
-    paddingVertical: 11,
-    paddingHorizontal: 12,
+    paddingVertical: 12,
+    paddingHorizontal: 14,
     borderRadius: 8,
     alignItems: 'center',
     marginBottom: 12,
@@ -396,7 +395,7 @@ const styles = StyleSheet.create({
   },
   buttonText: {
     color: 'white',
-    fontSize: 14,
+    fontSize: 15,
     fontWeight: '600',
   },
   loginButton: {
