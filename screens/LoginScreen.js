@@ -68,6 +68,7 @@ const LoginScreen = ({ navigation }) => {
         contentContainerStyle={styles.scrollContainer}
         showsVerticalScrollIndicator={true}
       >
+        <View style={styles.pageContainer}>
         {/* Header Section */}
         <View style={styles.header}>
           <Text style={styles.welcomeText}>Welcome Back</Text>
@@ -286,6 +287,14 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: '#f8faff',
     ...(Platform.OS === 'web' ? { overflow: 'auto', minHeight: '100vh' } : {}),
+  },
+  pageContainer: {
+    width: '100%',
+    maxWidth: 960,
+    alignSelf: 'center',
+    paddingHorizontal: 16,
+    paddingVertical: 24,
+    ...(Platform.OS === 'web' ? { minHeight: '100vh', justifyContent: 'center' } : {}),
   },
   scrollContainer: {
     flexGrow: 1,
