@@ -447,8 +447,8 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    marginBottom: 8,
     flexWrap: 'wrap',
+    marginTop: 6,
   },
   quickFillLabel: {
     color: '#6b7280',
@@ -462,7 +462,8 @@ const styles = StyleSheet.create({
     paddingHorizontal: 10,
     paddingVertical: 6,
     borderRadius: 999,
-    marginHorizontal: 4,
+    marginHorizontal: 6,
+    marginVertical: 6,
   },
   quickFillChipText: {
     color: '#1a237e',
