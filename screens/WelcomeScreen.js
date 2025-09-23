@@ -111,7 +111,7 @@ const WelcomeScreen = ({ navigation }) => {
       <ScrollView 
         style={styles.scroll}
         contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
         bounces={true}
       >
         {/* Header Section */}
@@ -289,7 +289,7 @@ const styles = StyleSheet.create({
     ...(isWeb && {
       width: '100%',
       maxWidth: '100vw',
-      overflow: 'hidden',
+      overflow: 'auto',
     }),
   },
   scroll: {
