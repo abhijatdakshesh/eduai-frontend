@@ -275,6 +275,8 @@ const LoginScreen = ({ navigation }) => {
             </Text>
           </TouchableOpacity>
         </View>
+        {/* Close pageContainer */}
+        </View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -290,31 +292,31 @@ const styles = StyleSheet.create({
   },
   pageContainer: {
     width: '100%',
-    maxWidth: 960,
+    maxWidth: 840,
     alignSelf: 'center',
-    paddingHorizontal: 16,
-    paddingVertical: 24,
+    paddingHorizontal: 12,
+    paddingVertical: 16,
     ...(Platform.OS === 'web' ? { minHeight: '100vh', justifyContent: 'center' } : {}),
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
-    paddingHorizontal: 24,
-    paddingVertical: 24,
+    paddingHorizontal: 16,
+    paddingVertical: 16,
   },
   header: {
     alignItems: 'center',
-    marginBottom: 40,
+    marginBottom: 32,
   },
   welcomeText: {
-    fontSize: 28,
+    fontSize: 24,
     fontWeight: '700',
     color: '#1a1a1a',
     marginBottom: 8,
     letterSpacing: -0.5,
   },
   subtitle: {
-    fontSize: 16,
+    fontSize: 14,
     color: '#666',
     fontWeight: '400',
   },
@@ -327,23 +329,23 @@ const styles = StyleSheet.create({
   },
   loginCard: {
     backgroundColor: 'white',
-    borderRadius: 16,
-    padding: 24,
-    marginBottom: 32,
+    borderRadius: 14,
+    padding: 18,
+    marginBottom: 24,
     shadowColor: '#000',
     shadowOffset: {
       width: 0,
       height: 4,
     },
     shadowOpacity: 0.1,
-    shadowRadius: 12,
-    elevation: 8,
-    maxWidth: 400,
+    shadowRadius: 10,
+    elevation: 4,
+    maxWidth: 360,
     alignSelf: 'center',
     width: '100%',
   },
   inputContainer: {
-    marginBottom: 20,
+    marginBottom: 14,
   },
   inputLabel: {
     fontSize: 14,
@@ -353,31 +355,31 @@ const styles = StyleSheet.create({
     letterSpacing: 0.2,
   },
   input: {
-    borderWidth: 1.5,
+    borderWidth: 1,
     borderColor: '#e1e5e9',
-    borderRadius: 12,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontSize: 16,
+    borderRadius: 10,
+    paddingHorizontal: 12,
+    paddingVertical: 12,
+    fontSize: 14,
     backgroundColor: '#fafbfc',
     color: '#1a1a1a',
     fontWeight: '400',
   },
   loginButton: {
     backgroundColor: '#4f46e5',
-    paddingVertical: 16,
-    borderRadius: 12,
+    paddingVertical: 12,
+    borderRadius: 10,
     alignItems: 'center',
-    marginTop: 8,
-    marginBottom: 16,
+    marginTop: 6,
+    marginBottom: 12,
     shadowColor: '#4f46e5',
     shadowOffset: {
       width: 0,
       height: 4,
     },
     shadowOpacity: 0.3,
-    shadowRadius: 8,
-    elevation: 6,
+    shadowRadius: 6,
+    elevation: 3,
   },
   loginButtonDisabled: {
     backgroundColor: '#9ca3af',
@@ -386,9 +388,9 @@ const styles = StyleSheet.create({
   },
   loginButtonText: {
     color: 'white',
-    fontSize: 16,
+    fontSize: 14,
     fontWeight: '600',
-    letterSpacing: 0.3,
+    letterSpacing: 0.2,
   },
   forgotPassword: {
     alignItems: 'center',
@@ -468,15 +470,15 @@ const styles = StyleSheet.create({
     backgroundColor: '#e3f2fd',
     borderColor: '#90caf9',
     borderWidth: 1,
-    paddingHorizontal: 10,
-    paddingVertical: 6,
+    paddingHorizontal: 8,
+    paddingVertical: 4,
     borderRadius: 999,
-    marginHorizontal: 6,
-    marginVertical: 6,
+    marginHorizontal: 4,
+    marginVertical: 4,
   },
   quickFillChipText: {
     color: '#1a237e',
-    fontSize: 12,
+    fontSize: 11,
     fontWeight: '600',
   },
 });
