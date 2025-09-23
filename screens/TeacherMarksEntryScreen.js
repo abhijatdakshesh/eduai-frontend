@@ -1,7 +1,8 @@
 import React, { useEffect, useMemo, useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StyleSheet, Dimensions } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, FlatList, ActivityIndicator, Alert, ScrollView, StyleSheet, Dimensions, RefreshControl } from 'react-native';
 import { assessmentsAPI } from '../services/apiService';
 import { apiClient } from '../services/api';
+import { LinearGradient } from 'expo-linear-gradient';
 
 const { width } = Dimensions.get('window');
 
@@ -30,6 +31,9 @@ export default function TeacherMarksEntryScreen() {
 
   const [subjects, setSubjects] = useState([]);
   const [classes, setClasses] = useState([]);
+  const [refreshing, setRefreshing] = useState(false);
+  const [bulkMode, setBulkMode] = useState(false);
+  const [selectedStudents, setSelectedStudents] = useState(new Set());
 
   useEffect(() => {
     const loadClasses = async () => {

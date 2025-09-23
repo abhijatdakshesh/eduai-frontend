@@ -1,8 +1,10 @@
 {
   "version": 2,
+  "buildCommand": "npm run build:web",
+  "outputDirectory": "dist",
   "routes": [
     { "handle": "filesystem" },
-    { "src": "/(.*)", "dest": "/dist/index.html" }
+    { "src": "/(.*)", "dest": "/index.html" }
   ]
 }
 

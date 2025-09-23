@@ -13,17 +13,37 @@ import { LinearGradient } from 'expo-linear-gradient';
 
 const { width, height } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
-// Responsive card width: 3 cols on wide screens, else 2 cols
-const maxContentWidth = 960;
-const computedContentWidth = Math.min(width, maxContentWidth);
-const featureCols = computedContentWidth >= 900 ? 3 : 2;
-const horizontalGap = 12;
-const featureCardWidth = (computedContentWidth - horizontalGap * (featureCols - 1) - 48) / featureCols; // 24px padding each side total 48
+
+// Fixed responsive design to prevent deployment issues
+const getResponsiveLayout = () => {
+  const screenWidth = width;
+  const maxContentWidth = 960;
+  const contentWidth = Math.min(screenWidth, maxContentWidth);
+  
+  // Use fixed breakpoints instead of dynamic calculations
+  let featureCols = 2;
+  let cardWidth = (contentWidth - 48 - 12) / 2; // 24px padding each side, 12px gap
+  
+  if (screenWidth >= 900) {
+    featureCols = 3;
+    cardWidth = (contentWidth - 48 - 24) / 3; // 24px padding each side, 24px total gap
+  }
+  
+  return {
+    contentWidth,
+    featureCols,
+    cardWidth: Math.max(cardWidth, 200), // Minimum card width
+    horizontalGap: 12
+  };
+};
 
 const WelcomeScreen = ({ navigation }) => {
   const fadeAnim = useRef(new Animated.Value(0)).current;
   const slideAnim = useRef(new Animated.Value(50)).current;
   const scaleAnim = useRef(new Animated.Value(0.8)).current;
+  
+  // Get responsive layout values
+  const layout = getResponsiveLayout();
 
   useEffect(() => {
     Animated.parallel([
@@ -121,8 +141,8 @@ const WelcomeScreen = ({ navigation }) => {
         >
           <Text style={styles.featuresTitle}>What We Offer</Text>
           
-          <View style={styles.featuresGrid}>
-            <View style={styles.featureCard}>
+          <View style={[styles.featuresGrid, { width: layout.contentWidth }]}>
+            <View style={[styles.featureCard, { width: layout.cardWidth }]}>
               <View style={styles.featureIconContainer}>
                 <Text style={styles.featureIcon}>📚</Text>
               </View>
@@ -132,7 +152,7 @@ const WelcomeScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            <View style={styles.featureCard}>
+            <View style={[styles.featureCard, { width: layout.cardWidth }]}>
               <View style={styles.featureIconContainer}>
                 <Text style={styles.featureIcon}>📊</Text>
               </View>
@@ -142,7 +162,7 @@ const WelcomeScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            <View style={styles.featureCard}>
+            <View style={[styles.featureCard, { width: layout.cardWidth }]}>
               <View style={styles.featureIconContainer}>
                 <Text style={styles.featureIcon}>📈</Text>
               </View>
@@ -152,7 +172,7 @@ const WelcomeScreen = ({ navigation }) => {
               </Text>
             </View>
 
-            <View style={styles.featureCard}>
+            <View style={[styles.featureCard, { width: layout.cardWidth }]}>
               <View style={styles.featureIconContainer}>
                 <Text style={styles.featureIcon}>💬</Text>
               </View>
@@ -260,6 +280,12 @@ const WelcomeScreen = ({ navigation }) => {
 const styles = StyleSheet.create({
   container: {
     flex: 1,
+    minHeight: height,
+    ...(isWeb && {
+      width: '100%',
+      maxWidth: '100vw',
+      overflow: 'hidden',
+    }),
   },
   scroll: {
     flex: 1,
@@ -268,6 +294,10 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24,
     paddingTop: Platform.OS === 'ios' ? 40 : 20,
     paddingBottom: 40,
+    ...(isWeb && {
+      maxWidth: '100%',
+      boxSizing: 'border-box',
+    }),
   },
   header: {
     alignItems: 'center',
@@ -347,17 +377,19 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     flexWrap: 'wrap',
     justifyContent: 'space-between',
-    gap: horizontalGap,
+    alignSelf: 'center',
   },
   featureCard: {
-    width: featureCardWidth,
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
     borderRadius: 12,
     padding: 12,
     marginBottom: 12,
+    marginHorizontal: 6,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
+    minWidth: 200,
+    maxWidth: 300,
   },
   featureIconContainer: {
     width: 40,
@@ -461,7 +493,7 @@ const styles = StyleSheet.create({
   roleButtonsGrid: {
     flexDirection: 'row',
     justifyContent: 'space-between',
-    gap: 8,
+    paddingHorizontal: 4,
   },
   roleButton: {
     flex: 1,

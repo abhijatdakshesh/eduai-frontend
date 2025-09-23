@@ -99,6 +99,10 @@ A comprehensive React Native application for managing educational institutions, 
    npm run web
    ```
 
+## 📚 User Manual
+
+For full product usage, setup, role guides, data import/export, and troubleshooting, see `USER_MANUAL.md` in the project root.
+
 ### Demo Credentials
 
 Use these credentials to test the application:
