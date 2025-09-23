@@ -114,6 +114,21 @@ const LoginScreen = ({ navigation }) => {
             />
           </View>
 
+          {/* Quick Fill */}
+          <View style={styles.quickFillRow}>
+            <Text style={styles.quickFillLabel}>Quick fill:</Text>
+            <TouchableOpacity
+              style={styles.quickFillChip}
+              onPress={() => {
+                setEmail('cse.studnet@eduai.com');
+                setPassword('password123');
+              }}
+              activeOpacity={0.7}
+            >
+              <Text style={styles.quickFillChipText}>CSE Student</Text>
+            </TouchableOpacity>
+          </View>
+
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
             onPress={handleLogin}
