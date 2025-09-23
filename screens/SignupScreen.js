@@ -140,7 +140,7 @@ const SignupScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={true}>
         <View style={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         
@@ -309,18 +309,22 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f5f5f5',
+    ...(typeof document !== 'undefined' ? { overflow: 'auto', minHeight: '100vh' } : {}),
   },
   content: {
     flex: 1,
     justifyContent: 'center',
     padding: 20,
-    paddingTop: 40,
+    paddingTop: 24,
+    maxWidth: 560,
+    width: '100%',
+    alignSelf: 'center',
   },
   title: {
-    fontSize: 32,
+    fontSize: 28,
     fontWeight: 'bold',
     textAlign: 'center',
-    marginBottom: 40,
+    marginBottom: 24,
     color: '#1a237e',
   },
   form: {
@@ -332,6 +336,8 @@ const styles = StyleSheet.create({
     shadowOpacity: 0.1,
     shadowRadius: 4,
     elevation: 3,
+    maxWidth: 560,
+    alignSelf: 'center',
   },
   label: {
     fontSize: 16,
