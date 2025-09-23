@@ -14,25 +14,40 @@ import { LinearGradient } from 'expo-linear-gradient';
 const { width, height } = Dimensions.get('window');
 const isWeb = Platform.OS === 'web';
 
-// Fixed responsive design to prevent deployment issues
+// Improved responsive design for monitor and laptop screens
 const getResponsiveLayout = () => {
   const screenWidth = width;
-  const maxContentWidth = 960;
-  const contentWidth = Math.min(screenWidth, maxContentWidth);
+  const maxContentWidth = 1200; // Increased for larger screens
   
-  // Use fixed breakpoints instead of dynamic calculations
-  let featureCols = 2;
-  let cardWidth = (contentWidth - 48 - 12) / 2; // 24px padding each side, 12px gap
+  // Better breakpoints for different screen sizes
+  let contentWidth, featureCols, cardWidth;
   
-  if (screenWidth >= 900) {
+  if (screenWidth >= 1400) {
+    // Large monitor screens
+    contentWidth = Math.min(screenWidth, maxContentWidth);
     featureCols = 3;
-    cardWidth = (contentWidth - 48 - 24) / 3; // 24px padding each side, 24px total gap
+    cardWidth = (contentWidth - 60 - 24) / 3; // 30px padding each side, 24px total gap
+  } else if (screenWidth >= 1024) {
+    // Laptop screens
+    contentWidth = Math.min(screenWidth, 1000);
+    featureCols = 3;
+    cardWidth = (contentWidth - 48 - 20) / 3; // 24px padding each side, 20px total gap
+  } else if (screenWidth >= 768) {
+    // Tablet screens
+    contentWidth = Math.min(screenWidth, 800);
+    featureCols = 2;
+    cardWidth = (contentWidth - 40 - 16) / 2; // 20px padding each side, 16px total gap
+  } else {
+    // Mobile screens
+    contentWidth = screenWidth;
+    featureCols = 1;
+    cardWidth = contentWidth - 32; // 16px padding each side
   }
   
   return {
     contentWidth,
     featureCols,
-    cardWidth: Math.max(cardWidth, 200), // Minimum card width
+    cardWidth: Math.max(cardWidth, 250), // Increased minimum card width
     horizontalGap: 12
   };
 };
@@ -169,16 +184,6 @@ const WelcomeScreen = ({ navigation }) => {
               <Text style={styles.featureTitle}>Internship & Job Portal</Text>
               <Text style={styles.featureDescription}>
                 Apply for Internships & Off-Campus Jobs with your GPA and performance analytics
-              </Text>
-            </View>
-
-            <View style={[styles.featureCard, { width: layout.cardWidth }]}>
-              <View style={styles.featureIconContainer}>
-                <Text style={styles.featureIcon}>💬</Text>
-              </View>
-              <Text style={styles.featureTitle}>Communication Hub</Text>
-              <Text style={styles.featureDescription}>
-                Stay connected with announcements and messages
               </Text>
             </View>
           </View>
@@ -376,20 +381,28 @@ const styles = StyleSheet.create({
   featuresGrid: {
     flexDirection: 'row',
     flexWrap: 'wrap',
-    justifyContent: 'space-between',
+    justifyContent: 'center',
     alignSelf: 'center',
+    gap: 16,
   },
   featureCard: {
     backgroundColor: 'rgba(255, 255, 255, 0.15)',
-    borderRadius: 12,
-    padding: 12,
-    marginBottom: 12,
-    marginHorizontal: 6,
+    borderRadius: 16,
+    padding: 20,
+    marginBottom: 16,
     alignItems: 'center',
     borderWidth: 1,
     borderColor: 'rgba(255, 255, 255, 0.2)',
-    minWidth: 200,
-    maxWidth: 300,
+    minWidth: 280,
+    maxWidth: 350,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 4,
   },
   featureIconContainer: {
     width: 40,
@@ -404,17 +417,21 @@ const styles = StyleSheet.create({
     fontSize: 20,
   },
   featureTitle: {
-    fontSize: 12,
+    fontSize: 16,
     color: '#ffffff',
     fontWeight: '600',
     textAlign: 'center',
-    marginBottom: 4,
+    marginBottom: 8,
+    textShadowColor: 'rgba(0, 0, 0, 0.3)',
+    textShadowOffset: { width: 0, height: 1 },
+    textShadowRadius: 2,
   },
   featureDescription: {
-    fontSize: 10,
-    color: 'rgba(255, 255, 255, 0.8)',
+    fontSize: 13,
+    color: 'rgba(255, 255, 255, 0.9)',
     textAlign: 'center',
-    lineHeight: 14,
+    lineHeight: 18,
+    fontWeight: '400',
   },
   buttonSection: {
     marginBottom: 30,
