@@ -66,7 +66,7 @@ const LoginScreen = ({ navigation }) => {
     >
       <ScrollView 
         contentContainerStyle={styles.scrollContainer}
-        showsVerticalScrollIndicator={false}
+        showsVerticalScrollIndicator={true}
       >
         {/* Header Section */}
         <View style={styles.header}>
@@ -285,12 +285,13 @@ const styles = StyleSheet.create({
   container: {
     flex: 1,
     backgroundColor: '#f8faff',
+    ...(Platform.OS === 'web' ? { overflow: 'auto', minHeight: '100vh' } : {}),
   },
   scrollContainer: {
     flexGrow: 1,
     justifyContent: 'center',
     paddingHorizontal: 24,
-    paddingVertical: 40,
+    paddingVertical: 24,
   },
   header: {
     alignItems: 'center',
@@ -446,7 +447,6 @@ const styles = StyleSheet.create({
     flexDirection: 'row',
     alignItems: 'center',
     justifyContent: 'center',
-    gap: 8,
     marginBottom: 8,
     flexWrap: 'wrap',
   },
