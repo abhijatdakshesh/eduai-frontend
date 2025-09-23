@@ -140,7 +140,7 @@ const SignupScreen = ({ navigation }) => {
   };
 
   return (
-    <ScrollView style={styles.container} showsVerticalScrollIndicator={true}>
+    <ScrollView style={styles.container} showsVerticalScrollIndicator={false} contentContainerStyle={{ flexGrow: 1, justifyContent: 'center' }}>
         <View style={styles.content}>
         <Text style={styles.title}>Create Account</Text>
         
@@ -319,6 +319,7 @@ const styles = StyleSheet.create({
     maxWidth: 420,
     width: '100%',
     alignSelf: 'center',
+    ...(typeof document !== 'undefined' ? { minHeight: '100vh' } : {}),
   },
   title: {
     fontSize: 24,
@@ -338,29 +339,32 @@ const styles = StyleSheet.create({
     elevation: 3,
     maxWidth: 420,
     alignSelf: 'center',
+    width: '100%',
   },
   label: {
-    fontSize: 14,
+    fontSize: 13,
     fontWeight: '600',
-    marginBottom: 6,
+    marginBottom: 4,
     color: '#333',
   },
   input: {
     borderWidth: 1,
     borderColor: '#e1e5e9',
     borderRadius: 8,
-    padding: 12,
-    fontSize: 15,
-    marginBottom: 12,
+    paddingVertical: 10,
+    paddingHorizontal: 12,
+    fontSize: 14,
+    marginBottom: 10,
     backgroundColor: 'white',
   },
   userTypeContainer: {
     flexDirection: 'row',
-    marginBottom: 12,
+    marginBottom: 10,
   },
   userTypeButton: {
     flex: 1,
-    padding: 10,
+    paddingVertical: 8,
+    paddingHorizontal: 10,
     borderWidth: 1,
     borderColor: '#e1e5e9',
     borderRadius: 8,
@@ -372,7 +376,7 @@ const styles = StyleSheet.create({
     borderColor: '#1a237e',
   },
   userTypeText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#666',
   },
   userTypeTextActive: {
@@ -381,17 +385,18 @@ const styles = StyleSheet.create({
   },
   button: {
     backgroundColor: '#1a237e',
-    padding: 12,
+    paddingVertical: 11,
+    paddingHorizontal: 12,
     borderRadius: 8,
     alignItems: 'center',
-    marginBottom: 16,
+    marginBottom: 12,
   },
   buttonDisabled: {
     backgroundColor: '#ccc',
   },
   buttonText: {
     color: 'white',
-    fontSize: 15,
+    fontSize: 14,
     fontWeight: '600',
   },
   loginButton: {
@@ -399,7 +404,7 @@ const styles = StyleSheet.create({
   },
   loginText: {
     color: '#1a237e',
-    fontSize: 13,
+    fontSize: 12,
     textDecorationLine: 'underline',
   },
   backToWelcomeButton: {
@@ -409,16 +414,16 @@ const styles = StyleSheet.create({
   },
   backToWelcomeText: {
     color: '#6b7280',
-    fontSize: 13,
+    fontSize: 12,
     fontWeight: '500',
   },
   checkboxContainer: {
-    marginBottom: 20,
+    marginBottom: 12,
   },
   checkboxRow: {
     flexDirection: 'row',
     alignItems: 'center',
-    marginBottom: 12,
+    marginBottom: 8,
   },
   checkbox: {
     width: 20,
@@ -439,7 +444,7 @@ const styles = StyleSheet.create({
     fontWeight: 'bold',
   },
   checkboxText: {
-    fontSize: 14,
+    fontSize: 13,
     color: '#333',
     flex: 1,
   },
