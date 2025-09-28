@@ -122,7 +122,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.quickFillChip}
               onPress={() => {
                 setEmail('student@eduai.com');
-                setPassword('password123');
+                setPassword('StudentPass123!');
               }}
               activeOpacity={0.7}
             >
@@ -132,7 +132,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.quickFillChip}
               onPress={() => {
                 setEmail('cse.student@eduai.com');
-                setPassword('password123');
+                setPassword('StudentPass123!');
               }}
               activeOpacity={0.7}
             >
@@ -142,7 +142,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.quickFillChip}
               onPress={() => {
                 setEmail('ise.student@eduai.com');
-                setPassword('password123');
+                setPassword('StudentPass123!');
               }}
               activeOpacity={0.7}
             >
@@ -152,7 +152,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.quickFillChip}
               onPress={() => {
                 setEmail('teacher@eduai.com');
-                setPassword('password123');
+                setPassword('TeacherPass123!');
               }}
               activeOpacity={0.7}
             >
@@ -162,7 +162,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.quickFillChip}
               onPress={() => {
                 setEmail('cse.teacher@eduai.com');
-                setPassword('password123');
+                setPassword('TeacherPass123!');
               }}
               activeOpacity={0.7}
             >
@@ -172,7 +172,7 @@ const LoginScreen = ({ navigation }) => {
               style={styles.quickFillChip}
               onPress={() => {
                 setEmail('ise.teacher@eduai.com');
-                setPassword('password123');
+                setPassword('TeacherPass123!');
               }}
               activeOpacity={0.7}
             >
