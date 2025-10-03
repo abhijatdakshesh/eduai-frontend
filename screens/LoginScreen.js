@@ -115,90 +115,7 @@ const LoginScreen = ({ navigation }) => {
             />
           </View>
 
-          {/* Quick Fill */}
-          <View style={styles.quickFillRow}>
-            <Text style={styles.quickFillLabel}>Quick fill:</Text>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('student@eduai.com');
-                setPassword('StudentPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('cse.student@eduai.com');
-                setPassword('StudentPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>CSE Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('ise.student@eduai.com');
-                setPassword('StudentPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>ISE Student</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('teacher@eduai.com');
-                setPassword('TeacherPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>Teacher</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('cse.teacher@eduai.com');
-                setPassword('TeacherPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>CSE Teacher</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('ise.teacher@eduai.com');
-                setPassword('TeacherPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>ISE Teacher</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('parent@eduai.com');
-                setPassword('ParentPass123!');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>Parent</Text>
-            </TouchableOpacity>
-            <TouchableOpacity
-              style={styles.quickFillChip}
-              onPress={() => {
-                setEmail('admin@eduai.com');
-                setPassword('password123');
-              }}
-              activeOpacity={0.7}
-            >
-              <Text style={styles.quickFillChipText}>Admin</Text>
-            </TouchableOpacity>
-          </View>
+          
 
           <TouchableOpacity
             style={[styles.loginButton, loading && styles.loginButtonDisabled]}
@@ -454,33 +371,7 @@ const styles = StyleSheet.create({
     fontSize: 14,
     fontWeight: '500',
   },
-  quickFillRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    flexWrap: 'wrap',
-    marginTop: 6,
-  },
-  quickFillLabel: {
-    color: '#6b7280',
-    fontSize: 12,
-    marginRight: 8,
-  },
-  quickFillChip: {
-    backgroundColor: '#e3f2fd',
-    borderColor: '#90caf9',
-    borderWidth: 1,
-    paddingHorizontal: 8,
-    paddingVertical: 4,
-    borderRadius: 999,
-    marginHorizontal: 4,
-    marginVertical: 4,
-  },
-  quickFillChipText: {
-    color: '#1a237e',
-    fontSize: 11,
-    fontWeight: '600',
-  },
+  
 });
 
 export default LoginScreen;
